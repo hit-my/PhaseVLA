@@ -280,6 +280,142 @@ class FeedForward(nn.Module):
         return outputs
 
 
+
+
+@at.typecheck
+class CachedPrefixActionAttention(nn.Module):
+    """Action-only attention over frozen prefix cache, one memory token, and action tokens."""
+
+    config: Config
+
+    @nn.compact
+    def __call__(
+        self,
+        action_tokens: at.Float[at.Array, "b a d"],
+        memory_token: at.Float[at.Array, "b 1 d"],
+        prefix_kv_cache: tuple[at.Float[at.Array, "b c k h"], at.Float[at.Array, "b c v h"]],
+        memory_positions: at.Int[at.Array, "b 1"],
+        action_positions: at.Int[at.Array, "b a"],
+        attn_mask: at.Bool[at.Array, "b 1 a s"],
+    ) -> at.Float[at.Array, "b a d"]:
+        if self.config.num_heads % self.config.num_kv_heads != 0:
+            raise ValueError(
+                f"num_heads ({self.config.num_heads}) must be divisible by num_kv_heads "
+                f"({self.config.num_kv_heads})"
+            )
+
+        dtype = action_tokens.dtype
+        prefix_k, prefix_v = jax.tree.map(lambda x: jax.lax.stop_gradient(x).astype(dtype), prefix_kv_cache)
+        memory_token = memory_token.astype(dtype)
+
+        if self.config.num_kv_heads == self.config.num_heads:
+            qkv_einsum = lora.Einsum(
+                shape=(3, self.config.num_heads, self.config.width, self.config.head_dim),
+                name="qkv_einsum",
+                init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0, 1)),
+                lora_config=self.config.lora_configs.get("attn"),
+            )
+            q, action_k, action_v = qkv_einsum("BSD,3KDH->3BSKH", action_tokens)
+        else:
+            q_einsum = lora.Einsum(
+                shape=(self.config.num_heads, self.config.width, self.config.head_dim),
+                name="q_einsum",
+                init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0,)),
+                lora_config=self.config.lora_configs.get("attn"),
+            )
+            q = q_einsum("BTD,NDH->BTNH", action_tokens)
+            kv_einsum = lora.Einsum(
+                shape=(2, self.config.num_kv_heads, self.config.width, self.config.head_dim),
+                name="kv_einsum",
+                init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0, 1)),
+                lora_config=self.config.lora_configs.get("attn"),
+            )
+            action_k, action_v = kv_einsum("BSD,2KDH->2BSKH", action_tokens)
+
+        memory_kv_einsum = lora.Einsum(
+            shape=(2, self.config.num_kv_heads, self.config.width, self.config.head_dim),
+            name="memory_kv_einsum",
+            init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0, 1)),
+            lora_config=self.config.lora_configs.get("attn"),
+        )
+        memory_k, memory_v = memory_kv_einsum("BSD,2KDH->2BSKH", memory_token)
+
+        q = _apply_rope(q, positions=action_positions)
+        q *= self.config.head_dim**-0.5
+        action_k = _apply_rope(action_k, positions=action_positions)
+        memory_k = _apply_rope(memory_k, positions=memory_positions)
+
+        k = jnp.concatenate([prefix_k, memory_k, action_k], axis=1)
+        v = jnp.concatenate([prefix_v, memory_v, action_v], axis=1)
+        assert q.dtype == k.dtype == v.dtype == dtype
+
+        q = einops.rearrange(q, "B T (K G) H -> B T K G H", K=self.config.num_kv_heads)
+        logits = jnp.einsum("BTKGH,BSKH->BKGTS", q, k, preferred_element_type=jnp.float32)
+
+        if attn_mask.shape != (q.shape[0], 1, q.shape[1], k.shape[1]):
+            raise ValueError(
+                f"Attention mask with shape {attn_mask.shape} but shapes for q and k are: {q.shape} and {k.shape}"
+            )
+
+        big_neg = -2.3819763e38  # See gemma/modules.py
+        masked_logits = jnp.where(attn_mask[:, :, None, :, :], logits, big_neg)
+        probs = jax.nn.softmax(masked_logits, axis=-1).astype(dtype)
+
+        encoded = jnp.einsum("BKGTS,BSKH->BTKGH", probs, v)
+        encoded = einops.rearrange(encoded, "B T K G H -> B T (K G) H")
+        out_einsum = lora.Einsum(
+            shape=(self.config.num_heads, self.config.head_dim, self.config.width),
+            name="attn_vec_einsum",
+            init_fn=nn.initializers.lecun_normal(in_axis=(-3, -2), out_axis=-1),
+            lora_config=self.config.lora_configs.get("attn"),
+        )
+        return out_einsum("BTNH,NHD->BTD", encoded)
+
+
+@at.typecheck
+class CachedPrefixActionBlock(nn.Module):
+    """Gemma action block whose action queries reuse a frozen per-layer prefix KV cache."""
+
+    config: Config
+    dropout: float = 0.0
+    dropout_bdims: tuple[int, ...] = ()
+
+    @nn.compact
+    def __call__(
+        self,
+        action_tokens: at.Float[at.Array, "b a d"],
+        memory_token: at.Float[at.Array, "b 1 d"],
+        prefix_kv_cache: tuple[at.Float[at.Array, "b c k h"], at.Float[at.Array, "b c v h"]],
+        memory_positions: at.Int[at.Array, "b 1"],
+        action_positions: at.Int[at.Array, "b a"],
+        attn_mask: at.Bool[at.Array, "b 1 a s"],
+        adarms_cond: at.Float[at.Array, "b d"] | None,
+        deterministic: bool = True,  # noqa: FBT002
+    ) -> at.Float[at.Array, "b a d"]:
+        action_tokens = sharding.activation_sharding_constraint(action_tokens)
+        drop = nn.Dropout(self.dropout, self.dropout_bdims) if self.dropout else lambda x, _: x
+
+        pre_attn, gate = RMSNorm(name="pre_attention_norm")(action_tokens, adarms_cond)
+        pre_attn = sharding.activation_sharding_constraint(pre_attn)
+        post_attn = CachedPrefixActionAttention(config=self.config, name="attn")(
+            pre_attn, memory_token, prefix_kv_cache, memory_positions, action_positions, attn_mask
+        )
+        post_attn = drop(post_attn, deterministic)
+        post_attn = sharding.activation_sharding_constraint(post_attn)
+        action_tokens = _gated_residual(action_tokens, post_attn, gate)
+        action_tokens = sharding.activation_sharding_constraint(action_tokens)
+
+        pre_ffw, gate = RMSNorm(name="pre_ffw_norm")(action_tokens, adarms_cond)
+        out = lora.FeedForward(
+            features=self.config.width,
+            hidden_dim=self.config.mlp_dim,
+            name="mlp",
+            lora_config=self.config.lora_configs.get("ffn"),
+        )(pre_ffw)
+        out = sharding.activation_sharding_constraint(out)
+        out = drop(out, deterministic)
+        action_tokens = _gated_residual(action_tokens, out, gate)
+        return sharding.activation_sharding_constraint(action_tokens)
 @at.typecheck
 class Block(nn.Module):
     """Transformer block."""
