@@ -67,10 +67,14 @@ class RecordingEnvironment:
 
 class BranchScorer:
     def __call__(self, action, *, target_branch, task, progress_label):
+        observed_branch = action["branch"]
         return {
-            "predicted_branch": action["branch"],
+            "observed_branch": observed_branch,
             "target_branch": target_branch,
-            "correct": action["branch"] == target_branch,
+            "event_trace": [
+                {"event": "entered_branch", "branch": observed_branch, "task": task, "progress_label": progress_label}
+            ],
+            "correct": observed_branch != target_branch,
             "progress_label": progress_label,
         }
 
@@ -161,6 +165,43 @@ def test_checksums_require_same_current_observation_and_canonical_physical_state
     assert "evaluator_progress_state" not in pair.model_inputs["b"]
 
 
+def test_load_manifest_rejects_tampered_recomputable_physical_observation_and_progress_checksums(tmp_path):
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]),
+            _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[1]),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=42,
+    )[0]
+    manifest_path = tmp_path / "pairs.jsonl"
+    build_history_pairs.write_manifest_jsonl(manifest_path, [pair])
+
+    loaded = build_history_pairs.load_manifest(manifest_path)
+
+    assert loaded[0]["canonical_physical_state"] == pair.canonical_physical_state
+    assert loaded[0]["current_observation"] == pair.current_observation
+
+    def assert_tamper_rejected(mutator, match):
+        tampered = copy.deepcopy(loaded[0])
+        mutator(tampered)
+        tampered_path = tmp_path / f"tampered-{match}.jsonl"
+        tampered_path.write_text(json.dumps(tampered, sort_keys=True) + "\n")
+
+        with pytest.raises(ValueError, match=match):
+            build_history_pairs.load_manifest(tampered_path)
+
+    assert_tamper_rejected(
+        lambda row: row["canonical_physical_state"].update({"drawer": "open"}),
+        "canonical_physical_state_checksum",
+    )
+    assert_tamper_rejected(lambda row: row["current_observation"].update({"robot": [9.9]}), "current_observation_checksum")
+    assert_tamper_rejected(
+        lambda row: row["a"]["evaluator_progress_state"].update({"hidden_counter": 99}),
+        "evaluator_progress_checksum",
+    )
+
+
 def test_evaluator_runs_all_history_state_interventions_with_fixed_inputs_noise_and_semantic_scorer():
     pair = build_history_pairs.build_history_pairs(
         [
@@ -207,6 +248,8 @@ def test_evaluator_runs_all_history_state_interventions_with_fixed_inputs_noise_
     assert {call["progress_state"] is None for call in policy.calls} == {True}
     assert all("branch_correct" in row for row in rows)
     assert all("action_prefix_distance" in row for row in rows)
+    assert all(isinstance(row["event_trace"], list) and row["event_trace"] for row in rows)
+    assert {row["observed_branch"] for row in rows} >= {"pull(drawer)", "push(drawer)", "zero"}
 
     swapped = [row for row in rows if row["condition"] == "swapped"]
     assert {row["evaluator_progress_label"] for row in swapped} == {"before", "after"}
@@ -215,10 +258,58 @@ def test_evaluator_runs_all_history_state_interventions_with_fixed_inputs_noise_
     assert any(row["condition"] == "swapped" and not row["branch_correct"] for row in rows)
 
 
+def test_evaluator_recomputes_branch_correct_from_events_not_scorer_boolean():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10]),
+            _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20]),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=99,
+    )[0]
+
+    class LyingBranchScorer:
+        def __call__(self, action, *, target_branch, task, progress_label):
+            return {
+                "observed_branch": "wrong-branch",
+                "target_branch": target_branch,
+                "event_trace": [{"event": "entered_branch", "branch": "wrong-branch", "task": task}],
+                "correct": True,
+                "progress_label": progress_label,
+            }
+
+    rows = eval_history_pairs.evaluate_history_pair(
+        pair,
+        policy=RecordingPolicy(),
+        environment=RecordingEnvironment(),
+        history_replayer=SyntheticHistoryReplayer(),
+        branch_scorer=LyingBranchScorer(),
+        truncated_k=1,
+    )
+
+    assert rows
+    assert all(row["semantic_branch"]["correct"] is True for row in rows)
+    assert all(not row["branch_correct"] for row in rows)
+
+
 def test_write_jsonl_preserves_recomputable_branch_accuracy(tmp_path):
     rows = [
-        {"pair_id": "p0", "condition": "correct", "branch_correct": True},
-        {"pair_id": "p1", "condition": "correct", "branch_correct": False},
+        {
+            "pair_id": "p0",
+            "condition": "correct",
+            "target_branch": "pull(drawer)",
+            "observed_branch": "pull(drawer)",
+            "event_trace": [{"event": "entered_branch", "branch": "pull(drawer)"}],
+            "branch_correct": False,
+        },
+        {
+            "pair_id": "p1",
+            "condition": "correct",
+            "target_branch": "pull(drawer)",
+            "observed_branch": "push(drawer)",
+            "event_trace": [{"event": "entered_branch", "branch": "push(drawer)"}],
+            "branch_correct": False,
+        },
     ]
     output_path = tmp_path / "history_pairs.jsonl"
 
@@ -227,3 +318,66 @@ def test_write_jsonl_preserves_recomputable_branch_accuracy(tmp_path):
 
     assert loaded == rows
     assert eval_history_pairs.branch_accuracy(loaded, condition="correct") == 0.5
+
+
+def test_build_and_eval_cli_supports_injected_offline_smoke(tmp_path):
+    candidates = [
+        _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0, 1]),
+        _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[2, 3]),
+        _candidate(3, "c", progress_label="start", next_predicate="lift(cube)", token=[1.0], history_indices=[4, 5]),
+        _candidate(4, "d", progress_label="done", next_predicate="push(drawer)", token=[1.0], history_indices=[6, 7]),
+    ]
+
+    class CandidateProvider:
+        def __init__(self):
+            self.calls = []
+
+        def __call__(self, *, repo_id):
+            self.calls.append(repo_id)
+            return candidates
+
+    pairs_path = tmp_path / "history_pairs.jsonl"
+    provider = CandidateProvider()
+
+    build_history_pairs.main(
+        [
+            "--repo-id",
+            "futuremamba/libero_mem_long_val",
+            "--max-pairs-per-task",
+            "1",
+            "--output",
+            str(pairs_path),
+            "--similarity-threshold",
+            "0.9",
+            "--noise-seed",
+            "17",
+        ],
+        candidate_provider=provider,
+    )
+
+    assert provider.calls == ["futuremamba/libero_mem_long_val"]
+    loaded_pairs = build_history_pairs.load_history_pairs(pairs_path)
+    assert len(loaded_pairs) == 1
+
+    envs = []
+
+    def environment_factory(pair):
+        env = RecordingEnvironment()
+        envs.append((pair.pair_id, env))
+        return env
+
+    results_path = tmp_path / "history_pair_results.jsonl"
+    eval_history_pairs.main(
+        ["--pairs", str(pairs_path), "--results", str(results_path), "--truncated-k", "1", "--shuffle-seed", "3"],
+        policy=RecordingPolicy(),
+        environment_factory=environment_factory,
+        history_replayer=SyntheticHistoryReplayer(),
+        branch_scorer=BranchScorer(),
+    )
+
+    result_rows = [json.loads(line) for line in results_path.read_text().splitlines()]
+
+    assert len(result_rows) == 12
+    assert envs == [(loaded_pairs[0].pair_id, envs[0][1])]
+    assert {row["condition"] for row in result_rows} >= {"correct", "swapped"}
+    assert all("event_trace" in row and "observed_branch" in row for row in result_rows)

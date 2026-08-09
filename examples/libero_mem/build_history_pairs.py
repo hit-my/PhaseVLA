@@ -45,7 +45,9 @@ _REQUIRED_TOP_LEVEL_FIELDS = {
     "task_id",
     "a",
     "b",
+    "canonical_physical_state",
     "canonical_physical_state_checksum",
+    "current_observation",
     "current_observation_checksum",
     "threshold",
     "noise_seed",
@@ -124,15 +126,19 @@ def make_history_pair(
     if stable_checksum(left.current_observation) != stable_checksum(right.current_observation):
         raise ValueError("paired candidates must share a unique current observation")
     pair_id = _pair_id(left, right, pair_index=pair_index)
-    canonical_physical_state_checksum = stable_checksum(left.canonical_physical_state)
-    current_observation_checksum = stable_checksum(left.current_observation)
+    canonical_physical_state = _canonical_json(left.canonical_physical_state)
+    current_observation = _canonical_json(left.current_observation)
+    canonical_physical_state_checksum = stable_checksum(canonical_physical_state)
+    current_observation_checksum = stable_checksum(current_observation)
     manifest = {
         "pair_id": pair_id,
         "task_id": str(left.task_id),
         "similarity": float(similarity),
         "threshold": float(threshold),
         "noise_seed": int(noise_seed),
+        "canonical_physical_state": canonical_physical_state,
         "canonical_physical_state_checksum": canonical_physical_state_checksum,
+        "current_observation": current_observation,
         "current_observation_checksum": current_observation_checksum,
         "a": _manifest_branch(left),
         "b": _manifest_branch(right),
@@ -145,8 +151,8 @@ def make_history_pair(
         similarity=float(similarity),
         threshold=float(threshold),
         noise_seed=int(noise_seed),
-        canonical_physical_state=left.canonical_physical_state,
-        current_observation=left.current_observation,
+        canonical_physical_state=canonical_physical_state,
+        current_observation=current_observation,
         manifest=manifest,
         model_inputs={"a": _model_input(left), "b": _model_input(right)},
     )
@@ -156,6 +162,15 @@ def validate_pair_manifest(manifest: dict[str, Any]) -> None:
     missing_top = sorted(field for field in _REQUIRED_TOP_LEVEL_FIELDS if field not in manifest)
     if missing_top:
         raise ValueError(f"pair manifest missing required field(s): {', '.join(missing_top)}")
+
+    for value_field, checksum_field in (
+        ("canonical_physical_state", "canonical_physical_state_checksum"),
+        ("current_observation", "current_observation_checksum"),
+    ):
+        expected_checksum = stable_checksum(manifest[value_field])
+        if manifest[checksum_field] != expected_checksum:
+            raise ValueError(f"pair manifest {checksum_field} does not match persisted {value_field}")
+
     for branch_name in ("a", "b"):
         branch = manifest.get(branch_name)
         if not isinstance(branch, dict):
@@ -169,6 +184,12 @@ def validate_pair_manifest(manifest: dict[str, Any]) -> None:
             raise ValueError(f"pair manifest branch {branch_name!r} has empty history_indices")
         if branch["evaluator_progress_state"] is None:
             raise ValueError(f"pair manifest branch {branch_name!r} missing evaluator progress state")
+        expected_progress_checksum = stable_checksum(branch["evaluator_progress_state"])
+        if branch["evaluator_progress_checksum"] != expected_progress_checksum:
+            raise ValueError(
+                f"pair manifest branch {branch_name!r} evaluator_progress_checksum does not match "
+                "persisted evaluator_progress_state"
+            )
     if manifest["a"]["progress_label"] == manifest["b"]["progress_label"]:
         raise ValueError("pair manifest requires contrasting progress labels")
     if manifest["a"]["target_predicate"] == manifest["b"]["target_predicate"]:
@@ -191,6 +212,64 @@ def load_manifest(path: str | Path) -> list[dict[str, Any]]:
             raise ValueError(f"invalid manifest row {line_number}: {exc}") from exc
         rows.append(row)
     return rows
+
+
+def load_history_pairs(path: str | Path) -> list[HistoryPair]:
+    return [_history_pair_from_manifest(manifest) for manifest in load_manifest(path)]
+
+
+def limit_pairs_per_task(pairs: list[HistoryPair], max_pairs_per_task: int | None) -> list[HistoryPair]:
+    if max_pairs_per_task is None:
+        return pairs
+    if max_pairs_per_task < 1:
+        raise ValueError("max_pairs_per_task must be positive")
+    counts: dict[str, int] = {}
+    limited: list[HistoryPair] = []
+    for pair in pairs:
+        task_id = str(pair.manifest["task_id"])
+        if counts.get(task_id, 0) >= max_pairs_per_task:
+            continue
+        limited.append(pair)
+        counts[task_id] = counts.get(task_id, 0) + 1
+    return limited
+
+
+def _history_pair_from_manifest(manifest: dict[str, Any]) -> HistoryPair:
+    validate_pair_manifest(manifest)
+    left = _candidate_from_manifest_branch(manifest, "a")
+    right = _candidate_from_manifest_branch(manifest, "b")
+    return HistoryPair(
+        pair_id=str(manifest["pair_id"]),
+        a=left,
+        b=right,
+        similarity=float(manifest["similarity"]),
+        threshold=float(manifest["threshold"]),
+        noise_seed=int(manifest["noise_seed"]),
+        canonical_physical_state=_canonical_json(manifest["canonical_physical_state"]),
+        current_observation=_canonical_json(manifest["current_observation"]),
+        manifest=manifest,
+        model_inputs={"a": _model_input(left), "b": _model_input(right)},
+    )
+
+
+def _candidate_from_manifest_branch(manifest: dict[str, Any], branch_name: str) -> SyntheticCandidate:
+    branch = manifest[branch_name]
+    feasible_predicates = [manifest["a"]["target_predicate"], manifest["b"]["target_predicate"]]
+    return SyntheticCandidate(
+        task_id=str(manifest["task_id"]),
+        episode_id=branch["episode_id"],
+        query_id=branch["query_id"],
+        progress_label=branch["progress_label"],
+        source_episode_ids=list(branch["source_episode_ids"]),
+        retrieval_token=list(branch.get("retrieval_token", [])),
+        next_subgoal_predicate=branch["target_predicate"],
+        target_branch=branch["expert_branch"],
+        history_indices=list(branch["history_indices"]),
+        canonical_physical_state=_canonical_json(manifest["canonical_physical_state"]),
+        current_observation=_canonical_json(manifest["current_observation"]),
+        evaluator_progress_state=_canonical_json(branch["evaluator_progress_state"]),
+        feasible_predicates=branch.get("feasible_predicates", feasible_predicates),
+    )
 
 
 def write_manifest_jsonl(path: str | Path, pairs: list[HistoryPair]) -> None:
@@ -304,34 +383,104 @@ def _load_synthetic_candidates(path: str | Path) -> list[SyntheticCandidate]:
             continue
         raw = json.loads(line)
         try:
-            candidates.append(SyntheticCandidate(**raw))
-        except TypeError as exc:
+            candidates.append(_coerce_candidate(raw))
+        except (TypeError, ValueError) as exc:
             raise ValueError(f"invalid candidate row {line_number}: {exc}") from exc
     return candidates
 
 
-def _parse_args() -> argparse.Namespace:
+def _load_candidates_for_cli(args: argparse.Namespace, candidate_provider: Any | None) -> list[SyntheticCandidate]:
+    if args.synthetic_candidates_jsonl is not None:
+        return _load_synthetic_candidates(args.synthetic_candidates_jsonl)
+    if args.repo_id is None:
+        raise ValueError("No candidate source supplied. Pass --synthetic-candidates-jsonl or --repo-id.")
+    provider = candidate_provider if candidate_provider is not None else _load_real_candidate_provider()
+    if callable(provider):
+        raw_candidates = provider(repo_id=args.repo_id)
+    elif hasattr(provider, "load_candidates"):
+        raw_candidates = provider.load_candidates(repo_id=args.repo_id)
+    else:
+        raise TypeError("candidate_provider must be callable or define load_candidates(repo_id=...)")
+    return [_coerce_candidate(candidate) for candidate in raw_candidates]
+
+
+def _coerce_candidate(raw: Any) -> SyntheticCandidate:
+    if isinstance(raw, SyntheticCandidate):
+        return raw
+    if isinstance(raw, dict):
+        return SyntheticCandidate(**raw)
+    raise TypeError(f"unsupported candidate object {type(raw).__name__}")
+
+
+def _load_real_candidate_provider() -> Any:
+    try:
+        from lerobot.common.datasets.lerobot_dataset import LeRobotDataset  # type: ignore[import-not-found]
+    except Exception as exc:  # pragma: no cover - exercised only with real dependencies.
+        raise RuntimeError(
+            "LeRobotDataset is unavailable. Install/provide LeRobot dependencies, pass --synthetic-candidates-jsonl, "
+            "or call main(..., candidate_provider=...) with an injected provider."
+        ) from exc
+    return _LeRobotCandidateProvider(LeRobotDataset)
+
+
+class _LeRobotCandidateProvider:
+    def __init__(self, dataset_cls: Any):
+        self._dataset_cls = dataset_cls
+
+    def __call__(self, *, repo_id: str) -> list[SyntheticCandidate]:
+        dataset = self._dataset_cls(repo_id=repo_id)
+        candidates: list[SyntheticCandidate] = []
+        for row_index, row in enumerate(dataset):
+            payload = _candidate_payload_from_dataset_row(row)
+            if payload is None:
+                continue
+            try:
+                candidates.append(_coerce_candidate(payload))
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"invalid history-pair candidate at dataset row {row_index}: {exc}") from exc
+        if not candidates:
+            raise RuntimeError(
+                f"dataset {repo_id!r} did not expose SyntheticCandidate-compatible history-pair candidate records"
+            )
+        return candidates
+
+
+def _candidate_payload_from_dataset_row(row: Any) -> dict[str, Any] | SyntheticCandidate | None:
+    if isinstance(row, SyntheticCandidate):
+        return row
+    if not isinstance(row, dict):
+        return None
+    required = set(SyntheticCandidate.__dataclass_fields__)
+    if required <= set(row):
+        return row
+    for key in ("history_pair_candidate", "candidate", "metadata"):
+        value = row.get(key)
+        if isinstance(value, dict) and required <= set(value):
+            return value
+    return None
+
+
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build local LIBERO-Mem history-pair causal experiment manifests.")
     parser.add_argument("--synthetic-candidates-jsonl", type=Path)
-    parser.add_argument("--output-jsonl", type=Path, required=True)
+    parser.add_argument("--repo-id")
+    parser.add_argument("--max-pairs-per-task", type=int)
+    parser.add_argument("--output", "--output-jsonl", dest="output_jsonl", type=Path, required=True)
     parser.add_argument("--similarity-threshold", type=float, default=0.95)
     parser.add_argument("--noise-seed", type=int, default=0)
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> None:
-    args = _parse_args()
-    if args.synthetic_candidates_jsonl is None:
-        raise SystemExit(
-            "No local candidate source supplied. Pass --synthetic-candidates-jsonl, or provide the real FutureMamba "
-            "candidate extractor via Python injection; this CLI does not fabricate Policy/LIBERO dependencies."
-        )
+def main(argv: list[str] | None = None, *, candidate_provider: Any | None = None) -> list[HistoryPair]:
+    args = _parse_args(argv)
     pairs = build_history_pairs(
-        _load_synthetic_candidates(args.synthetic_candidates_jsonl),
+        _load_candidates_for_cli(args, candidate_provider),
         similarity_threshold=args.similarity_threshold,
         noise_seed=args.noise_seed,
     )
+    pairs = limit_pairs_per_task(pairs, args.max_pairs_per_task)
     write_manifest_jsonl(args.output_jsonl, pairs)
+    return pairs
 
 
 if __name__ == "__main__":
