@@ -1,4 +1,5 @@
 import dataclasses
+import math
 from typing import Literal
 
 import flax.nnx as nnx
@@ -18,6 +19,70 @@ ConditioningPool = Literal["last_valid", "attention", "tokens4", "tokens8"]
 MemoryBackend = Literal["mamba", "gru", "lstm", "frame_stack", "none"]
 DecoderMode = Literal["handoff", "action_memory_full"]
 Coupling = Literal["hard", "convex", "residual"]
+
+
+_PARAMETER_MATCH_TOLERANCE = 0.05
+
+
+def _mamba_parameter_count(config: MambaConfig) -> int:
+    d_model = int(config.d_model)
+    d_inner = d_model * int(config.expand)
+    d_state = int(config.d_state)
+    d_conv = int(config.d_conv)
+    dt_rank = int(config.dt_rank)
+    per_layer = 0
+    per_layer += d_model
+    per_layer += d_model * (2 * d_inner) + (2 * d_inner)
+    per_layer += d_inner * (dt_rank + 2 * d_state)
+    per_layer += dt_rank * d_inner + d_inner
+    per_layer += d_inner * d_model + d_model
+    per_layer += d_conv * d_inner + d_inner
+    per_layer += d_inner * d_state
+    per_layer += d_inner
+    return per_layer * int(config.depth)
+
+
+def _gru_parameter_count(d_model: int, hidden_width: int) -> int:
+    return (
+        d_model * hidden_width
+        + hidden_width
+        + hidden_width * (3 * hidden_width)
+        + 3 * hidden_width
+        + hidden_width * (3 * hidden_width)
+        + hidden_width * d_model
+        + d_model
+    )
+
+
+def _lstm_parameter_count(d_model: int, hidden_width: int) -> int:
+    return (
+        d_model * hidden_width
+        + hidden_width
+        + hidden_width * (4 * hidden_width)
+        + 4 * hidden_width
+        + hidden_width * (4 * hidden_width)
+        + hidden_width * d_model
+        + d_model
+    )
+
+
+def _frame_stack_parameter_count(d_model: int, frame_stack_window: int, hidden_width: int) -> int:
+    return frame_stack_window * d_model * hidden_width + hidden_width + hidden_width * d_model + d_model
+
+
+def _nearest_hidden_width(target_count: int, counter) -> tuple[int, int]:
+    max_width = max(4096, int(math.ceil(math.sqrt(max(target_count, 1)))) * 4)
+    best_width = 1
+    best_count = counter(1)
+    best_error = abs(best_count - target_count)
+    for width in range(2, max_width + 1):
+        count = counter(width)
+        error = abs(count - target_count)
+        if error < best_error:
+            best_width = width
+            best_count = count
+            best_error = error
+    return best_width, best_count
 
 
 @dataclasses.dataclass(frozen=True)
@@ -66,10 +131,6 @@ class FutureMambaConfig(pi0_config.Pi0Config):
 
     @override
     def create(self, rng: at.KeyArrayLike):
-        if self.memory_backend != "mamba":
-            raise NotImplementedError(f"FutureMamba memory_backend={self.memory_backend!r} is not implemented")
-        if self.decoder_mode != "handoff":
-            raise NotImplementedError(f"FutureMamba decoder_mode={self.decoder_mode!r} is not implemented")
         from openpi.models.futuremamba import FutureMamba
 
         return FutureMamba(self, rngs=nnx.Rngs(rng))
@@ -80,6 +141,91 @@ class FutureMambaConfig(pi0_config.Pi0Config):
     @override
     def get_freeze_filter(self) -> nnx.filterlib.Filter:
         return nnx.All(nnx.Param, nnx.Not(nnx_utils.PathRegex("futuremamba/.*")))
+
+    @property
+    def mamba_memory_parameter_count(self) -> int:
+        return _mamba_parameter_count(self.memory)
+
+    def _memory_backend_parameter_info(self) -> tuple[int, int, float, bool]:
+        target = self.mamba_memory_parameter_count
+        d_model = int(self.memory.d_model)
+        if self.memory_backend == "mamba":
+            width = d_model * int(self.memory.expand)
+            count = target
+        elif self.memory_backend == "gru":
+            width, count = _nearest_hidden_width(target, lambda hidden: _gru_parameter_count(d_model, hidden))
+        elif self.memory_backend == "lstm":
+            width, count = _nearest_hidden_width(target, lambda hidden: _lstm_parameter_count(d_model, hidden))
+        elif self.memory_backend == "frame_stack":
+            width, count = _nearest_hidden_width(
+                target, lambda hidden: _frame_stack_parameter_count(d_model, int(self.frame_stack_window), hidden)
+            )
+        elif self.memory_backend == "none":
+            width, count = 0, 0
+        else:
+            raise ValueError(f"Unknown memory_backend: {self.memory_backend!r}")
+        error = 0.0 if target == 0 else abs(float(count) - float(target)) / float(target)
+        matched = error <= _PARAMETER_MATCH_TOLERANCE
+        return width, count, error, matched
+
+    @property
+    def memory_backend_hidden_width(self) -> int:
+        return self._memory_backend_parameter_info()[0]
+
+    @property
+    def memory_backend_parameter_count(self) -> int:
+        return self._memory_backend_parameter_info()[1]
+
+    @property
+    def memory_backend_parameter_error(self) -> float:
+        return self._memory_backend_parameter_info()[2]
+
+    @property
+    def memory_backend_parameter_matched(self) -> bool:
+        return self._memory_backend_parameter_info()[3]
+
+    def checkpoint_metadata(self) -> dict[str, object]:
+        switches = {
+            "rho": self.handoff_ratio,
+            "handoff_ratio": self.handoff_ratio,
+            "depth": self.progress_depth,
+            "progress_depth": self.progress_depth,
+            "progress_prefix_layer_indices": self.resolved_progress_layer_indices,
+            "handoff_loss_weight": self.handoff_loss_weight,
+            "boundary_loss_weight": self.boundary_loss_weight,
+            "loss_weights": {
+                "handoff": self.handoff_loss_weight,
+                "boundary": self.boundary_loss_weight,
+            },
+            "memory_input": self.memory_input,
+            "token_only": self.memory_input == "token_only",
+            "pooling": self.conditioning_pool,
+            "conditioning_pool": self.conditioning_pool,
+            "prefix_cache": self.use_prefix_cache,
+            "use_prefix_cache": self.use_prefix_cache,
+            "reset_every_query": self.reset_memory_every_query,
+            "reset_memory_every_query": self.reset_memory_every_query,
+            "backend": self.memory_backend,
+            "memory_backend": self.memory_backend,
+            "decoder": self.decoder_mode,
+            "decoder_mode": self.decoder_mode,
+            "coupling": self.coupling,
+            "frame_stack_window": self.frame_stack_window,
+            "bptt_window_queries": self.bptt_window_queries,
+            "bptt": self.bptt_window_queries,
+            "memory": dataclasses.asdict(self.memory),
+        }
+        width, count, error, matched = self._memory_backend_parameter_info()
+        return {
+            **switches,
+            "memory_backend_hidden_width": width,
+            "memory_parameter_count": count,
+            "mamba_memory_parameter_count": self.mamba_memory_parameter_count,
+            "memory_parameter_error": error,
+            "parameter_matched": matched,
+            "parameter_match_tolerance": _PARAMETER_MATCH_TOLERANCE,
+            "all_ablation_switches": switches,
+        }
 
     def _validate_config(self) -> None:
         if not 0 <= self.handoff_ratio <= 1:
@@ -118,10 +264,7 @@ class FutureMambaConfig(pi0_config.Pi0Config):
 
         self._validate_progress_layer_indices(action_config.depth)
         self._validate_enums()
-        if self.memory_backend != "mamba":
-            raise NotImplementedError(f"FutureMamba memory_backend={self.memory_backend!r} is not implemented")
-        if self.decoder_mode != "handoff":
-            raise NotImplementedError(f"FutureMamba decoder_mode={self.decoder_mode!r} is not implemented")
+        _ = self.memory_backend_parameter_error
 
     def _validate_progress_layer_indices(self, action_depth: int) -> None:
         if self.progress_prefix_layer_indices is None:

@@ -86,11 +86,27 @@ def test_config_default_progress_layer_indices_use_even_mapping():
     assert config.resolved_progress_layer_indices == make_layer_mapping(4, 4)
 
 
-def test_config_rejects_unimplemented_variants_at_construction():
-    with pytest.raises(NotImplementedError, match="memory_backend"):
-        _dummy_config(memory_backend="gru")
-    with pytest.raises(NotImplementedError, match="decoder_mode"):
-        _dummy_config(decoder_mode="action_memory_full")
+def test_config_supports_ablation_backends_and_serializable_metadata():
+    for backend in ("mamba", "gru", "lstm", "frame_stack", "none"):
+        config = _dummy_config(memory_backend=backend)
+        metadata = config.checkpoint_metadata()
+        assert metadata["memory_backend"] == backend
+        assert metadata["rho"] == config.handoff_ratio
+        assert metadata["decoder_mode"] == "handoff"
+        assert metadata["coupling"] == "hard"
+        assert metadata["memory_parameter_error"] >= 0.0
+        assert isinstance(metadata["parameter_matched"], bool)
+
+    full = _dummy_config(decoder_mode="action_memory_full", coupling="residual", bptt_window_queries=2)
+    metadata = full.checkpoint_metadata()
+    assert metadata["decoder_mode"] == "action_memory_full"
+    assert metadata["coupling"] == "residual"
+    assert metadata["bptt_window_queries"] == 2
+    assert metadata["all_ablation_switches"]["use_prefix_cache"] is True
+
+    unmatched = _dummy_config(memory_backend="frame_stack", frame_stack_window=2_000)
+    assert unmatched.memory_backend_parameter_matched is False
+    assert unmatched.checkpoint_metadata()["parameter_matched"] is False
 
 
 def test_config_rejects_mamba_width_mismatch():
@@ -262,35 +278,47 @@ def test_memory_scan_resets_before_step_and_freezes_invalid_queries():
     jax.tree.map(lambda expected, got: np.testing.assert_allclose(got[1:2], expected, rtol=1e-5, atol=1e-5), single_state, next_state)
 
 
-def test_integrate_handoff_uses_hard_step_split_and_no_extra_resampling():
-    calls = {"progress": 0, "action": 0}
+@pytest.mark.parametrize(
+    ("coupling", "expected", "calls"),
+    [
+        ("hard", -6.0, {"progress": 2, "action": 2}),
+        ("convex", -5.0, {"progress": 2, "action": 4}),
+        ("residual", -5.75, {"progress": 2, "action": 4}),
+    ],
+)
+def test_integrate_handoff_uses_exact_coupling_formulas_and_reports_solver_stats(coupling, expected, calls):
+    actual_calls = {"progress": 0, "action": 0}
     seen = []
 
     def progress_velocity(x, t):
-        calls["progress"] += 1
-        seen.append(np.asarray(x).copy())
-        return jnp.ones_like(x)
+        actual_calls["progress"] += 1
+        seen.append(("progress", np.asarray(x).copy(), np.asarray(t).copy()))
+        return 10.0 * jnp.ones_like(x)
 
     def action_velocity(x, t):
-        calls["action"] += 1
-        seen.append(np.asarray(x).copy())
+        actual_calls["action"] += 1
+        seen.append(("action", np.asarray(x).copy(), np.asarray(t).copy()))
         return 2.0 * jnp.ones_like(x)
 
-    noise = jnp.zeros((1, 2, 3), dtype=jnp.float32)
+    noise = jnp.zeros((1, 1, 1), dtype=jnp.float32)
     result, diagnostics = integrate_handoff(
         noise,
-        num_steps=10,
+        num_steps=4,
         handoff_steps=2,
         progress_velocity=progress_velocity,
         action_velocity=action_velocity,
+        coupling=coupling,
     )
 
-    assert calls == {"progress": 2, "action": 8}
-    assert diagnostics["progress_calls"] == 2
-    assert diagnostics["action_calls"] == 8
-    np.testing.assert_allclose(diagnostics["handoff_state"], -0.2 * jnp.ones_like(noise), rtol=1e-6, atol=1e-6)
-    np.testing.assert_allclose(result, -1.8 * jnp.ones_like(noise), rtol=1e-6, atol=1e-6)
-    np.testing.assert_allclose(seen[2], diagnostics["handoff_state"], rtol=1e-6, atol=1e-6)
+    assert actual_calls == calls
+    assert diagnostics["progress_calls"] == calls["progress"]
+    assert diagnostics["action_calls"] == calls["action"]
+    assert diagnostics["solver_steps"] == 4
+    assert diagnostics["solver_dt"] == -0.25
+    np.testing.assert_allclose(result, expected * jnp.ones_like(noise), rtol=1e-6, atol=1e-6)
+    if coupling == "hard":
+        np.testing.assert_allclose(diagnostics["handoff_state"], -5.0 * jnp.ones_like(noise), rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(seen[2][1], diagnostics["handoff_state"], rtol=1e-6, atol=1e-6)
 
 
 def test_sample_actions_with_memory_matches_parent_at_zero_handoff_and_skips_action_at_full_handoff(monkeypatch):
@@ -361,5 +389,136 @@ def test_compute_episode_loss_masks_padding_queries_and_returns_fixed_keys(monke
 
     sampled_time = model._sample_high_noise_time(jax.random.key(1), (1024,), handoff_steps=2, num_steps=10)
     assert jnp.all(sampled_time >= 0.8)
+
+
+def test_initial_memory_state_is_stable_pytree_for_all_backends():
+    for backend in ("mamba", "gru", "lstm", "frame_stack", "none"):
+        config = _dummy_config(memory_backend=backend, frame_stack_window=3)
+        model = config.create(jax.random.key(0))
+        state = model.initial_memory_state(batch_size=2)
+        restored = jax.tree.map(lambda x: jnp.array(x), state)
+        leaves = jax.tree.leaves(restored)
+        assert leaves
+        assert all(leaf.shape[0] == 2 for leaf in leaves)
+
+        prefix_inputs = jnp.ones((2, 3, config.memory.d_model), dtype=jnp.float32)
+        executed_actions = jnp.zeros((2, 3, config.executed_horizon, config.action_dim), dtype=jnp.float32)
+        executed_mask = jnp.zeros((2, 3, config.executed_horizon), dtype=jnp.bool_)
+        query_mask = jnp.ones((2, 3), dtype=jnp.bool_)
+        reset_mask = jnp.zeros((2, 3), dtype=jnp.bool_)
+        tokens, next_state = model._scan_memory(prefix_inputs, executed_actions, executed_mask, query_mask, reset_mask, state)
+        assert tokens.shape == (2, 3, config.memory.d_model)
+        assert jax.tree.structure(next_state) == jax.tree.structure(state)
+
+
+def test_action_memory_full_skips_progress_and_conditions_all_solver_steps(monkeypatch):
+    config = _dummy_config(action_horizon=4, executed_horizon=2, decoder_mode="action_memory_full")
+    model = config.create(jax.random.key(0))
+    obs = config.fake_obs(batch_size=1)
+    state = model.initial_memory_state(batch_size=1)
+    noise = jnp.zeros((1, config.action_horizon, config.action_dim), dtype=jnp.float32)
+    prefix_mask = jnp.ones((1, 1), dtype=jnp.bool_)
+    kv_cache = (
+        jnp.zeros((4, 1, 1, 1, 16), dtype=jnp.float32),
+        jnp.zeros((4, 1, 1, 1, 16), dtype=jnp.float32),
+    )
+    memory_token = jnp.ones((1, 1, config.memory.d_model), dtype=jnp.float32)
+    calls = {"action_memory": 0}
+
+    def prepare_memory_context(*args, **kwargs):
+        del args, kwargs
+        return prefix_mask, kv_cache, memory_token, state
+
+    def fail_progress(*args, **kwargs):
+        raise AssertionError("Progress Expert must not run for action_memory_full")
+
+    def action_memory_velocity(observation, x_t, timestep, prefix_mask_arg, kv_cache_arg, memory_token_arg):
+        del observation, timestep, prefix_mask_arg, kv_cache_arg
+        calls["action_memory"] += 1
+        np.testing.assert_allclose(memory_token_arg, memory_token)
+        return jnp.ones_like(x_t)
+
+    monkeypatch.setattr(model, "_prepare_memory_context", prepare_memory_context)
+    monkeypatch.setattr(model.futuremamba, "progress_expert", fail_progress)
+    monkeypatch.setattr(model, "_action_velocity_with_memory_full", action_memory_velocity)
+
+    actions, next_state, diagnostics = model.sample_actions_with_memory(
+        jax.random.key(1),
+        obs,
+        state,
+        jnp.zeros((1, config.executed_horizon, config.action_dim), dtype=jnp.float32),
+        jnp.zeros((1, config.executed_horizon), dtype=jnp.bool_),
+        num_steps=3,
+        noise=noise,
+    )
+
+    np.testing.assert_allclose(actions, -jnp.ones_like(noise), rtol=1e-6, atol=1e-6)
+    assert next_state is state
+    assert calls["action_memory"] == 3
+    assert diagnostics["progress_calls"] == 0
+    assert diagnostics["action_calls"] == 3
+
+
+def test_action_memory_full_appends_trainable_memory_kv_without_mutating_prefix_cache():
+    config = _dummy_config(decoder_mode="action_memory_full")
+    model = config.create(jax.random.key(0))
+    action_config = _futuremamba._gemma.get_config(config.action_expert_variant)
+    prefix_k = jnp.zeros((action_config.depth, 2, 3, action_config.num_kv_heads, action_config.head_dim), dtype=jnp.float32)
+    prefix_v = jnp.zeros_like(prefix_k)
+    memory_token = jnp.ones((2, 1, action_config.width), dtype=jnp.float32)
+
+    augmented_k, augmented_v = model._augment_kv_cache_with_memory((prefix_k, prefix_v), memory_token)
+
+    assert augmented_k.shape == (action_config.depth, 2, 4, action_config.num_kv_heads, action_config.head_dim)
+    assert augmented_v.shape == augmented_k.shape
+    np.testing.assert_allclose(augmented_k[:, :, :3], prefix_k, rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(augmented_v[:, :, :3], prefix_v, rtol=1e-6, atol=1e-6)
+    assert not np.allclose(np.asarray(augmented_k[:, :, 3]), 0.0)
+
+
+def test_bptt_window_stops_gradient_at_window_boundary_but_uses_real_burn_in(monkeypatch):
+    config = _dummy_config(bptt_window_queries=2)
+    model = config.create(jax.random.key(0))
+
+    class AdditiveMemory:
+        def initial_state(self, batch_size: int, dtype=jnp.float32):
+            return (jnp.zeros((batch_size, config.memory.d_model), dtype=dtype),)
+
+        def step(self, x, state):
+            next_value = state[0] + x
+            return next_value, (next_value,)
+
+    monkeypatch.setattr(model.futuremamba, "memory", AdditiveMemory())
+    monkeypatch.setattr(model, "_memory_step_input", lambda prefix_input, executed_actions, executed_action_mask: prefix_input)
+    prefix_inputs = jnp.arange(4 * config.memory.d_model, dtype=jnp.float32).reshape(1, 4, config.memory.d_model) / 10.0
+    executed_actions = jnp.zeros((1, 4, config.executed_horizon, config.action_dim), dtype=jnp.float32)
+    executed_mask = jnp.zeros((1, 4, config.executed_horizon), dtype=jnp.bool_)
+    query_mask = jnp.ones((1, 4), dtype=jnp.bool_)
+    reset_mask = jnp.zeros((1, 4), dtype=jnp.bool_)
+
+    def final_sum(inputs):
+        tokens, _ = model._scan_memory(
+            inputs,
+            executed_actions,
+            executed_mask,
+            query_mask,
+            reset_mask,
+            model.initial_memory_state(batch_size=1),
+        )
+        return jnp.sum(tokens[:, -1])
+
+    tokens, _ = model._scan_memory(
+        prefix_inputs,
+        executed_actions,
+        executed_mask,
+        query_mask,
+        reset_mask,
+        model.initial_memory_state(batch_size=1),
+    )
+    np.testing.assert_allclose(tokens[:, -1], jnp.sum(prefix_inputs, axis=1), rtol=1e-6, atol=1e-6)
+
+    grad = jax.grad(final_sum)(prefix_inputs)
+    np.testing.assert_allclose(grad[:, :2], 0.0, rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(grad[:, 2:], 1.0, rtol=1e-6, atol=1e-6)
 
 
