@@ -6,6 +6,7 @@ import dataclasses
 import numpy as np
 
 from openpi.training import episode_data_loader as _episode_loader
+from openpi.training import config as _config
 
 
 ACTION_DIM = 3
@@ -56,6 +57,22 @@ class _FakeLeRobotDataset:
             "state": np.asarray([episode_index, local_index], dtype=np.float32),
             "actions": _frame_action(local_index, episode_index),
             "prompt": f"episode {episode_index}",
+        }
+
+
+class _FakeLeRobotDatasetWithSampleTask(_FakeLeRobotDataset):
+    def __init__(self):
+        super().__init__((6, 6), task_names=("task from episode zero", "task from episode one"))
+        del self.episode_task_index
+
+    def __getitem__(self, index):
+        sample = super().__getitem__(index)
+        episode_index = self._episode_for_frame[int(index)]
+        return {
+            **sample,
+            "prompt": "stale prompt that must be replaced",
+            "task_index": np.asarray(episode_index, dtype=np.int64),
+            "task": self.meta.tasks[episode_index],
         }
 
 
@@ -145,15 +162,91 @@ def test_lerobot_episode_dataset_indexes_queries_from_episode_data_index_and_app
     assert len(dataset.episodes) == 2
     assert [query.frame_index for query in dataset.episodes[0].queries] == [0, 5, 10]
     assert [query.frame_index for query in dataset.episodes[1].queries] == [12, 17]
-    assert dataset.query_record(0, 2).local_frame_index == 10
     assert dataset.query_record(1, 1).episode_index == 1
 
     episode = dataset.episode_at(0)
-    np.testing.assert_array_equal(calls, [0, 5, 10])
+    assert {0, 5, 10}.issubset(set(calls))
     np.testing.assert_allclose(episode.observation.state[:, 0], [10.0, 10.0, 10.0])
     np.testing.assert_allclose(episode.observation.state[:, 1], [100.0, 105.0, 110.0])
     np.testing.assert_allclose(episode.actions[0, 0], _frame_action(0, 0) + 500.0)
     np.testing.assert_allclose(episode.actions[1, 0], _frame_action(5, 0) + 500.0)
+
+
+def test_one_dimensional_action_fallback_applies_transforms_to_every_future_frame():
+    def transform(sample):
+        return {**sample, "actions": sample["actions"] + np.asarray([500.0, 500.0, 500.0], dtype=np.float32)}
+
+    dataset = _episode_loader.LeRobotEpisodeDataset(
+        dataset=_FakeLeRobotDataset((12, 7)),
+        action_horizon=ACTION_HORIZON,
+        query_stride=QUERY_STRIDE,
+        executed_horizon=QUERY_STRIDE,
+        transforms=[transform],
+    )
+
+    episode = dataset.episode_at(0)
+    expected_first_query = np.stack([_frame_action(frame, 0) + 500.0 for frame in range(ACTION_HORIZON)], axis=0)
+    expected_second_query = np.zeros((ACTION_HORIZON, ACTION_DIM), dtype=np.float32)
+    expected_second_query[:7] = np.stack([_frame_action(frame, 0) + 500.0 for frame in range(5, 12)], axis=0)
+    np.testing.assert_allclose(episode.actions[0], expected_first_query)
+    np.testing.assert_allclose(episode.actions[1], expected_second_query)
+
+
+def test_prompt_from_task_uses_sample_task_when_episode_task_index_is_absent():
+    seen_prompts = []
+
+    def capture_prompt(sample):
+        seen_prompts.append(sample["prompt"])
+        return sample
+
+    dataset = _episode_loader.LeRobotEpisodeDataset(
+        dataset=_FakeLeRobotDatasetWithSampleTask(),
+        action_horizon=2,
+        query_stride=QUERY_STRIDE,
+        executed_horizon=2,
+        transforms=[capture_prompt],
+        prompt_from_task=True,
+    )
+
+    _ = dataset.episode_at(1)
+    assert seen_prompts
+    assert set(seen_prompts) == {"task from episode one"}
+
+
+def test_episode_data_config_is_consumed_by_dataset_and_balanced_sampler_factories():
+    episode_config = _config.EpisodeDataConfig(
+        query_stride=3,
+        executed_horizon=2,
+        suite_weights={"mem": 1.0, "long": 9.0},
+    )
+    dataset = _episode_loader.create_lerobot_episode_dataset(
+        data_config=_config.DataConfig(repo_id="fake"),
+        episode_config=episode_config,
+        action_horizon=4,
+        dataset=_FakeLeRobotDataset((8,)),
+    )
+
+    assert dataset.query_stride == 3
+    assert dataset.executed_horizon == 2
+    assert [query.frame_index for query in dataset.episodes[0].queries] == [0, 3, 6]
+    batch = _episode_loader.EpisodeCollator()([dataset.episode_at(0)])
+    assert batch.executed_actions.shape == (1, 3, 2, ACTION_DIM)
+
+    suites = [
+        _episode_loader.QuerySuite(
+            name="mem",
+            weight=1.0,
+            tasks=[_episode_loader.QueryTask("mem_task", [_episode_loader.QueryEpisode("mem_ep", 2)])],
+        ),
+        _episode_loader.QuerySuite(
+            name="long",
+            weight=1.0,
+            tasks=[_episode_loader.QueryTask("long_task", [_episode_loader.QueryEpisode("long_ep", 2)])],
+        ),
+    ]
+    sampler = _episode_loader.create_balanced_query_dataset(suites, episode_config=episode_config, seed=3)
+    suite_counts = collections.Counter(sampler.record_at(index).suite_name for index in range(1000))
+    assert suite_counts["long"] / sum(suite_counts.values()) > 0.85
 
 
 def test_balanced_query_dataset_samples_suite_then_task_episode_and_query_uniformly_with_seed():

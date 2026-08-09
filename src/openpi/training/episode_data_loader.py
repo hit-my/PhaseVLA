@@ -208,9 +208,21 @@ class LeRobotEpisodeDataset:
     def _with_prompt(self, sample: dict[str, Any], record: EpisodeRecord) -> dict[str, Any]:
         if not self._prompt_from_task:
             return sample
-        if record.task_index is None or record.task_name is None:
+
+        task_index = record.task_index
+        task_name = record.task_name
+        if task_index is None and "task_index" in sample:
+            task_index = int(np.asarray(sample["task_index"]).item())
+            task_name = task_name or self._tasks.get(task_index)
+        if task_name is None and "task" in sample:
+            task_name = _string_from_value(sample["task"])
+        if task_name is None:
             return sample
-        return {**sample, "task_index": record.task_index, "prompt": record.task_name}
+
+        result = {**sample, "prompt": task_name}
+        if task_index is not None:
+            result["task_index"] = task_index
+        return result
 
     def _action_chunk(
         self, record: EpisodeRecord, query: QueryRecord, transformed_query: dict[str, Any]
@@ -234,7 +246,8 @@ class LeRobotEpisodeDataset:
             frame_index = query.frame_index + horizon_index
             if frame_index >= record.end_frame:
                 break
-            chunk[horizon_index] = _as_action_array(self._dataset[frame_index]["actions"])
+            transformed = self._transform(self._with_prompt(self._dataset[frame_index], record))
+            chunk[horizon_index] = _as_action_array(transformed["actions"])
             mask[horizon_index] = True
         return chunk, mask
 
@@ -389,6 +402,40 @@ def make_transform_pipeline(data_config: Any, *, skip_norm_stats: bool = False) 
     )
 
 
+def create_lerobot_episode_dataset(
+    *,
+    data_config: Any,
+    episode_config: Any,
+    action_horizon: int,
+    dataset: _RandomAccessDataset | None = None,
+    skip_norm_stats: bool = False,
+    dataset_factory: Callable[..., _RandomAccessDataset] | None = None,
+    dataset_metadata_factory: Callable[[str], Any] | None = None,
+) -> LeRobotEpisodeDataset:
+    return LeRobotEpisodeDataset(
+        dataset=dataset,
+        repo_id=None if dataset is not None else data_config.repo_id,
+        action_horizon=action_horizon,
+        query_stride=episode_config.query_stride,
+        executed_horizon=episode_config.executed_horizon,
+        transforms=make_transform_pipeline(data_config, skip_norm_stats=skip_norm_stats),
+        action_sequence_keys=data_config.action_sequence_keys,
+        prompt_from_task=data_config.prompt_from_task,
+        dataset_factory=dataset_factory,
+        dataset_metadata_factory=dataset_metadata_factory,
+    )
+
+
+def create_balanced_query_dataset(
+    suites: Sequence[QuerySuite], *, episode_config: Any, seed: int = 0
+) -> BalancedQueryDataset:
+    suite_weights = getattr(episode_config, "suite_weights", {}) or {}
+    configured_suites = tuple(
+        dataclasses.replace(suite, weight=float(suite_weights.get(suite.name, suite.weight))) for suite in suites
+    )
+    return BalancedQueryDataset(configured_suites, seed=seed)
+
+
 def _to_int_array(value: Any) -> np.ndarray:
     if hasattr(value, "numpy"):
         value = value.numpy()
@@ -401,6 +448,12 @@ def _tasks_from_dataset(dataset: Any) -> dict[int, str]:
     if hasattr(dataset, "tasks"):
         return {int(key): value for key, value in dataset.tasks.items()}
     return {}
+
+
+def _string_from_value(value: Any) -> str:
+    if hasattr(value, "item"):
+        value = value.item()
+    return str(value)
 
 
 def _as_action_array(value: Any) -> np.ndarray:
