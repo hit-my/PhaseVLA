@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 from typing import Dict, Optional, Tuple
 
@@ -25,6 +26,7 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
         self._packer = msgpack_numpy.Packer()
         self._api_key = api_key
         self._ws, self._server_metadata = self._wait_for_server()
+        self._lock = threading.Lock()
 
     def get_server_metadata(self) -> Dict:
         return self._server_metadata
@@ -45,14 +47,22 @@ class WebsocketClientPolicy(_base_policy.BasePolicy):
 
     @override
     def infer(self, obs: Dict) -> Dict:  # noqa: UP006
-        data = self._packer.pack(obs)
-        self._ws.send(data)
-        response = self._ws.recv()
-        if isinstance(response, str):
-            # we're expecting bytes; if the server sends a string, it's an error.
-            raise RuntimeError(f"Error in inference server:\n{response}")
-        return msgpack_numpy.unpackb(response)
+        with self._lock:
+            data = self._packer.pack(obs)
+            self._ws.send(data)
+            response = self._ws.recv()
+            if isinstance(response, str):
+                # we're expecting bytes; if the server sends a string, it's an error.
+                raise RuntimeError(f"Error in inference server:\n{response}")
+            return msgpack_numpy.unpackb(response)
 
     @override
     def reset(self) -> None:
-        pass
+        with self._lock:
+            self._ws.send(self._packer.pack({"__openpi_control__": "reset"}))
+            response = self._ws.recv()
+            if isinstance(response, str):
+                raise RuntimeError(f"Error in inference server:\n{response}")
+            ack = msgpack_numpy.unpackb(response)
+            if ack != {"reset": True}:
+                raise RuntimeError(f"Unexpected reset response from inference server: {ack}")

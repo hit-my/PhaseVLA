@@ -92,6 +92,8 @@ def eval_libero(args: Args) -> None:
             # Reset environment
             env.reset()
             action_plan = collections.deque()
+            client.reset()
+            executed_actions = []
 
             # Set initial states
             obs = env.set_init_state(initial_states[episode_idx])
@@ -138,7 +140,9 @@ def eval_libero(args: Args) -> None:
                                 )
                             ),
                             "prompt": str(task_description),
+                            "executed_actions": np.asarray(executed_actions, dtype=np.float32).reshape((-1, 7)),
                         }
+                        executed_actions = []
 
                         # Query model to get action
                         action_chunk = client.infer(element)["actions"]
@@ -151,6 +155,7 @@ def eval_libero(args: Args) -> None:
 
                     # Execute action in environment
                     obs, reward, done, info = env.step(action.tolist())
+                    executed_actions.append(np.asarray(action, dtype=np.float32))
                     if done:
                         task_successes += 1
                         total_successes += 1

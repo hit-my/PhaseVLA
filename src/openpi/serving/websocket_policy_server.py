@@ -48,6 +48,7 @@ class WebsocketPolicyServer:
     async def _handler(self, websocket: _server.ServerConnection):
         logger.info(f"Connection from {websocket.remote_address} opened")
         packer = msgpack_numpy.Packer()
+        policy = self._policy.fork()
 
         await websocket.send(packer.pack(self._metadata))
 
@@ -57,8 +58,14 @@ class WebsocketPolicyServer:
                 start_time = time.monotonic()
                 obs = msgpack_numpy.unpackb(await websocket.recv())
 
+                if isinstance(obs, dict) and "__openpi_control__" in obs:
+                    response = _handle_control(policy, obs["__openpi_control__"])
+                    await websocket.send(packer.pack(response))
+                    prev_total_time = time.monotonic() - start_time
+                    continue
+
                 infer_time = time.monotonic()
-                action = self._policy.infer(obs)
+                action = policy.infer(obs)
                 infer_time = time.monotonic() - infer_time
 
                 action["server_timing"] = {
@@ -81,6 +88,13 @@ class WebsocketPolicyServer:
                     reason="Internal server error. Traceback included in previous frame.",
                 )
                 raise
+
+
+def _handle_control(policy: _base_policy.BasePolicy, control: object) -> dict:
+    if control == "reset":
+        policy.reset()
+        return {"reset": True}
+    return {"error": "unknown_control", "message": f"Unknown control message: {control}"}
 
 
 def _health_check(connection: _server.ServerConnection, request: _server.Request) -> _server.Response | None:

@@ -6,7 +6,9 @@ from typing import Any
 import jax.numpy as jnp
 
 import openpi.models.model as _model
+import openpi.models.futuremamba_config as _futuremamba_config
 import openpi.policies.policy as _policy
+import openpi.policies.futuremamba_policy as _futuremamba_policy
 import openpi.shared.download as download
 from openpi.training import checkpoints as _checkpoints
 from openpi.training import config as _config
@@ -72,21 +74,46 @@ def create_trained_policy(
         except ImportError:
             pytorch_device = "cpu"
 
+    is_futuremamba = isinstance(train_config.model, _futuremamba_config.FutureMambaConfig)
+    input_transforms = [
+        *repack_transforms.inputs,
+        transforms.InjectDefaultPrompt(default_prompt),
+        *data_config.data_transforms.inputs,
+        transforms.Normalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
+    ]
+    if is_futuremamba:
+        action_stats = None if norm_stats is None else norm_stats.get("actions")
+        input_transforms.append(transforms.NormalizeExecutedActions(action_stats, use_quantiles=data_config.use_quantile_norm))
+        input_transforms.append(
+            transforms.PadExecutedActions(
+                executed_horizon=train_config.model.executed_horizon,
+                action_dim=train_config.model.action_dim,
+            )
+        )
+    input_transforms.extend(data_config.model_transforms.inputs)
+
+    output_transforms = [
+        *data_config.model_transforms.outputs,
+        transforms.Unnormalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
+        *data_config.data_transforms.outputs,
+        *repack_transforms.outputs,
+    ]
+    if is_futuremamba:
+        futuremamba_sample_kwargs = dict(sample_kwargs or {})
+        futuremamba_sample_kwargs.setdefault("num_steps", train_config.model.num_denoise_steps)
+        futuremamba_sample_kwargs.setdefault("handoff_ratio", train_config.model.handoff_ratio)
+        return _futuremamba_policy.FutureMambaPolicy(
+            model,
+            transforms=input_transforms,
+            output_transforms=output_transforms,
+            sample_kwargs=futuremamba_sample_kwargs,
+            metadata=train_config.policy_metadata,
+        )
+
     return _policy.Policy(
         model,
-        transforms=[
-            *repack_transforms.inputs,
-            transforms.InjectDefaultPrompt(default_prompt),
-            *data_config.data_transforms.inputs,
-            transforms.Normalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
-            *data_config.model_transforms.inputs,
-        ],
-        output_transforms=[
-            *data_config.model_transforms.outputs,
-            transforms.Unnormalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
-            *data_config.data_transforms.outputs,
-            *repack_transforms.outputs,
-        ],
+        transforms=input_transforms,
+        output_transforms=output_transforms,
         sample_kwargs=sample_kwargs,
         metadata=train_config.policy_metadata,
         is_pytorch=is_pytorch,

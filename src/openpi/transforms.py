@@ -146,6 +146,58 @@ class Normalize(DataTransformFn):
 
 
 @dataclasses.dataclass(frozen=True)
+class NormalizeExecutedActions(DataTransformFn):
+    """Normalize executed action prefixes using target-action statistics."""
+
+    norm_stats: NormStats | None
+    use_quantiles: bool = False
+
+    def __call__(self, data: DataDict) -> DataDict:
+        if self.norm_stats is None or "executed_actions" not in data:
+            return data
+
+        executed_actions = data["executed_actions"]
+        if self.use_quantiles:
+            if self.norm_stats.q01 is None or self.norm_stats.q99 is None:
+                raise ValueError("quantile stats must be provided when use_quantiles is True")
+            q01 = self.norm_stats.q01[..., : executed_actions.shape[-1]]
+            q99 = self.norm_stats.q99[..., : executed_actions.shape[-1]]
+            data["executed_actions"] = (executed_actions - q01) / (q99 - q01 + 1e-6) * 2.0 - 1.0
+            return data
+        mean = self.norm_stats.mean[..., : executed_actions.shape[-1]]
+        std = self.norm_stats.std[..., : executed_actions.shape[-1]]
+        data["executed_actions"] = (executed_actions - mean) / (std + 1e-6)
+        return data
+
+
+@dataclasses.dataclass(frozen=True)
+class PadExecutedActions(DataTransformFn):
+    """Pad executed action prefixes and expose a validity mask."""
+
+    executed_horizon: int
+    action_dim: int
+
+    def __call__(self, data: DataDict) -> DataDict:
+        executed_actions = np.asarray(data.get("executed_actions", np.zeros((0, 0), dtype=np.float32)))
+        if executed_actions.ndim != 2:
+            raise ValueError(f"executed_actions must be rank 2, got shape {executed_actions.shape}")
+        if executed_actions.shape[0] > self.executed_horizon:
+            raise ValueError(
+                f"executed_actions length {executed_actions.shape[0]} exceeds horizon {self.executed_horizon}"
+            )
+
+        prefix_len = executed_actions.shape[0]
+        padded = pad_to_dim(executed_actions, self.action_dim, axis=-1)
+        if padded.shape[-1] > self.action_dim:
+            raise ValueError(f"executed_actions width {padded.shape[-1]} exceeds action_dim {self.action_dim}")
+        if prefix_len < self.executed_horizon:
+            padded = np.pad(padded, [(0, self.executed_horizon - prefix_len), (0, 0)])
+        data["executed_actions"] = padded
+        data["executed_action_mask"] = np.arange(self.executed_horizon) < prefix_len
+        return data
+
+
+@dataclasses.dataclass(frozen=True)
 class Unnormalize(DataTransformFn):
     norm_stats: at.PyTree[NormStats] | None
     # If true, will use quantile normalization. Otherwise, normal z-score normalization will be used.
