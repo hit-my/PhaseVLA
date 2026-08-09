@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import pathlib
 import re
 import urllib.parse
 from typing import Protocol, runtime_checkable
@@ -63,13 +64,25 @@ class PartialCheckpointWeightLoader(WeightLoader):
     missing_regex: str = "futuremamba/.*"
 
     def load(self, params: at.Params) -> at.Params:
-        parsed = urllib.parse.urlparse(self.params_path)
-        if parsed.scheme:
-            raise ValueError(
-                f"PartialCheckpointWeightLoader only supports local checkpoint paths; got URI scheme {parsed.scheme!r}"
-            )
-        loaded_params = _model.restore_params(self.params_path, restore_type=np.ndarray)
+        params_path = _require_existing_local_path(self.params_path)
+        loaded_params = _model.restore_params(params_path, restore_type=np.ndarray)
         return _strict_merge_params(loaded_params, params, missing_regex=self.missing_regex)
+
+
+def _require_existing_local_path(params_path: str) -> pathlib.Path:
+    parsed = urllib.parse.urlparse(params_path)
+    if parsed.scheme:
+        raise ValueError(
+            "PartialCheckpointWeightLoader requires params_path to be an existing local file or directory; "
+            f"got URI scheme {parsed.scheme!r} for {params_path!r}"
+        )
+    local_path = pathlib.Path(params_path).expanduser()
+    if not local_path.exists():
+        raise FileNotFoundError(
+            "PartialCheckpointWeightLoader requires params_path to be an existing local file or directory; "
+            f"got missing path {params_path!r}"
+        )
+    return local_path
 
 
 @dataclasses.dataclass(frozen=True)
