@@ -4,6 +4,7 @@ import dataclasses
 import importlib.util
 import json
 import pathlib
+import numpy as np
 import sys
 
 
@@ -69,6 +70,67 @@ class FakeClient:
 
 class ThreeQueryClient(FakeClient):
     pass
+
+class InferOnlyClient:
+    def __init__(self, chunks):
+        self._chunks = [np.asarray(chunk, dtype=np.float32) for chunk in chunks]
+        self.reset_calls = 0
+        self.infer_calls = []
+
+    def reset(self):
+        self.reset_calls += 1
+
+    def infer(self, payload):
+        self.infer_calls.append(dict(payload))
+        return {"actions": self._chunks[len(self.infer_calls) - 1]}
+
+
+def libero_observation(frame):
+    image = np.arange(256 * 256 * 3, dtype=np.uint8).reshape(256, 256, 3)
+    wrist_image = np.arange(256 * 256 * 3, dtype=np.uint8).reshape(256, 256, 3) + np.uint8(1)
+    return {
+        "agentview_image": image + np.uint8(frame),
+        "robot0_eye_in_hand_image": wrist_image + np.uint8(frame),
+        "robot0_eef_pos": np.asarray([1.0, 2.0, 3.0], dtype=np.float32) + frame,
+        "robot0_eef_quat": np.asarray([0.0, 0.0, 0.0, 1.0], dtype=np.float32),
+        "robot0_gripper_qpos": np.asarray([0.25], dtype=np.float32) + frame,
+    }
+
+
+def assert_infer_payload(payload, *, observation, prompt, executed_actions):
+    assert set(payload) == {
+        "observation/image",
+        "observation/wrist_image",
+        "observation/state",
+        "prompt",
+        "executed_actions",
+    }
+    assert payload["prompt"] == prompt
+    assert payload["observation/image"].shape == (224, 224, 3)
+    assert payload["observation/image"].dtype == np.uint8
+    np.testing.assert_array_equal(
+        payload["observation/image"],
+        main.image_tools.convert_to_uint8(
+            main.image_tools.resize_with_pad(np.ascontiguousarray(observation["agentview_image"][::-1, ::-1]), 224, 224)
+        ),
+    )
+    assert payload["observation/wrist_image"].shape == (224, 224, 3)
+    assert payload["observation/wrist_image"].dtype == np.uint8
+    np.testing.assert_array_equal(
+        payload["observation/wrist_image"],
+        main.image_tools.convert_to_uint8(
+            main.image_tools.resize_with_pad(
+                np.ascontiguousarray(observation["robot0_eye_in_hand_image"][::-1, ::-1]), 224, 224
+            )
+        ),
+    )
+    np.testing.assert_allclose(
+        payload["observation/state"],
+        np.asarray([*observation["robot0_eef_pos"], 0.0, 0.0, 0.0, *observation["robot0_gripper_qpos"]]),
+    )
+    assert payload["executed_actions"].dtype == np.float32
+    assert payload["executed_actions"].shape == executed_actions.shape
+    np.testing.assert_allclose(payload["executed_actions"], executed_actions)
 
 
 class FakeLibero10Env:
@@ -269,6 +331,106 @@ def test_run_single_episode_sends_only_last_executed_chunk_and_independent_query
     assert [call["query_index"] for call in client.query_calls] == [0, 1, 2]
     assert [call["executed_prefix"] for call in client.query_calls] == [[], ["a0", "a1"], ["b0", "b1"]]
 
+def test_infer_only_client_receives_flat_libero_payloads_with_previous_executed_actions(tmp_path):
+    action_a0 = np.asarray([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7], dtype=np.float32)
+    action_a1 = np.asarray([1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7], dtype=np.float32)
+    action_b0 = np.asarray([2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7], dtype=np.float32)
+    action_b1 = np.asarray([3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7], dtype=np.float32)
+    action_c0 = np.asarray([4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7], dtype=np.float32)
+    action_c1 = np.asarray([5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7], dtype=np.float32)
+    observations = [libero_observation(frame) for frame in range(6)]
+    adapter = FakeAdapter(
+        [
+            FakeSnapshot(False, [], False, {}, observations[0]),
+            FakeSnapshot(False, [], False, {}, observations[1]),
+            FakeSnapshot(False, ["a"], False, {"a": True}, observations[2]),
+            FakeSnapshot(False, ["a"], False, {"b": True}, observations[3]),
+            FakeSnapshot(False, ["a", "b"], False, {"b": True}, observations[4]),
+            FakeSnapshot(True, ["a", "b", "c"], False, {"c": True}, observations[5]),
+        ]
+    )
+    client = InferOnlyClient([[action_a0, action_a1], [action_b0, action_b1], [action_c0, action_c1]])
+
+    main.run_single_episode(
+        adapter=adapter,
+        client=client,
+        task="three chunks",
+        task_family="spatial",
+        memory_length=3,
+        goals={"Sequence": ["a", "b", "c"]},
+        config={"task_suite_name": "libero_mem", "replan_steps": 2},
+        checkpoint_checksum="sha256:def",
+        train_seed=5,
+        rollout_seed=13,
+        episode=0,
+        handoff_ratio=0.2,
+        history_condition="futuremamba",
+        max_steps=5,
+        replan_steps=2,
+        results_path=tmp_path / "episodes.jsonl",
+        stable_frames=1,
+        video_path=None,
+    )
+
+    assert client.reset_calls == 1
+    assert len(client.infer_calls) == 3
+    assert_infer_payload(
+        client.infer_calls[0],
+        observation=observations[0],
+        prompt="three chunks",
+        executed_actions=np.empty((0, 7), dtype=np.float32),
+    )
+    assert_infer_payload(
+        client.infer_calls[1],
+        observation=observations[2],
+        prompt="three chunks",
+        executed_actions=np.asarray([action_a0, action_a1], dtype=np.float32),
+    )
+    assert_infer_payload(
+        client.infer_calls[2],
+        observation=observations[4],
+        prompt="three chunks",
+        executed_actions=np.asarray([action_b0, action_b1], dtype=np.float32),
+    )
+
+
+def test_eval_uses_suite_specific_max_steps_when_args_keep_default(monkeypatch, tmp_path):
+    records = []
+
+    def recording_runner(**kwargs):
+        records.append({"task": kwargs["task"], "max_steps": kwargs["max_steps"]})
+        return {"task": kwargs["task"], "max_steps": kwargs["max_steps"]}
+
+    libero_10_suite = FakeTaskSuite()
+    install_fake_dependencies(monkeypatch, suite=libero_10_suite, envs=[FakeLibero10Env()])
+    main.eval_libero_mem(
+        main.Args(
+            task_suite_name="libero_10",
+            task_ids=[0],
+            num_trials_per_task=1,
+            num_steps_wait=0,
+            results_path=str(tmp_path / "libero_10.jsonl"),
+        ),
+        episode_runner=recording_runner,
+    )
+
+    libero_mem_suite = FakeTaskSuite()
+    install_fake_dependencies(monkeypatch, suite=libero_mem_suite, envs=[FakeInitStateEnv()])
+    main.eval_libero_mem(
+        main.Args(
+            task_suite_name="libero_mem",
+            task_ids=[0],
+            num_trials_per_task=1,
+            num_steps_wait=0,
+            results_path=str(tmp_path / "libero_mem.jsonl"),
+        ),
+        episode_runner=recording_runner,
+    )
+
+    assert records == [
+        {"task": "task-0", "max_steps": 520},
+        {"task": "task-0", "max_steps": 600},
+    ]
 
 def test_libero_10_uses_plain_adapter_without_progress_api_and_empty_events(monkeypatch, tmp_path):
     suite = FakeTaskSuite()

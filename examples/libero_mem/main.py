@@ -3,9 +3,13 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import importlib.util
+import math
 import time
 from pathlib import Path
 from typing import Any
+
+import numpy as np
+from openpi_client import image_tools
 
 try:
     import metrics as _metrics
@@ -18,6 +22,11 @@ except ModuleNotFoundError:
 
 
 LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
+LIBERO_INFERENCE_IMAGE_SIZE = 224
+LIBERO_SUITE_MAX_STEPS = {
+    "libero_10": 520,
+    "libero_mem": 600,
+}
 
 
 @dataclasses.dataclass(frozen=True)
@@ -99,7 +108,7 @@ class Args:
     port: int = 8000
     task_suite_name: str = "libero_mem"
     replan_steps: int = 5
-    max_steps: int = 520
+    max_steps: int | None = None
     stable_frames: int = 6
     train_seed: int = 0
     rollout_seed: int = 0
@@ -270,6 +279,10 @@ def eval_libero_mem(args: Args, *, episode_runner=run_single_episode) -> list[di
     get_libero_path = _imports["get_libero_path"]
     offscreen_env = _imports["OffScreenRenderEnv"]
 
+    max_steps = _select_max_steps(args.task_suite_name, args.max_steps)
+    run_config = dataclasses.asdict(args)
+    run_config["max_steps"] = max_steps
+
     client = websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
     task_suite = benchmark.get_benchmark_dict()[args.task_suite_name]()
     task_ids = _select_task_ids(args.task_ids, task_suite.n_tasks)
@@ -303,14 +316,14 @@ def eval_libero_mem(args: Args, *, episode_runner=run_single_episode) -> list[di
                     task_family=task_family,
                     memory_length=memory_length,
                     goals=goals,
-                    config=dataclasses.asdict(args),
+                    config=run_config,
                     checkpoint_checksum=checkpoint_checksum(args.checkpoint_path),
                     train_seed=args.train_seed,
                     rollout_seed=args.rollout_seed,
                     episode=episode_index,
                     handoff_ratio=args.handoff_ratio,
                     history_condition=args.history_condition,
-                    max_steps=args.max_steps,
+                    max_steps=max_steps,
                     replan_steps=args.replan_steps,
                     results_path=args.results_path,
                     stable_frames=args.stable_frames,
@@ -328,6 +341,14 @@ def _select_task_ids(task_ids: tuple[int, ...] | list[int] | None, task_count: i
     if invalid:
         raise ValueError(f"task_ids contains out-of-range ids {invalid} for suite with {task_count} tasks")
     return selected
+
+def _select_max_steps(task_suite_name: str, max_steps: int | None) -> int:
+    if max_steps is not None:
+        return int(max_steps)
+    try:
+        return LIBERO_SUITE_MAX_STEPS[task_suite_name]
+    except KeyError as error:
+        raise ValueError(f"Unknown task suite: {task_suite_name}") from error
 
 
 def _trial_init_state(initial_states: Any, episode_index: int, *, task_id: int) -> Any:
@@ -351,6 +372,49 @@ def checkpoint_checksum(path: str | Path | None) -> str:
             digest.update(chunk)
     return f"sha256:{digest.hexdigest()}"
 
+def _quat2axisangle(quat: np.ndarray) -> np.ndarray:
+    quat = np.asarray(quat).copy()
+    if quat[3] > 1.0:
+        quat[3] = 1.0
+    elif quat[3] < -1.0:
+        quat[3] = -1.0
+
+    den = np.sqrt(1.0 - quat[3] * quat[3])
+    if math.isclose(float(den), 0.0):
+        return np.zeros(3)
+
+    return (quat[:3] * 2.0 * math.acos(float(quat[3]))) / den
+
+
+def _libero_infer_payload(*, observation: Any, task: str, executed_prefix: list[Any]) -> dict[str, Any]:
+    if not isinstance(observation, dict):
+        raise TypeError("LIBERO infer observation must be a dict")
+
+    image = np.ascontiguousarray(observation["agentview_image"][::-1, ::-1])
+    wrist_image = np.ascontiguousarray(observation["robot0_eye_in_hand_image"][::-1, ::-1])
+    image = image_tools.convert_to_uint8(
+        image_tools.resize_with_pad(image, LIBERO_INFERENCE_IMAGE_SIZE, LIBERO_INFERENCE_IMAGE_SIZE)
+    )
+    wrist_image = image_tools.convert_to_uint8(
+        image_tools.resize_with_pad(wrist_image, LIBERO_INFERENCE_IMAGE_SIZE, LIBERO_INFERENCE_IMAGE_SIZE)
+    )
+
+    state = np.concatenate(
+        (
+            observation["robot0_eef_pos"],
+            _quat2axisangle(observation["robot0_eef_quat"]),
+            observation["robot0_gripper_qpos"],
+        )
+    )
+
+    return {
+        "observation/image": image,
+        "observation/wrist_image": wrist_image,
+        "observation/state": state,
+        "prompt": str(task),
+        "executed_actions": np.asarray(executed_prefix, dtype=np.float32).reshape((-1, 7)),
+    }
+
 
 def _query_client(client: Any, *, observation: Any, task: str, executed_prefix: list[Any], query_index: int) -> list[Any]:
     if hasattr(client, "query"):
@@ -364,12 +428,7 @@ def _query_client(client: Any, *, observation: Any, task: str, executed_prefix: 
         )
     if hasattr(client, "infer"):
         response = client.infer(
-            {
-                "observation": observation,
-                "prompt": task,
-                "executed_prefix": list(executed_prefix),
-                "query_index": query_index,
-            }
+            _libero_infer_payload(observation=observation, task=task, executed_prefix=list(executed_prefix))
         )
         return list(response["actions"])
     raise TypeError("client must provide query(...) or infer(...)")
