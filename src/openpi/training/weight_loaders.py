@@ -55,6 +55,18 @@ class CheckpointWeightLoader(WeightLoader):
 
 
 @dataclasses.dataclass(frozen=True)
+class PartialCheckpointWeightLoader(WeightLoader):
+    """Strictly loads a checkpoint while allowing only declared missing reference params."""
+
+    params_path: str
+    missing_regex: str = "futuremamba/.*"
+
+    def load(self, params: at.Params) -> at.Params:
+        loaded_params = _model.restore_params(download.maybe_download(self.params_path), restore_type=np.ndarray)
+        return _strict_merge_params(loaded_params, params, missing_regex=self.missing_regex)
+
+
+@dataclasses.dataclass(frozen=True)
 class PaliGemmaWeightLoader(WeightLoader):
     """Loads weights from the official PaliGemma checkpoint.
 
@@ -100,5 +112,40 @@ def _merge_params(loaded_params: at.Params, params: at.Params, *, missing_regex:
     for k in {k for k in flat_ref if pattern.fullmatch(k)}:
         if k not in result:
             result[k] = flat_ref[k]
+
+    return flax.traverse_util.unflatten_dict(result, sep="/")
+
+
+def _strict_merge_params(loaded_params: at.Params, params: at.Params, *, missing_regex: str) -> at.Params:
+    flat_ref = flax.traverse_util.flatten_dict(params, sep="/")
+    flat_loaded = flax.traverse_util.flatten_dict(loaded_params, sep="/")
+    pattern = re.compile(missing_regex)
+
+    ref_keys = set(flat_ref)
+    loaded_keys = set(flat_loaded)
+    extra_keys = sorted(loaded_keys - ref_keys)
+    if extra_keys:
+        raise ValueError(f"Checkpoint contains extra parameter keys not present in reference: {extra_keys}")
+
+    disallowed_missing = sorted(key for key in ref_keys - loaded_keys if pattern.fullmatch(key) is None)
+    if disallowed_missing:
+        raise ValueError(f"Checkpoint is missing non-optional parameter keys: {disallowed_missing}")
+
+    result = {}
+    for key in sorted(loaded_keys):
+        loaded_value = flat_loaded[key]
+        ref_value = flat_ref[key]
+        if loaded_value.shape != ref_value.shape:
+            raise ValueError(
+                f"Checkpoint parameter shape mismatch for {key}: got {loaded_value.shape}, expected {ref_value.shape}"
+            )
+        if loaded_value.dtype != ref_value.dtype:
+            raise ValueError(
+                f"Checkpoint parameter dtype mismatch for {key}: got {loaded_value.dtype}, expected {ref_value.dtype}"
+            )
+        result[key] = loaded_value
+
+    for key in sorted(ref_keys - loaded_keys):
+        result[key] = flat_ref[key]
 
     return flax.traverse_util.unflatten_dict(result, sep="/")
