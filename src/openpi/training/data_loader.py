@@ -14,7 +14,10 @@ import torch
 import openpi.models.model as _model
 import openpi.training.config as _config
 from openpi.training.droid_rlds_dataset import DroidRldsDataset
+import openpi.training.episode_data_loader as _episode_data_loader
 import openpi.transforms as _transforms
+
+EpisodeBatch = _episode_data_loader.EpisodeBatch
 
 T_co = TypeVar("T_co", covariant=True)
 
@@ -393,6 +396,7 @@ class TorchDataLoader:
         num_workers: int = 0,
         seed: int = 0,
         framework: str = "jax",
+        collate_fn=None,
     ):
         """Create a PyTorch data loader.
 
@@ -431,6 +435,8 @@ class TorchDataLoader:
 
         generator = torch.Generator()
         generator.manual_seed(seed)
+        if collate_fn is None:
+            collate_fn = _collate_fn
         self._data_loader = torch.utils.data.DataLoader(
             typing.cast(torch.utils.data.Dataset, dataset),
             batch_size=local_batch_size,
@@ -439,7 +445,7 @@ class TorchDataLoader:
             num_workers=num_workers,
             multiprocessing_context=mp_context,
             persistent_workers=num_workers > 0,
-            collate_fn=_collate_fn,
+            collate_fn=collate_fn,
             worker_init_fn=_worker_init_fn,
             drop_last=True,
             generator=generator,
@@ -538,3 +544,46 @@ class DataLoaderImpl(DataLoader):
     def __iter__(self):
         for batch in self._data_loader:
             yield _model.Observation.from_dict(batch), batch["actions"]
+
+
+class EpisodeDataLoaderImpl(DataLoader[_episode_data_loader.EpisodeBatch]):
+    def __init__(self, data_config: _config.DataConfig, data_loader: TorchDataLoader):
+        self._data_config = data_config
+        self._data_loader = data_loader
+
+    def data_config(self) -> _config.DataConfig:
+        return self._data_config
+
+    def __iter__(self):
+        yield from self._data_loader
+
+
+def create_episode_data_loader(
+    config: _config.TrainConfig,
+    *,
+    sharding: jax.sharding.Sharding | None = None,
+    shuffle: bool = False,
+    num_batches: int | None = None,
+    skip_norm_stats: bool = False,
+) -> DataLoader[_episode_data_loader.EpisodeBatch]:
+    data_config = config.data.create(config.assets_dirs, config.model)
+    logging.info(f"episode data_config: {data_config}")
+    dataset = _episode_data_loader.create_lerobot_episode_dataset(
+        data_config=data_config,
+        episode_config=config.episode_data,
+        action_horizon=config.model.action_horizon,
+        skip_norm_stats=skip_norm_stats,
+    )
+    local_batch_size = config.batch_size // jax.process_count()
+    data_loader = TorchDataLoader(
+        dataset,
+        local_batch_size=local_batch_size,
+        sharding=sharding,
+        shuffle=shuffle,
+        num_batches=num_batches,
+        num_workers=config.num_workers,
+        seed=config.seed,
+        framework="jax",
+        collate_fn=_episode_data_loader.EpisodeCollator(),
+    )
+    return EpisodeDataLoaderImpl(data_config, data_loader)

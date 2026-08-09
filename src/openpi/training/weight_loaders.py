@@ -69,6 +69,57 @@ class PartialCheckpointWeightLoader(WeightLoader):
         return _strict_merge_params(loaded_params, params, missing_regex=self.missing_regex)
 
 
+
+@dataclasses.dataclass(frozen=True)
+class LatestCheckpointWeightLoader(WeightLoader):
+    """Loads the latest numeric-step checkpoint params from a local Orbax checkpoint root."""
+
+    checkpoint_root: str
+    missing_regex: str = "futuremamba/.*"
+
+    def load(self, params: at.Params) -> at.Params:
+        checkpoint_root = _require_existing_local_checkpoint_root(self.checkpoint_root)
+        params_path = _latest_numeric_step_params_path(checkpoint_root)
+        loaded_params = _model.restore_params(params_path, restore_type=np.ndarray)
+        return _strict_merge_params(loaded_params, params, missing_regex=self.missing_regex)
+
+
+def _require_existing_local_checkpoint_root(checkpoint_root: str) -> pathlib.Path:
+    parsed = urllib.parse.urlparse(checkpoint_root)
+    if parsed.scheme:
+        raise ValueError(
+            "LatestCheckpointWeightLoader requires checkpoint_root to be an existing local checkpoint root; "
+            f"got URI scheme {parsed.scheme!r} for {checkpoint_root!r}"
+        )
+    local_path = pathlib.Path(checkpoint_root).expanduser()
+    if not local_path.exists():
+        raise FileNotFoundError(
+            "LatestCheckpointWeightLoader requires checkpoint_root to be an existing local checkpoint root; "
+            f"got missing path {checkpoint_root!r}"
+        )
+    if not local_path.is_dir():
+        raise ValueError(
+            "LatestCheckpointWeightLoader requires checkpoint_root to be an existing local checkpoint root directory; "
+            f"got file {checkpoint_root!r}"
+        )
+    return local_path
+
+
+def _latest_numeric_step_params_path(checkpoint_root: pathlib.Path) -> pathlib.Path:
+    candidates: list[tuple[int, pathlib.Path]] = []
+    for child in checkpoint_root.iterdir():
+        if not child.is_dir() or not child.name.isdigit():
+            continue
+        params_path = child / "params"
+        if params_path.exists():
+            candidates.append((int(child.name), params_path))
+    if not candidates:
+        raise ValueError(
+            "No numeric checkpoint step directories containing a params item were found in local checkpoint root "
+            f"{checkpoint_root!s}"
+        )
+    return max(candidates, key=lambda item: item[0])[1]
+
 def _require_existing_local_path(params_path: str) -> pathlib.Path:
     parsed = urllib.parse.urlparse(params_path)
     if parsed.scheme:

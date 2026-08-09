@@ -14,6 +14,7 @@ from typing_extensions import override
 import tyro
 
 import openpi.models.model as _model
+import openpi.models.futuremamba_config as futuremamba_config
 import openpi.models.pi0_config as pi0_config
 import openpi.models.pi0_fast as pi0_fast
 import openpi.models.tokenizer as _tokenizer
@@ -194,11 +195,15 @@ class DataConfigFactory(abc.ABC):
     def create_base_config(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
         repo_id = self.repo_id if self.repo_id is not tyro.MISSING else None
         asset_id = self.assets.asset_id or repo_id
+        norm_assets_dir = epath.Path(self.assets.assets_dir or assets_dirs)
+        norm_stats = self._load_norm_stats(norm_assets_dir, asset_id)
+        if norm_stats is None and asset_id == "futuremamba/libero_mem_long_train":
+            norm_stats = self._load_norm_stats(norm_assets_dir.parent / "pi05_futuremamba_base", asset_id)
         return dataclasses.replace(
             self.base_config or DataConfig(),
             repo_id=repo_id,
             asset_id=asset_id,
-            norm_stats=self._load_norm_stats(epath.Path(self.assets.assets_dir or assets_dirs), asset_id),
+            norm_stats=norm_stats,
             use_quantile_norm=model_config.model_type != ModelType.PI0,
         )
 
@@ -509,6 +514,8 @@ class TrainConfig:
 
     # Determines the data to be trained on.
     data: DataConfigFactory = dataclasses.field(default_factory=FakeDataConfig)
+    # FutureMamba episode-query sampling settings. Standard chunk trainers ignore this field.
+    episode_data: EpisodeDataConfig = dataclasses.field(default_factory=EpisodeDataConfig)
 
     # Base directory for config assets (e.g., norm stats).
     assets_base_dir: str = "./assets"
@@ -569,6 +576,19 @@ class TrainConfig:
     def __post_init__(self) -> None:
         if self.resume and self.overwrite:
             raise ValueError("Cannot resume and overwrite at the same time.")
+
+
+_FUTUREMAMBA_LIBERO_MEM_ASSET_ID = "futuremamba/libero_mem_long_train"
+_FUTUREMAMBA_SUITE_WEIGHTS = {"LIBERO-Mem": 0.5, "LIBERO-Long": 0.5}
+_PI05_FUTUREMAMBA_BASE_MODEL = pi0_config.Pi0Config(pi05=True, action_horizon=10, discrete_state_input=True)
+_FUTUREMAMBA_LIBERO_MEM_MODEL = futuremamba_config.FutureMambaConfig(
+    action_horizon=10,
+    executed_horizon=5,
+    num_denoise_steps=10,
+    handoff_ratio=0.2,
+    progress_depth=4,
+    discrete_state_input=True,
+)
 
 
 # Use `get_config` if you need to get a config by name in your code.
@@ -654,6 +674,38 @@ _CONFIGS = [
                 prompt_from_task=True,
             ),
         ),
+    ),
+    #
+    # Two-stage FutureMamba training configs.
+    #
+    TrainConfig(
+        name="pi05_futuremamba_base",
+        exp_name="base",
+        model=_PI05_FUTUREMAMBA_BASE_MODEL,
+        data=LeRobotLiberoDataConfig(
+            repo_id=_FUTUREMAMBA_LIBERO_MEM_ASSET_ID,
+            assets=AssetsConfig(asset_id=_FUTUREMAMBA_LIBERO_MEM_ASSET_ID),
+            base_config=DataConfig(prompt_from_task=True),
+            extra_delta_transform=False,
+        ),
+        episode_data=EpisodeDataConfig(query_stride=5, executed_horizon=5, suite_weights=_FUTUREMAMBA_SUITE_WEIGHTS),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        num_train_steps=30_000,
+    ),
+    TrainConfig(
+        name="futuremamba_libero_mem",
+        model=_FUTUREMAMBA_LIBERO_MEM_MODEL,
+        data=LeRobotLiberoDataConfig(
+            repo_id=_FUTUREMAMBA_LIBERO_MEM_ASSET_ID,
+            assets=AssetsConfig(asset_id=_FUTUREMAMBA_LIBERO_MEM_ASSET_ID),
+            base_config=DataConfig(prompt_from_task=True),
+            extra_delta_transform=False,
+        ),
+        episode_data=EpisodeDataConfig(query_stride=5, executed_horizon=5, suite_weights=_FUTUREMAMBA_SUITE_WEIGHTS),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_futuremamba_base/base"),
+        freeze_filter=_FUTUREMAMBA_LIBERO_MEM_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        num_train_steps=30_000,
     ),
     #
     # Fine-tuning Libero configs.
