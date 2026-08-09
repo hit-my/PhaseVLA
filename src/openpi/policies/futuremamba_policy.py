@@ -86,7 +86,7 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
         outputs = {"state": inputs["state"], "actions": actions}
         outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)
         outputs = self._output_transform(outputs)
-        outputs["handoff_step"] = _diagnostic_scalar(diagnostics.get("handoff_step")) if diagnostics else None
+        outputs["handoff_step"] = _handoff_step_diagnostic(diagnostics)
         outputs["memory_state_bytes"] = _tree_nbytes(self._memory_state)
         outputs["policy_timing"] = {"infer_ms": model_time * 1000}
         return outputs
@@ -127,6 +127,20 @@ def _jit_if_possible(method):
         return nnx_utils.module_jit(method)
     except ValueError:
         return method
+
+
+def _handoff_step_diagnostic(diagnostics):
+    if not diagnostics:
+        raise ValueError("FutureMamba diagnostics must include handoff_step")
+    if "handoff_steps" in diagnostics:
+        value = diagnostics["handoff_steps"]
+    elif "handoff_step" in diagnostics:
+        value = diagnostics["handoff_step"]
+    else:
+        raise ValueError("FutureMamba diagnostics must include handoff_step")
+    if value is None:
+        raise ValueError("FutureMamba diagnostics must include handoff_step")
+    return _diagnostic_scalar(value)
 
 
 def _diagnostic_scalar(value):

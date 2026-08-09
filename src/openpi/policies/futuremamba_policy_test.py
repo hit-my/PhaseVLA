@@ -53,7 +53,7 @@ class _FakeStatefulModel:
         if noise is not None:
             actions = actions + noise
         next_state = _MemoryState(value=memory_state.value + 1.0)
-        diagnostics = {"handoff_step": jnp.asarray([2], dtype=jnp.int32)}
+        diagnostics = {"handoff_steps": jnp.asarray([2], dtype=jnp.int32)}
         return actions, next_state, diagnostics
 
 
@@ -110,6 +110,70 @@ def test_infer_updates_memory_and_passes_transformed_executed_actions():
     assert first["handoff_step"] == 2
     assert first["memory_state_bytes"] > 0
     assert "policy_timing" in first
+
+
+def test_infer_raises_when_handoff_diagnostic_is_missing():
+    policy = _policy(_sample_actions_with_memory=_sample_without_handoff_diagnostics)
+
+    with pytest.raises(ValueError, match="handoff_step"):
+        policy.infer(_obs())
+
+
+def test_infer_accepts_legacy_singular_handoff_diagnostic():
+    policy = _policy(_sample_actions_with_memory=_sample_with_legacy_handoff_diagnostic)
+
+    result = policy.infer(_obs())
+
+    assert result["handoff_step"] == 3
+
+
+def test_infer_raises_when_handoff_diagnostic_is_none():
+    policy = _policy(_sample_actions_with_memory=_sample_with_none_handoff_diagnostic)
+
+    with pytest.raises(ValueError, match="handoff_step"):
+        policy.infer(_obs())
+
+
+def _sample_with_legacy_handoff_diagnostic(
+    rng,
+    observation,
+    memory_state,
+    executed_actions,
+    executed_action_mask,
+    **sample_kwargs,
+):
+    del rng, observation, executed_actions, executed_action_mask, sample_kwargs
+    batch_size = memory_state.value.shape[0]
+    actions = jnp.zeros((batch_size, 4, 8), dtype=jnp.float32)
+    return actions, memory_state, {"handoff_step": jnp.asarray([3], dtype=jnp.int32)}
+
+
+def _sample_with_none_handoff_diagnostic(
+    rng,
+    observation,
+    memory_state,
+    executed_actions,
+    executed_action_mask,
+    **sample_kwargs,
+):
+    del rng, observation, executed_actions, executed_action_mask, sample_kwargs
+    batch_size = memory_state.value.shape[0]
+    actions = jnp.zeros((batch_size, 4, 8), dtype=jnp.float32)
+    return actions, memory_state, {"handoff_steps": None}
+
+
+def _sample_without_handoff_diagnostics(
+    rng,
+    observation,
+    memory_state,
+    executed_actions,
+    executed_action_mask,
+    **sample_kwargs,
+):
+    del rng, observation, executed_actions, executed_action_mask, sample_kwargs
+    batch_size = memory_state.value.shape[0]
+    actions = jnp.zeros((batch_size, 4, 8), dtype=jnp.float32)
+    return actions, memory_state, {}
 
 
 def test_reset_restores_initial_memory_state():
