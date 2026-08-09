@@ -98,6 +98,21 @@ class DataConfig:
     datasets: Sequence[droid_rlds_dataset.RLDSDataset] = ()
 
 
+@dataclasses.dataclass(frozen=True)
+class EpisodeDataConfig:
+    query_stride: int = 5
+    executed_horizon: int = 5
+    suite_weights: dict[str, float] = dataclasses.field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.query_stride <= 0:
+            raise ValueError(f"query_stride must be positive, got {self.query_stride}")
+        if self.executed_horizon <= 0:
+            raise ValueError(f"executed_horizon must be positive, got {self.executed_horizon}")
+        for suite, weight in self.suite_weights.items():
+            if weight <= 0:
+                raise ValueError(f"suite weight for {suite!r} must be positive, got {weight}")
+
 class GroupFactory(Protocol):
     def __call__(self, model_config: _model.BaseModelConfig) -> _transforms.Group:
         """Create a group."""
