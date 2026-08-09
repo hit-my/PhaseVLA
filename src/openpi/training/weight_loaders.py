@@ -1,6 +1,7 @@
 import dataclasses
 import logging
 import re
+import urllib.parse
 from typing import Protocol, runtime_checkable
 
 import flax.traverse_util
@@ -62,7 +63,12 @@ class PartialCheckpointWeightLoader(WeightLoader):
     missing_regex: str = "futuremamba/.*"
 
     def load(self, params: at.Params) -> at.Params:
-        loaded_params = _model.restore_params(download.maybe_download(self.params_path), restore_type=np.ndarray)
+        parsed = urllib.parse.urlparse(self.params_path)
+        if parsed.scheme:
+            raise ValueError(
+                f"PartialCheckpointWeightLoader only supports local checkpoint paths; got URI scheme {parsed.scheme!r}"
+            )
+        loaded_params = _model.restore_params(self.params_path, restore_type=np.ndarray)
         return _strict_merge_params(loaded_params, params, missing_regex=self.missing_regex)
 
 

@@ -118,6 +118,10 @@ class FutureMambaConfig(pi0_config.Pi0Config):
 
         self._validate_progress_layer_indices(action_config.depth)
         self._validate_enums()
+        if self.memory_backend != "mamba":
+            raise NotImplementedError(f"FutureMamba memory_backend={self.memory_backend!r} is not implemented")
+        if self.decoder_mode != "handoff":
+            raise NotImplementedError(f"FutureMamba decoder_mode={self.decoder_mode!r} is not implemented")
 
     def _validate_progress_layer_indices(self, action_depth: int) -> None:
         if self.progress_prefix_layer_indices is None:

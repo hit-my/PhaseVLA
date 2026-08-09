@@ -124,3 +124,13 @@ def test_partial_checkpoint_loader_accepts_jax_arrays_without_cast(monkeypatch):
 
     assert result["base"]["kernel"].dtype == ref["base"]["kernel"].dtype
     np.testing.assert_array_equal(np.asarray(result["futuremamba"]["p"]), np.asarray(ref["futuremamba"]["p"]))
+
+
+def test_partial_checkpoint_loader_rejects_remote_scheme_without_download(monkeypatch):
+    def fail_download(path):
+        raise AssertionError(f"maybe_download must not be called for PartialCheckpointWeightLoader: {path}")
+
+    monkeypatch.setattr(weight_loaders.download, "maybe_download", fail_download)
+
+    with pytest.raises(ValueError, match="local.*scheme"):
+        weight_loaders.PartialCheckpointWeightLoader("gs://bucket/checkpoint/params").load(_params())
