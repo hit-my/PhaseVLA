@@ -67,6 +67,359 @@ class FakeClient:
         return list(self._chunks[query_index])
 
 
+class ThreeQueryClient(FakeClient):
+    pass
+
+
+class FakeLibero10Env:
+    def __init__(self):
+        self.reset_calls = 0
+        self.step_actions = []
+        self.success_after = 1
+
+    def reset(self):
+        self.reset_calls += 1
+        return {"frame": "reset"}
+
+    def step(self, action):
+        self.step_actions.append(action)
+        success = len(self.step_actions) >= self.success_after and action != "wait"
+        return {"frame": len(self.step_actions)}, 1.0 if success else 0.0, success, {"success": success}
+
+
+class FakeInitStateEnv:
+    def __init__(self):
+        self.seed_calls = []
+        self.reset_calls = 0
+        self.set_init_state_calls = []
+        self.step_actions = []
+
+    def seed(self, seed):
+        self.seed_calls.append(seed)
+
+    def reset(self):
+        self.reset_calls += 1
+        return {"phase": "reset"}
+
+    def set_init_state(self, state):
+        self.set_init_state_calls.append(state)
+        return {"phase": "init", "state": state}
+
+    def step(self, action):
+        self.step_actions.append(action)
+        success = action == "act"
+        return {"phase": "step", "action": action}, 1.0 if success else 0.0, success, {"success": success}
+
+
+class FakeTask:
+    problem_folder = "folder"
+    bddl_file = "task.bddl"
+    task_family = "family"
+    memory_length = 0
+    goals = {"Sequence": ["done"]}
+
+    def __init__(self, language):
+        self.language = language
+
+
+class FakeTaskSuite:
+    n_tasks = 2
+
+    def __init__(self):
+        self.init_state_calls = []
+
+    def get_task(self, task_id):
+        return FakeTask(f"task-{task_id}")
+
+    def get_task_init_states(self, task_id):
+        self.init_state_calls.append(task_id)
+        return [f"state-{task_id}-0", f"state-{task_id}-1"]
+
+
+class FakeBenchmark:
+    def __init__(self, suite):
+        self.suite = suite
+
+    def get_benchmark_dict(self):
+        return {"libero_10": lambda: self.suite, "libero_mem": lambda: self.suite}
+
+
+class FakeWebsocketModule:
+    class WebsocketClientPolicy:
+        def __init__(self, host, port):
+            self.host = host
+            self.port = port
+            self.reset_calls = 0
+
+        def reset(self):
+            self.reset_calls += 1
+
+
+class RecordingMemAdapter:
+    constructed = []
+
+    def __init__(self, env, *, task_text):
+        RecordingMemAdapter.constructed.append((env, task_text))
+        self.env = env
+
+    def reset(self):
+        observation = self.env.reset()
+        return FakeSnapshot(False, [], False, {}, observation)
+
+    def step(self, action):
+        observation, reward, done, info = self.env.step(action)
+        return FakeSnapshot(bool(info.get("success", done)), ["done"] if info.get("success", done) else [], False, {"done": bool(info.get("success", done))}, observation)
+
+
+class FakeEnvAdapterModule:
+    LiberoMemEnvAdapter = RecordingMemAdapter
+
+
+def install_fake_dependencies(monkeypatch, *, suite, envs):
+    env_iter = iter(envs)
+
+    def fake_offscreen_env(**kwargs):
+        env = next(env_iter)
+        env.kwargs = kwargs
+        return env
+
+    monkeypatch.setattr(
+        main,
+        "_load_real_dependencies",
+        lambda: {
+            "env_adapter": FakeEnvAdapterModule,
+            "websocket_client_policy": FakeWebsocketModule,
+            "benchmark": FakeBenchmark(suite),
+            "get_libero_path": lambda name: "/tmp/bddl",
+            "OffScreenRenderEnv": fake_offscreen_env,
+        },
+    )
+
+
+def successful_one_step_runner(**kwargs):
+    adapter = kwargs["adapter"]
+    client = kwargs["client"]
+    if hasattr(client, "reset"):
+        client.reset()
+    snapshot = adapter.reset()
+    snapshot = adapter.step("act")
+    record = main.build_episode_log(
+        config=kwargs["config"],
+        checkpoint_checksum=kwargs["checkpoint_checksum"],
+        task=kwargs["task"],
+        task_family=kwargs["task_family"],
+        memory_length=kwargs["memory_length"],
+        train_seed=kwargs["train_seed"],
+        rollout_seed=kwargs["rollout_seed"],
+        episode=kwargs["episode"],
+        metrics=metrics.EpisodeMetrics(
+            success=bool(snapshot.success),
+            completed_subgoals=len(snapshot.satisfied_subgoals),
+            total_subgoals=len(snapshot.satisfied_subgoals),
+            redundant_chunks=0,
+            decidable_chunks=0,
+            overshot=bool(snapshot.overshot),
+            steps=1,
+        ),
+        subgoal_events=[],
+        handoff_ratio=kwargs["handoff_ratio"],
+        history_condition=kwargs["history_condition"],
+        timing={"episode_sec": 0.0},
+        video_path=kwargs["video_path"],
+    )
+    main.write_episode_jsonl(kwargs["results_path"], record)
+    return record
+
+
+def test_run_single_episode_sends_only_last_executed_chunk_and_independent_query_count(tmp_path):
+    goals = {"Sequence": ["a", "b", "c"]}
+    adapter = FakeAdapter(
+        [
+            FakeSnapshot(False, [], False, {}, {"frame": 0}),
+            FakeSnapshot(False, [], False, {}, {"frame": 1}),
+            FakeSnapshot(False, ["a"], False, {"a": True}, {"frame": 2}),
+            FakeSnapshot(False, ["a"], False, {"b": True}, {"frame": 3}),
+            FakeSnapshot(False, ["a", "b"], False, {"b": True}, {"frame": 4}),
+            FakeSnapshot(True, ["a", "b", "c"], False, {"c": True}, {"frame": 5}),
+        ]
+    )
+    client = ThreeQueryClient([["a0", "a1"], ["b0", "b1"], ["c0", "c1"]])
+
+    main.run_single_episode(
+        adapter=adapter,
+        client=client,
+        task="three chunks",
+        task_family="spatial",
+        memory_length=3,
+        goals=goals,
+        config={"task_suite_name": "libero_mem", "replan_steps": 2},
+        checkpoint_checksum="sha256:def",
+        train_seed=5,
+        rollout_seed=13,
+        episode=0,
+        handoff_ratio=0.2,
+        history_condition="futuremamba",
+        max_steps=5,
+        replan_steps=2,
+        results_path=tmp_path / "episodes.jsonl",
+        stable_frames=1,
+        video_path=None,
+    )
+
+    assert [call["query_index"] for call in client.query_calls] == [0, 1, 2]
+    assert [call["executed_prefix"] for call in client.query_calls] == [[], ["a0", "a1"], ["b0", "b1"]]
+
+
+def test_libero_10_uses_plain_adapter_without_progress_api_and_empty_events(monkeypatch, tmp_path):
+    suite = FakeTaskSuite()
+    env = FakeLibero10Env()
+    install_fake_dependencies(monkeypatch, suite=suite, envs=[env])
+    RecordingMemAdapter.constructed = []
+
+    records = main.eval_libero_mem(
+        main.Args(
+            task_suite_name="libero_10",
+            num_trials_per_task=1,
+            task_ids=[0],
+            results_path=str(tmp_path / "rollouts.jsonl"),
+            num_steps_wait=0,
+        ),
+        episode_runner=successful_one_step_runner,
+    )
+
+    assert RecordingMemAdapter.constructed == []
+    assert records[0]["subgoal_events"] == []
+    assert records[0]["redundant_chunks"] == 0
+    assert records[0]["decidable_chunks"] == 0
+
+
+def test_eval_uses_task_init_states_and_waits_before_eval_steps(monkeypatch, tmp_path):
+    suite = FakeTaskSuite()
+    env = FakeInitStateEnv()
+    install_fake_dependencies(monkeypatch, suite=suite, envs=[env, FakeInitStateEnv()])
+    RecordingMemAdapter.constructed = []
+
+    records = main.eval_libero_mem(
+        main.Args(
+            task_suite_name="libero_mem",
+            task_ids=[1],
+            num_trials_per_task=2,
+            num_steps_wait=2,
+            rollout_seed=99,
+            results_path=str(tmp_path / "rollouts.jsonl"),
+        ),
+        episode_runner=successful_one_step_runner,
+    )
+
+    assert suite.init_state_calls == [1]
+    assert env.seed_calls == [99]
+    assert env.reset_calls == 2
+    assert env.set_init_state_calls == ["state-1-0", "state-1-1"]
+    assert env.step_actions == [main.LIBERO_DUMMY_ACTION, main.LIBERO_DUMMY_ACTION, "act", main.LIBERO_DUMMY_ACTION, main.LIBERO_DUMMY_ACTION, "act"]
+    assert [record["episode"] for record in records] == [0, 1]
+    assert all(record["steps"] == 1 for record in records)
+
+
+def test_eval_filters_task_ids_and_rejects_out_of_range(monkeypatch, tmp_path):
+    suite = FakeTaskSuite()
+    install_fake_dependencies(monkeypatch, suite=suite, envs=[FakeLibero10Env()])
+
+    records = main.eval_libero_mem(
+        main.Args(
+            task_suite_name="libero_10",
+            task_ids=[1],
+            num_trials_per_task=1,
+            num_steps_wait=0,
+            results_path=str(tmp_path / "selected.jsonl"),
+        ),
+        episode_runner=successful_one_step_runner,
+    )
+    assert [record["task"] for record in records] == ["task-1"]
+
+    try:
+        main.eval_libero_mem(
+            main.Args(
+                task_suite_name="libero_10",
+                task_ids=[2],
+                results_path=str(tmp_path / "bad.jsonl"),
+            ),
+            episode_runner=successful_one_step_runner,
+        )
+    except ValueError as error:
+        assert "task_ids" in str(error)
+        assert "2" in str(error)
+    else:
+        raise AssertionError("out-of-range task_ids must raise ValueError")
+
+
+def test_aggregate_jsonl_reports_required_breakdowns_integrity_bootstrap_and_retention(tmp_path):
+    rows = [
+        {"task": "task-a", "task_family": "spatial", "memory_length": 1, "train_seed": 7, "rollout_seed": 0, "episode": 0, "success": True, "steps": 3, "overshot": False, "redundant_chunks": 0, "decidable_chunks": 1, "subgoal_events": []},
+        {"task": "task-a", "task_family": "spatial", "memory_length": 1, "train_seed": 7, "rollout_seed": 1, "episode": 1, "success": False, "steps": 5, "overshot": True, "redundant_chunks": 1, "decidable_chunks": 1, "subgoal_events": [{"reason": "redundant"}]},
+        {"task": "task-b", "task_family": "semantic", "memory_length": 3, "train_seed": 7, "rollout_seed": 0, "episode": 0, "success": True, "steps": 4, "overshot": False, "redundant_chunks": 0, "decidable_chunks": 1, "subgoal_events": []},
+    ]
+    baseline_rows = [
+        {"task": "task-a", "task_suite_name": "libero_10", "train_seed": 7, "success": False},
+        {"task": "task-b", "task_suite_name": "libero_10", "train_seed": 7, "success": True},
+    ]
+    path = tmp_path / "rollouts.jsonl"
+    baseline_path = tmp_path / "baseline.jsonl"
+    metrics.write_jsonl(path, rows)
+    metrics.write_jsonl(baseline_path, baseline_rows)
+
+    report = metrics.aggregate_jsonl(path, baseline=baseline_path, expected_trials_per_task=2)
+
+    assert [bucket["key"] for bucket in report["by_task"]] == ["task-a", "task-b"]
+    assert [bucket["key"] for bucket in report["by_memory_length"]] == ["1", "3"]
+    assert report["temporal_scaling"] == report["by_memory_length"]
+    assert report["trial_seed_integrity"] == {
+        "expected_trials_per_task": 2,
+        "complete": False,
+        "missing": [{"task": "task-b", "missing_trial_keys": ["1"]}],
+        "duplicates": [],
+    }
+    assert len(report["overall"]["success_bootstrap95"]) == 2
+    assert report["capability_retention_abs"] == {"task-a|7": 0.5, "task-b|7": 0.0}
+
+
+def test_symbolic_monitor_handles_repeated_signature_occurrences_in_order():
+    monitor = metrics.SymbolicEventMonitor(goals={"Sequence": ["touch(block)", "touch(block)"]}, stable_frames=1)
+
+    first = monitor.observe(
+        frame=1,
+        query_index=0,
+        atomic_predicates={"touch(block)": True},
+        satisfied_before=[],
+        satisfied_after=["touch(block)"],
+    )
+    still_needed = monitor.observe(
+        frame=2,
+        query_index=1,
+        atomic_predicates={"touch(block)": False},
+        satisfied_before=["touch(block)"],
+        satisfied_after=["touch(block)"],
+    )
+    second = monitor.observe(
+        frame=3,
+        query_index=1,
+        atomic_predicates={"touch(block)": True},
+        satisfied_before=["touch(block)"],
+        satisfied_after=["touch(block)", "touch(block)"],
+    )
+
+    assert still_needed == []
+    assert [(row["signature"], row["reason"]) for row in first + second] == [
+        ("touch(block)", "progress"),
+        ("touch(block)", "progress"),
+    ]
+    episode = monitor.finish(success=True, overshot=False, steps=3)
+    assert episode.completed_subgoals == 2
+    assert episode.total_subgoals == 2
+    assert episode.redundant_chunks == 0
+    assert episode.decidable_chunks == 2
+
+
+
 def test_symbolic_monitor_counts_sequence_only_in_order_and_marks_redundant_after_completion():
     monitor = metrics.SymbolicEventMonitor(
         goals={"Sequence": ["open(cabinet)", "put(cup,cabinet)"]},

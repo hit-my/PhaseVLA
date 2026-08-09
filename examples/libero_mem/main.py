@@ -16,6 +16,83 @@ except ModuleNotFoundError:
     _METRICS_SPEC.loader.exec_module(_metrics)
 
 
+
+LIBERO_DUMMY_ACTION = [0.0] * 6 + [-1.0]
+
+
+@dataclasses.dataclass(frozen=True)
+class PlainEnvSnapshot:
+    observation: Any
+    success: bool
+    satisfied_subgoals: list[Any]
+    overshot: bool
+    atomic_predicates: dict[str, bool]
+
+
+class PlainLiberoEnvAdapter:
+    """Adapter for LIBERO suites without LIBERO-Mem progress APIs."""
+
+    def __init__(self, env: Any):
+        self._env = env
+
+    def reset(self) -> PlainEnvSnapshot:
+        return self.snapshot(self._env.reset(), success=False)
+
+    def step(self, action: Any) -> PlainEnvSnapshot:
+        observation, reward, done, info = self._env.step(action)
+        success = bool(done)
+        if isinstance(info, dict):
+            success = success or bool(info.get("success", False))
+        return self.snapshot(observation, success=success)
+
+    def snapshot(self, observation: Any, *, success: bool = False) -> PlainEnvSnapshot:
+        return PlainEnvSnapshot(
+            observation=observation,
+            success=bool(success),
+            satisfied_subgoals=[],
+            overshot=False,
+            atomic_predicates={},
+        )
+
+
+class EpisodeSetupAdapter:
+    """Resets a LIBERO task to a fixed init state and waits before metric steps."""
+
+    def __init__(self, base_adapter: Any, *, env: Any, init_state: Any, num_steps_wait: int):
+        self._base_adapter = base_adapter
+        self._env = env
+        self._init_state = init_state
+        self._num_steps_wait = int(num_steps_wait)
+
+    def reset(self) -> Any:
+        snapshot = self._base_adapter.reset()
+        observation = getattr(snapshot, "observation", None)
+        if hasattr(self._env, "set_init_state"):
+            observation = self._env.set_init_state(self._init_state)
+        for _ in range(self._num_steps_wait):
+            observation, _, _, _ = self._env.step(LIBERO_DUMMY_ACTION)
+        return self._snapshot(observation, success=False)
+
+    def step(self, action: Any) -> Any:
+        return self._base_adapter.step(action)
+
+    def advance(self, action: Any) -> Any:
+        if hasattr(self._base_adapter, "advance"):
+            return self._base_adapter.advance(action)
+        return self._base_adapter.step(action)
+
+    def _snapshot(self, observation: Any, *, success: bool) -> Any:
+        if hasattr(self._base_adapter, "snapshot"):
+            return self._base_adapter.snapshot(observation, success=success)
+        return PlainEnvSnapshot(
+            observation=observation,
+            success=bool(success),
+            satisfied_subgoals=[],
+            overshot=False,
+            atomic_predicates={},
+        )
+
+
 @dataclasses.dataclass(frozen=True)
 class Args:
     host: str = "0.0.0.0"
@@ -27,6 +104,8 @@ class Args:
     train_seed: int = 0
     rollout_seed: int = 0
     num_trials_per_task: int = 1
+    num_steps_wait: int = 10
+    task_ids: tuple[int, ...] | None = None
     results_path: str = "data/libero_mem/rollouts.jsonl"
     checkpoint_path: str | None = None
     video_out_path: str | None = None
@@ -102,37 +181,40 @@ def run_single_episode(
 ) -> dict[str, Any]:
     started = time.perf_counter()
     monitor = _metrics.SymbolicEventMonitor(goals=goals, stable_frames=stable_frames)
-    executed_prefix: list[Any] = []
+    last_executed_chunk: list[Any] = []
     subgoal_events: list[dict[str, Any]] = []
     snapshot = None
     steps = 0
     success = False
     overshot = False
+    query_count = 0
     try:
         if hasattr(client, "reset"):
             client.reset()
         snapshot = adapter.reset()
         previous_satisfied = list(getattr(snapshot, "satisfied_subgoals", []) or [])
         while steps < max_steps:
-            query_index = len(executed_prefix) // int(replan_steps)
+            query_index = query_count
             actions = _query_client(
                 client,
                 observation=getattr(snapshot, "observation", None),
                 task=task,
-                executed_prefix=executed_prefix,
+                executed_prefix=last_executed_chunk,
                 query_index=query_index,
             )
+            query_count += 1
             if len(actions) < replan_steps:
                 raise ValueError(
                     f"replan_steps={replan_steps} requires at least {replan_steps} actions, got {len(actions)}"
                 )
+            current_executed_chunk: list[Any] = []
             for action in actions[:replan_steps]:
                 if steps >= max_steps:
                     break
                 before = previous_satisfied
                 snapshot = _advance_adapter(adapter, action)
                 steps += 1
-                executed_prefix.append(action)
+                current_executed_chunk.append(action)
                 after = list(getattr(snapshot, "satisfied_subgoals", []) or [])
                 subgoal_events.extend(
                     monitor.observe(
@@ -148,6 +230,7 @@ def run_single_episode(
                 overshot = bool(getattr(snapshot, "overshot", False))
                 if success:
                     break
+            last_executed_chunk = current_executed_chunk
             if success:
                 break
     finally:
@@ -189,19 +272,29 @@ def eval_libero_mem(args: Args, *, episode_runner=run_single_episode) -> list[di
 
     client = websocket_client_policy.WebsocketClientPolicy(args.host, args.port)
     task_suite = benchmark.get_benchmark_dict()[args.task_suite_name]()
+    task_ids = _select_task_ids(args.task_ids, task_suite.n_tasks)
     records: list[dict[str, Any]] = []
-    for task_id in range(task_suite.n_tasks):
+    for task_id in task_ids:
         task_object = task_suite.get_task(task_id)
+        initial_states = task_suite.get_task_init_states(task_id)
         task_text = str(getattr(task_object, "language", task_object))
         task_family = str(getattr(task_object, "task_family", args.task_suite_name))
         memory_length = int(getattr(task_object, "memory_length", 0))
-        goals = getattr(task_object, "goals", {"Sequence": []})
+        is_plain_libero = args.task_suite_name == "libero_10"
+        goals = {"Sequence": []} if is_plain_libero else getattr(task_object, "goals", {"Sequence": []})
         task_bddl = Path(get_libero_path("bddl_files")) / task_object.problem_folder / task_object.bddl_file
         env = offscreen_env(bddl_file_name=task_bddl, camera_heights=256, camera_widths=256)
         if hasattr(env, "seed"):
             env.seed(args.rollout_seed)
-        adapter = env_adapter_module.LiberoMemEnvAdapter(env, task_text=task_text)
+        base_adapter = PlainLiberoEnvAdapter(env) if is_plain_libero else env_adapter_module.LiberoMemEnvAdapter(env, task_text=task_text)
         for episode_index in range(args.num_trials_per_task):
+            init_state = _trial_init_state(initial_states, episode_index, task_id=task_id)
+            adapter = EpisodeSetupAdapter(
+                base_adapter,
+                env=env,
+                init_state=init_state,
+                num_steps_wait=args.num_steps_wait,
+            )
             records.append(
                 episode_runner(
                     adapter=adapter,
@@ -225,6 +318,27 @@ def eval_libero_mem(args: Args, *, episode_runner=run_single_episode) -> list[di
                 )
             )
     return records
+
+
+def _select_task_ids(task_ids: tuple[int, ...] | list[int] | None, task_count: int) -> list[int]:
+    if task_ids is None:
+        return list(range(task_count))
+    selected = [int(task_id) for task_id in task_ids]
+    invalid = [task_id for task_id in selected if task_id < 0 or task_id >= task_count]
+    if invalid:
+        raise ValueError(f"task_ids contains out-of-range ids {invalid} for suite with {task_count} tasks")
+    return selected
+
+
+def _trial_init_state(initial_states: Any, episode_index: int, *, task_id: int) -> Any:
+    try:
+        return initial_states[episode_index]
+    except IndexError as error:
+        raise ValueError(
+            f"task {task_id} has no init state for trial {episode_index}; "
+            f"received {len(initial_states)} initial states"
+        ) from error
+
 
 
 def checkpoint_checksum(path: str | Path | None) -> str:
