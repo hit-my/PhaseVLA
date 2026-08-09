@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import pathlib
+import subprocess
 import sys
 
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
@@ -186,3 +187,49 @@ def test_lerobot_roundtrip_preserves_task_index_episode_boundaries_and_images(tm
     )
     assert np.asarray(reloaded[0]["state"]).shape == (8,)
     assert np.asarray(reloaded[0]["actions"]).shape == (7,)
+
+
+def test_cli_help_exposes_top_level_flags_without_args_prefix():
+    result = subprocess.run(
+        [sys.executable, str(pathlib.Path(__file__).with_name("convert_to_lerobot.py")), "--help"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "--libero-mem-data-dir" in result.stdout
+    assert "--libero-long-data-dir" in result.stdout
+    assert "--max-episodes-per-suite" in result.stdout
+    assert "--args." not in result.stdout
+
+
+def test_cli_parses_top_level_flags_without_fetching_data(monkeypatch, tmp_path):
+    captured_args = []
+
+    def fake_main(args):
+        captured_args.append(args)
+
+    monkeypatch.setattr(convert_to_lerobot, "main", fake_main)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "convert_to_lerobot.py",
+            "--libero-mem-data-dir",
+            str(tmp_path / "mem"),
+            "--libero-long-data-dir",
+            str(tmp_path / "long"),
+            "--max-episodes-per-suite",
+            "3",
+        ],
+    )
+
+    convert_to_lerobot.cli()
+
+    assert captured_args == [
+        convert_to_lerobot.Args(
+            libero_mem_data_dir=tmp_path / "mem",
+            libero_long_data_dir=tmp_path / "long",
+            max_episodes_per_suite=3,
+        )
+    ]

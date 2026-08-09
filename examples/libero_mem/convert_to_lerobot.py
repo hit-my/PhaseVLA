@@ -268,6 +268,10 @@ def main(args: Args) -> None:
     )
 
 
+def cli() -> None:
+    main(tyro.cli(Args))
+
+
 def checksum_paths(paths: Iterable[Path]) -> str:
     digest = hashlib.sha256()
     for path in sorted((Path(p) for p in paths), key=lambda p: str(p)):
@@ -425,4 +429,4 @@ def _default_val_count(episodes: list[OfficialEpisode]) -> int:
 
 
 if __name__ == "__main__":
-    tyro.cli(main)
+    cli()
