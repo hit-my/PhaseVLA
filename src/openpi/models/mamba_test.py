@@ -35,6 +35,18 @@ def test_initial_state_is_zero_and_repeatable():
         np.testing.assert_array_equal(leaf_a, leaf_b)
         np.testing.assert_array_equal(leaf_a, jnp.zeros_like(leaf_a))
 
+def test_bfloat16_state_keeps_dtype_after_step_and_scan():
+    model = SelectiveMamba(MambaConfig(d_model=16, d_state=4, d_conv=3, expand=2, depth=2), nnx.Rngs(0))
+    x = jax.random.normal(jax.random.key(1), (2, 5, 16))
+
+    _, step_state = model.step(x[:, 0], model.initial_state(batch_size=2, dtype=jnp.bfloat16))
+    _, scan_state = model.scan(x, model.initial_state(batch_size=2, dtype=jnp.bfloat16))
+
+    for leaf in jax.tree.leaves(step_state):
+        assert leaf.dtype == jnp.bfloat16
+    for leaf in jax.tree.leaves(scan_state):
+        assert leaf.dtype == jnp.bfloat16
+
 
 def test_state_tree_and_shapes_do_not_depend_on_sequence_length():
     config = MambaConfig(d_model=12, d_state=5, d_conv=4, expand=2, depth=3)

@@ -124,7 +124,8 @@ class _MambaLayer(nnx.Module):
         next_ssm = dA * state.ssm + input_update
         ssm_y = jnp.sum(next_ssm * c[:, None, :], axis=-1) + self.D.value * conv
         y = self.out_proj(ssm_y * jax.nn.silu(gate))
-        return residual + y, MambaLayerState(ssm=next_ssm, conv=next_conv)
+        next_state = MambaLayerState(ssm=next_ssm.astype(state.ssm.dtype), conv=next_conv.astype(state.conv.dtype))
+        return residual + y, next_state
 
 
 class SelectiveMamba(nnx.Module):
