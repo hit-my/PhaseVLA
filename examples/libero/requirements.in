@@ -9,3 +9,8 @@ torchvision==0.12.0+cu113
 torchaudio==0.11.0+cu113
 robosuite==1.4.1
 matplotlib==3.5.3
+
+bddl==1.0.1
+easydict==1.9
+cloudpickle==2.1.0
+gym==0.25.2

@@ -1,0 +1,529 @@
+from __future__ import annotations
+
+import copy
+import importlib.util
+import json
+import pathlib
+import sys
+
+import pytest
+
+_MODULE_DIR = pathlib.Path(__file__).parent
+
+_BUILD_SPEC = importlib.util.spec_from_file_location(
+    "libero_mem_build_history_pairs", _MODULE_DIR / "build_history_pairs.py"
+)
+build_history_pairs = importlib.util.module_from_spec(_BUILD_SPEC)
+sys.modules[_BUILD_SPEC.name] = build_history_pairs
+_BUILD_SPEC.loader.exec_module(build_history_pairs)
+
+_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "libero_mem_eval_history_pairs", _MODULE_DIR / "eval_history_pairs.py"
+)
+eval_history_pairs = importlib.util.module_from_spec(_EVAL_SPEC)
+sys.modules[_EVAL_SPEC.name] = eval_history_pairs
+_EVAL_SPEC.loader.exec_module(eval_history_pairs)
+
+
+class SyntheticHistoryReplayer:
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, history_indices, *, branch):
+        self.calls.append((tuple(history_indices), branch))
+        return {"branch": branch, "history": list(history_indices), "hidden": f"state:{branch}"}
+
+
+class RecordingPolicy:
+    def __init__(self):
+        self.calls = []
+
+    def act(self, observation, *, state, noise, task, progress_state=None):
+        self.calls.append(
+            {
+                "observation": copy.deepcopy(observation),
+                "state": copy.deepcopy(state),
+                "noise": noise,
+                "task": task,
+                "progress_state": copy.deepcopy(progress_state),
+            }
+        )
+        state_branch = state.get("branch") if isinstance(state, dict) else None
+        if state_branch is None:
+            state_branch = "zero"
+        return {"branch": state_branch, "vector": [len(str(state_branch)), noise["seed"] % 10]}
+
+
+class RecordingEnvironment:
+    def __init__(self):
+        self.restores = []
+
+    def restore(self, *, observation, physical_state, evaluator_progress_state, noise):
+        self.restores.append(
+            {
+                "observation": copy.deepcopy(observation),
+                "physical_state": copy.deepcopy(physical_state),
+                "evaluator_progress_state": copy.deepcopy(evaluator_progress_state),
+                "noise": copy.deepcopy(noise),
+            }
+        )
+
+
+class BranchScorer:
+    def __call__(self, action, *, target_branch, task, progress_label):
+        observed_branch = action["branch"]
+        return {
+            "observed_branch": observed_branch,
+            "target_branch": target_branch,
+            "event_trace": [
+                {"event": "entered_branch", "branch": observed_branch, "task": task, "progress_label": progress_label}
+            ],
+            "correct": observed_branch != target_branch,
+            "progress_label": progress_label,
+        }
+
+
+def _candidate(
+    episode_id,
+    query_id,
+    *,
+    progress_label,
+    next_predicate,
+    token,
+    history_indices,
+    canonical_state=None,
+    current_observation=None,
+    feasible_predicates=None,
+):
+    return build_history_pairs.SyntheticCandidate(
+        task_id="open-drawer",
+        episode_id=episode_id,
+        query_id=query_id,
+        progress_label=progress_label,
+        source_episode_ids=[episode_id],
+        retrieval_token=token,
+        next_subgoal_predicate=next_predicate,
+        target_branch=next_predicate,
+        history_indices=history_indices,
+        canonical_physical_state=canonical_state or {"drawer": "closed", "cube": "reachable"},
+        current_observation=current_observation or {"rgb": [[1, 2], [3, 4]], "robot": [0.1, 0.2]},
+        evaluator_progress_state={"label": progress_label, "hidden_counter": len(history_indices)},
+        feasible_predicates=feasible_predicates or {"pull(drawer)", "push(drawer)", "lift(cube)"},
+    )
+
+
+def test_build_pairs_greedy_selects_only_valid_non_overlapping_history_contrast():
+    candidates = [
+        _candidate(
+            1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0, 0.0], history_indices=[0, 1]
+        ),
+        _candidate(
+            2, "b", progress_label="after", next_predicate="push(drawer)", token=[0.96, 0.0], history_indices=[2, 3]
+        ),
+        _candidate(
+            3, "c", progress_label="before", next_predicate="lift(cube)", token=[1.0, 0.0], history_indices=[4, 5]
+        ),
+        _candidate(
+            1, "d", progress_label="after", next_predicate="push(drawer)", token=[0.98, 0.0], history_indices=[6, 7]
+        ),
+    ]
+
+    pairs = build_history_pairs.build_history_pairs(candidates, similarity_threshold=0.95, noise_seed=123)
+
+    assert len(pairs) == 1
+    pair = pairs[0]
+    assert pair.a.query_id == "a"
+    assert pair.b.query_id == "b"
+    assert pair.similarity == pytest.approx(1.0)
+    assert pair.manifest["a"]["history_indices"] == [0, 1]
+    assert pair.manifest["b"]["history_indices"] == [2, 3]
+    assert pair.manifest["threshold"] == 0.95
+    assert pair.manifest["noise_seed"] == 123
+
+
+def test_manifest_validation_rejects_missing_required_fields():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]
+            ),
+            _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[1]),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=7,
+    )[0]
+    manifest = copy.deepcopy(pair.manifest)
+    del manifest["a"]["evaluator_progress_checksum"]
+
+    with pytest.raises(ValueError, match="evaluator_progress_checksum"):
+        build_history_pairs.validate_pair_manifest(manifest)
+
+
+def test_checksums_require_same_current_observation_and_canonical_physical_state_but_distinct_progress_state():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]
+            ),
+            _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[1]),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=42,
+    )[0]
+
+    assert pair.manifest["canonical_physical_state_checksum"] == build_history_pairs.stable_checksum(
+        pair.canonical_physical_state
+    )
+    assert pair.manifest["current_observation_checksum"] == build_history_pairs.stable_checksum(
+        pair.current_observation
+    )
+    assert pair.manifest["a"]["evaluator_progress_checksum"] != pair.manifest["b"]["evaluator_progress_checksum"]
+    assert pair.manifest["a"]["evaluator_progress_state"] == {"label": "before", "hidden_counter": 1}
+    assert "evaluator_progress_state" not in pair.model_inputs["a"]
+    assert "evaluator_progress_state" not in pair.model_inputs["b"]
+
+
+def test_load_manifest_rejects_tampered_recomputable_physical_observation_and_progress_checksums(tmp_path):
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]
+            ),
+            _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[1]),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=42,
+    )[0]
+    manifest_path = tmp_path / "pairs.jsonl"
+    build_history_pairs.write_manifest_jsonl(manifest_path, [pair])
+
+    loaded = build_history_pairs.load_manifest(manifest_path)
+
+    assert loaded[0]["canonical_physical_state"] == pair.canonical_physical_state
+    assert loaded[0]["current_observation"] == pair.current_observation
+
+    def assert_tamper_rejected(mutator, match):
+        tampered = copy.deepcopy(loaded[0])
+        mutator(tampered)
+        tampered_path = tmp_path / f"tampered-{match}.jsonl"
+        tampered_path.write_text(json.dumps(tampered, sort_keys=True) + "\n")
+
+        with pytest.raises(ValueError, match=match):
+            build_history_pairs.load_manifest(tampered_path)
+
+    assert_tamper_rejected(
+        lambda row: row["canonical_physical_state"].update({"drawer": "open"}),
+        "canonical_physical_state_checksum",
+    )
+    assert_tamper_rejected(
+        lambda row: row["current_observation"].update({"robot": [9.9]}), "current_observation_checksum"
+    )
+    assert_tamper_rejected(
+        lambda row: row["a"]["evaluator_progress_state"].update({"hidden_counter": 99}),
+        "evaluator_progress_checksum",
+    )
+
+
+def test_evaluator_runs_all_history_state_interventions_with_fixed_inputs_noise_and_semantic_scorer():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1,
+                "a",
+                progress_label="before",
+                next_predicate="pull(drawer)",
+                token=[1.0],
+                history_indices=[10, 11, 12],
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20, 21, 22]
+            ),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=99,
+    )[0]
+    env = RecordingEnvironment()
+    policy = RecordingPolicy()
+    replayer = SyntheticHistoryReplayer()
+
+    rows = eval_history_pairs.evaluate_history_pair(
+        pair,
+        policy=policy,
+        environment=env,
+        history_replayer=replayer,
+        branch_scorer=BranchScorer(),
+        truncated_k=2,
+        shuffle_seed=5,
+    )
+
+    conditions = {(row["trial_branch"], row["condition"]) for row in rows}
+    assert conditions == {
+        ("a", "frozen_baseline"),
+        ("a", "correct"),
+        ("a", "zero"),
+        ("a", "truncated_2"),
+        ("a", "shuffled"),
+        ("a", "swapped"),
+        ("b", "frozen_baseline"),
+        ("b", "correct"),
+        ("b", "zero"),
+        ("b", "truncated_2"),
+        ("b", "shuffled"),
+        ("b", "swapped"),
+    }
+    assert {row["observation_checksum"] for row in rows} == {pair.manifest["current_observation_checksum"]}
+    assert {row["physical_state_checksum"] for row in rows} == {pair.manifest["canonical_physical_state_checksum"]}
+    assert {row["noise_checksum"] for row in rows} == {build_history_pairs.stable_checksum({"seed": 99})}
+    assert {restore["observation"] == pair.current_observation for restore in env.restores} == {True}
+    assert {restore["physical_state"] == pair.canonical_physical_state for restore in env.restores} == {True}
+    assert {call["progress_state"] is None for call in policy.calls} == {True}
+    assert all("branch_correct" in row for row in rows)
+    assert all("action_prefix_distance" in row for row in rows)
+    assert all(isinstance(row["event_trace"], list) and row["event_trace"] for row in rows)
+    assert {row["observed_branch"] for row in rows} >= {"pull(drawer)", "push(drawer)", "zero"}
+
+    swapped = [row for row in rows if row["condition"] == "swapped"]
+    assert {row["evaluator_progress_label"] for row in swapped} == {"before", "after"}
+    assert {row["target_branch"] for row in swapped} == {"pull(drawer)", "push(drawer)"}
+    assert any(row["condition"] == "correct" and row["branch_correct"] for row in rows)
+    assert any(row["condition"] == "swapped" and not row["branch_correct"] for row in rows)
+
+
+def test_evaluator_recomputes_branch_correct_from_events_not_scorer_boolean():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10]
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20]
+            ),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=99,
+    )[0]
+
+    class LyingBranchScorer:
+        def __call__(self, action, *, target_branch, task, progress_label):
+            return {
+                "observed_branch": "wrong-branch",
+                "target_branch": target_branch,
+                "event_trace": [{"event": "entered_branch", "branch": "wrong-branch", "task": task}],
+                "correct": True,
+                "progress_label": progress_label,
+            }
+
+    rows = eval_history_pairs.evaluate_history_pair(
+        pair,
+        policy=RecordingPolicy(),
+        environment=RecordingEnvironment(),
+        history_replayer=SyntheticHistoryReplayer(),
+        branch_scorer=LyingBranchScorer(),
+        truncated_k=1,
+    )
+
+    assert rows
+    assert all(row["semantic_branch"]["correct"] is True for row in rows)
+    assert all(not row["branch_correct"] for row in rows)
+
+
+def test_write_jsonl_preserves_recomputable_branch_accuracy(tmp_path):
+    rows = [
+        {
+            "pair_id": "p0",
+            "condition": "correct",
+            "target_branch": "pull(drawer)",
+            "observed_branch": "pull(drawer)",
+            "event_trace": [{"event": "entered_branch", "branch": "pull(drawer)"}],
+            "branch_correct": False,
+        },
+        {
+            "pair_id": "p1",
+            "condition": "correct",
+            "target_branch": "pull(drawer)",
+            "observed_branch": "push(drawer)",
+            "event_trace": [{"event": "entered_branch", "branch": "push(drawer)"}],
+            "branch_correct": False,
+        },
+    ]
+    output_path = tmp_path / "history_pairs.jsonl"
+
+    eval_history_pairs.write_jsonl(output_path, rows)
+    loaded = [json.loads(line) for line in output_path.read_text().splitlines()]
+
+    assert loaded == rows
+    assert eval_history_pairs.branch_accuracy(loaded, condition="correct") == 0.5
+
+
+def test_build_and_eval_cli_supports_injected_offline_smoke(tmp_path):
+    candidates = [
+        _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0, 1]),
+        _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[2, 3]),
+        _candidate(3, "c", progress_label="start", next_predicate="lift(cube)", token=[1.0], history_indices=[4, 5]),
+        _candidate(4, "d", progress_label="done", next_predicate="push(drawer)", token=[1.0], history_indices=[6, 7]),
+    ]
+
+    class CandidateProvider:
+        def __init__(self):
+            self.calls = []
+
+        def __call__(self, *, repo_id):
+            self.calls.append(repo_id)
+            return candidates
+
+    pairs_path = tmp_path / "history_pairs.jsonl"
+    provider = CandidateProvider()
+
+    build_history_pairs.main(
+        [
+            "--repo-id",
+            "futuremamba/libero_mem_long_val",
+            "--max-pairs-per-task",
+            "1",
+            "--output",
+            str(pairs_path),
+            "--similarity-threshold",
+            "0.9",
+            "--noise-seed",
+            "17",
+        ],
+        candidate_provider=provider,
+    )
+
+    assert provider.calls == ["futuremamba/libero_mem_long_val"]
+    loaded_pairs = build_history_pairs.load_history_pairs(pairs_path)
+    assert len(loaded_pairs) == 1
+
+    envs = []
+
+    def environment_factory(pair):
+        env = RecordingEnvironment()
+        envs.append((pair.pair_id, env))
+        return env
+
+    results_path = tmp_path / "history_pair_results.jsonl"
+    eval_history_pairs.main(
+        ["--pairs", str(pairs_path), "--results", str(results_path), "--truncated-k", "1", "--shuffle-seed", "3"],
+        policy=RecordingPolicy(),
+        environment_factory=environment_factory,
+        history_replayer=SyntheticHistoryReplayer(),
+        branch_scorer=BranchScorer(),
+    )
+
+    result_rows = [json.loads(line) for line in results_path.read_text().splitlines()]
+
+    assert len(result_rows) == 12
+    assert envs == [(loaded_pairs[0].pair_id, envs[0][1])]
+    assert {row["condition"] for row in result_rows} >= {"correct", "swapped"}
+    assert all("event_trace" in row and "observed_branch" in row for row in result_rows)
+
+
+def test_real_history_replayer_rejects_branch_only_manifest_policy_snapshots_without_replayable_dataset():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10, 11]
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20, 21]
+            ),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=99,
+    )[0]
+    pair.manifest["a"]["policy_state_snapshot"] = {"branch": "a", "history": [10, 11]}
+    pair.manifest["b"]["policy_state_snapshot"] = {"branch": "b", "history": [20, 21]}
+
+    class Args:
+        history_repo_id = None
+        history_dataset_root = None
+
+    with pytest.raises(ValueError, match="replayable.*history.*per-condition"):
+        eval_history_pairs._load_real_history_replayer(args=Args(), pairs=[pair], policy=RecordingPolicy())
+
+
+def test_evaluate_history_pairs_closes_callable_environment_when_evaluation_fails():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10]
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20]
+            ),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=99,
+    )[0]
+
+    class ClosableEnvironment(RecordingEnvironment):
+        def __init__(self):
+            super().__init__()
+            self.close_calls = 0
+
+        def close(self):
+            self.close_calls += 1
+
+    class ExplodingBranchScorer:
+        def __call__(self, action, *, target_branch, task, progress_label):
+            raise RuntimeError("scorer failed")
+
+    created_envs = []
+
+    def environment_factory(pair):
+        del pair
+        env = ClosableEnvironment()
+        created_envs.append(env)
+        return env
+
+    with pytest.raises(RuntimeError, match="scorer failed"):
+        eval_history_pairs.evaluate_history_pairs(
+            [pair],
+            policy=RecordingPolicy(),
+            environment_factory=environment_factory,
+            history_replayer=SyntheticHistoryReplayer(),
+            branch_scorer=ExplodingBranchScorer(),
+            truncated_k=1,
+        )
+
+    assert len(created_envs) == 1
+    assert created_envs[0].close_calls == 1
+
+
+def test_restorable_libero_environment_close_closes_raw_env_once():
+    class RawEnv:
+        def __init__(self):
+            self.close_calls = 0
+
+        def close(self):
+            self.close_calls += 1
+
+    class FakeAdapter:
+        def __init__(self, env, *, task_text):
+            del task_text
+            self.env = env
+
+    class FakeAdapterModule:
+        LiberoMemEnvAdapter = FakeAdapter
+
+    raw_env = RawEnv()
+    environment = eval_history_pairs._RestorableLiberoMemEnvironment(
+        raw_env,
+        task_text="pick and place",
+        env_adapter_module=FakeAdapterModule,
+    )
+
+    environment.close()
+    environment.close()
+
+    assert raw_env.close_calls == 1
+
+
+def test_snapshot_satisfied_propagates_snapshot_failures_with_context():
+    class BrokenAdapter:
+        def snapshot(self, observation, *, success):
+            del observation, success
+            raise RuntimeError("snapshot broke")
+
+    with pytest.raises(RuntimeError, match="snapshot_satisfied.*snapshot broke"):
+        eval_history_pairs._snapshot_satisfied(BrokenAdapter(), {"rgb": [[1]]})

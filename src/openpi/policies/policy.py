@@ -133,3 +133,18 @@ class PolicyRecorder(_base_policy.BasePolicy):
 
         np.save(output_path, np.asarray(data))
         return results
+
+    @override
+    def reset(self) -> None:
+        self._policy.reset()
+
+    def snapshot_state(self):
+        return self._policy.snapshot_state()
+
+    def restore_state(self, state) -> None:
+        self._policy.restore_state(state)
+
+    def fork(self) -> "PolicyRecorder":
+        fork_dir = self._record_dir / f"fork_{self._record_step}"
+        self._record_step += 1
+        return PolicyRecorder(self._policy.fork(), fork_dir)

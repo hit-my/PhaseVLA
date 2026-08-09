@@ -1,6 +1,8 @@
 import dataclasses
 import logging
+import pathlib
 import re
+import urllib.parse
 from typing import Protocol, runtime_checkable
 
 import flax.traverse_util
@@ -55,6 +57,86 @@ class CheckpointWeightLoader(WeightLoader):
 
 
 @dataclasses.dataclass(frozen=True)
+class PartialCheckpointWeightLoader(WeightLoader):
+    """Strictly loads a checkpoint while allowing only declared missing reference params."""
+
+    params_path: str
+    missing_regex: str = "futuremamba/.*"
+
+    def load(self, params: at.Params) -> at.Params:
+        params_path = _require_existing_local_path(self.params_path)
+        loaded_params = _model.restore_params(params_path, restore_type=np.ndarray)
+        return _strict_merge_params(loaded_params, params, missing_regex=self.missing_regex)
+
+
+
+@dataclasses.dataclass(frozen=True)
+class LatestCheckpointWeightLoader(WeightLoader):
+    """Loads the latest numeric-step checkpoint params from a local Orbax checkpoint root."""
+
+    checkpoint_root: str
+    missing_regex: str = "futuremamba/.*"
+
+    def load(self, params: at.Params) -> at.Params:
+        checkpoint_root = _require_existing_local_checkpoint_root(self.checkpoint_root)
+        params_path = _latest_numeric_step_params_path(checkpoint_root)
+        loaded_params = _model.restore_params(params_path, restore_type=np.ndarray)
+        return _strict_merge_params(loaded_params, params, missing_regex=self.missing_regex)
+
+
+def _require_existing_local_checkpoint_root(checkpoint_root: str) -> pathlib.Path:
+    parsed = urllib.parse.urlparse(checkpoint_root)
+    if parsed.scheme:
+        raise ValueError(
+            "LatestCheckpointWeightLoader requires checkpoint_root to be an existing local checkpoint root; "
+            f"got URI scheme {parsed.scheme!r} for {checkpoint_root!r}"
+        )
+    local_path = pathlib.Path(checkpoint_root).expanduser()
+    if not local_path.exists():
+        raise FileNotFoundError(
+            "LatestCheckpointWeightLoader requires checkpoint_root to be an existing local checkpoint root; "
+            f"got missing path {checkpoint_root!r}"
+        )
+    if not local_path.is_dir():
+        raise ValueError(
+            "LatestCheckpointWeightLoader requires checkpoint_root to be an existing local checkpoint root directory; "
+            f"got file {checkpoint_root!r}"
+        )
+    return local_path
+
+
+def _latest_numeric_step_params_path(checkpoint_root: pathlib.Path) -> pathlib.Path:
+    candidates: list[tuple[int, pathlib.Path]] = []
+    for child in checkpoint_root.iterdir():
+        if not child.is_dir() or not child.name.isdigit():
+            continue
+        params_path = child / "params"
+        if params_path.exists():
+            candidates.append((int(child.name), params_path))
+    if not candidates:
+        raise ValueError(
+            "No numeric checkpoint step directories containing a params item were found in local checkpoint root "
+            f"{checkpoint_root!s}"
+        )
+    return max(candidates, key=lambda item: item[0])[1]
+
+def _require_existing_local_path(params_path: str) -> pathlib.Path:
+    parsed = urllib.parse.urlparse(params_path)
+    if parsed.scheme:
+        raise ValueError(
+            "PartialCheckpointWeightLoader requires params_path to be an existing local file or directory; "
+            f"got URI scheme {parsed.scheme!r} for {params_path!r}"
+        )
+    local_path = pathlib.Path(params_path).expanduser()
+    if not local_path.exists():
+        raise FileNotFoundError(
+            "PartialCheckpointWeightLoader requires params_path to be an existing local file or directory; "
+            f"got missing path {params_path!r}"
+        )
+    return local_path
+
+
+@dataclasses.dataclass(frozen=True)
 class PaliGemmaWeightLoader(WeightLoader):
     """Loads weights from the official PaliGemma checkpoint.
 
@@ -100,5 +182,40 @@ def _merge_params(loaded_params: at.Params, params: at.Params, *, missing_regex:
     for k in {k for k in flat_ref if pattern.fullmatch(k)}:
         if k not in result:
             result[k] = flat_ref[k]
+
+    return flax.traverse_util.unflatten_dict(result, sep="/")
+
+
+def _strict_merge_params(loaded_params: at.Params, params: at.Params, *, missing_regex: str) -> at.Params:
+    flat_ref = flax.traverse_util.flatten_dict(params, sep="/")
+    flat_loaded = flax.traverse_util.flatten_dict(loaded_params, sep="/")
+    pattern = re.compile(missing_regex)
+
+    ref_keys = set(flat_ref)
+    loaded_keys = set(flat_loaded)
+    extra_keys = sorted(loaded_keys - ref_keys)
+    if extra_keys:
+        raise ValueError(f"Checkpoint contains extra parameter keys not present in reference: {extra_keys}")
+
+    disallowed_missing = sorted(key for key in ref_keys - loaded_keys if pattern.fullmatch(key) is None)
+    if disallowed_missing:
+        raise ValueError(f"Checkpoint is missing non-optional parameter keys: {disallowed_missing}")
+
+    result = {}
+    for key in sorted(loaded_keys):
+        loaded_value = flat_loaded[key]
+        ref_value = flat_ref[key]
+        if loaded_value.shape != ref_value.shape:
+            raise ValueError(
+                f"Checkpoint parameter shape mismatch for {key}: got {loaded_value.shape}, expected {ref_value.shape}"
+            )
+        if loaded_value.dtype != ref_value.dtype:
+            raise ValueError(
+                f"Checkpoint parameter dtype mismatch for {key}: got {loaded_value.dtype}, expected {ref_value.dtype}"
+            )
+        result[key] = loaded_value
+
+    for key in sorted(ref_keys - loaded_keys):
+        result[key] = flat_ref[key]
 
     return flax.traverse_util.unflatten_dict(result, sep="/")
