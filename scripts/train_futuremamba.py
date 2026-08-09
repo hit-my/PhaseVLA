@@ -7,8 +7,8 @@ import platform
 from typing import Any
 
 import etils.epath as epath
-import flax.nnx as nnx
 from flax import struct
+import flax.nnx as nnx
 from flax.training import common_utils
 import flax.traverse_util as traverse_util
 import jax
@@ -219,6 +219,20 @@ def _create_episode_loader(
     return episode_loader.create_episode_data_loader(config, sharding=sharding, shuffle=shuffle)
 
 
+def _episode_iterator_at_step(data_loader: episode_loader.DataLoader[episode_loader.EpisodeBatch], start_step: int):
+    """Build a deterministic episode iterator aligned to the restored train step.
+
+    checkpoints.restore_state does not restore data-loader cursors; episode loaders are seeded from config.seed,
+    so replaying exactly train_state.step batches restores the next batch without consuming before restore.
+    """
+    if start_step < 0:
+        raise ValueError(f"Cannot restore episode loader to negative train step {start_step}.")
+    data_iter = iter(data_loader)
+    for _ in range(start_step):
+        next(data_iter)
+    return data_iter
+
+
 def restore_train_state_for_test(config: _config.TrainConfig, init_rng: at.KeyArrayLike):
     mesh = sharding.make_mesh(config.fsdp_devices)
     data_sharding = jax.sharding.NamedSharding(mesh, jax.sharding.PartitionSpec(sharding.DATA_AXIS))
@@ -255,9 +269,6 @@ def main(config: _config.TrainConfig):
     )
     init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
     data_loader = _create_episode_loader(config, sharding=data_sharding, shuffle=True)
-    data_iter = iter(data_loader)
-    batch = _as_train_episode_batch(next(data_iter))
-    logging.info(f"Initialized episode data loader:\n{training_utils.array_tree_to_info(batch)}")
     train_state, train_state_sharding = init_train_state(config, init_rng, mesh, resume=resuming)
     jax.block_until_ready(train_state)
     logging.info(f"Initialized train state:\n{training_utils.array_tree_to_info(train_state.params)}")
@@ -265,16 +276,25 @@ def main(config: _config.TrainConfig):
     logging.info("FutureMamba trainable params:\n%s", "\n".join(trainable_paths))
     if resuming:
         train_state = _checkpoints.restore_state(checkpoint_manager, train_state, data_loader)
+    # checkpoints.restore_state currently restores model/optimizer state but not an episode-loader cursor.
+    # The episode loader is constructed from config.seed, so restore the cursor deterministically from the
+    # restored train step. The loop saves before any lookahead, keeping train_state.step equal to batches consumed.
+    start_step = int(train_state.step)
+    data_iter = _episode_iterator_at_step(data_loader, start_step)
     ptrain_step = jax.jit(
         functools.partial(train_step, config),
         in_shardings=(replicated_sharding, train_state_sharding, data_sharding),
         out_shardings=(train_state_sharding, replicated_sharding),
         donate_argnums=(1,),
     )
-    start_step = int(train_state.step)
-    pbar = tqdm.tqdm(range(start_step, config.num_train_steps), initial=start_step, total=config.num_train_steps, dynamic_ncols=True)
+    pbar = tqdm.tqdm(
+        range(start_step, config.num_train_steps), initial=start_step, total=config.num_train_steps, dynamic_ncols=True
+    )
     infos = []
     for step in pbar:
+        batch = _as_train_episode_batch(next(data_iter))
+        if step == start_step:
+            logging.info(f"Initialized episode data loader:\n{training_utils.array_tree_to_info(batch)}")
         with sharding.set_mesh(mesh):
             train_state, info = ptrain_step(train_rng, train_state, batch)
         infos.append(info)
@@ -286,7 +306,6 @@ def main(config: _config.TrainConfig):
             if config.wandb_enabled:
                 wandb.log(reduced_info, step=step)
             infos = []
-        batch = _as_train_episode_batch(next(data_iter))
         if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
             _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
     logging.info("Waiting for checkpoint manager to finish")

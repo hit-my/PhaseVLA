@@ -49,6 +49,89 @@ def _mean_last_k_valid(tokens: jax.Array, mask: jax.Array, k: int) -> jax.Array:
     return _masked_mean(tokens, keep)
 
 
+class _GRUMemory(nnx.Module):
+    def __init__(self, d_model: int, hidden_width: int, *, rngs: nnx.Rngs):
+        self.d_model = int(d_model)
+        self.hidden_width = int(hidden_width)
+        self.input_proj = nnx.Linear(self.d_model, self.hidden_width, rngs=rngs)
+        self.input_gates = nnx.Linear(self.hidden_width, 3 * self.hidden_width, rngs=rngs)
+        self.hidden_gates = nnx.Linear(self.hidden_width, 3 * self.hidden_width, use_bias=False, rngs=rngs)
+        self.output_proj = nnx.Linear(self.hidden_width, self.d_model, rngs=rngs)
+
+    def initial_state(self, batch_size: int, dtype=jnp.float32):
+        return (jnp.zeros((int(batch_size), self.hidden_width), dtype=dtype),)
+
+    def step(self, step_input: jax.Array, state):
+        hidden = state[0]
+        projected = nnx.swish(self.input_proj(step_input))
+        input_gates = self.input_gates(projected)
+        hidden_gates = self.hidden_gates(hidden)
+        input_update, input_reset, input_candidate = jnp.split(input_gates, 3, axis=-1)
+        hidden_update, hidden_reset, hidden_candidate = jnp.split(hidden_gates, 3, axis=-1)
+        update = jax.nn.sigmoid(input_update + hidden_update)
+        reset = jax.nn.sigmoid(input_reset + hidden_reset)
+        candidate = jnp.tanh(input_candidate + reset * hidden_candidate)
+        next_hidden = (1.0 - update) * candidate + update * hidden
+        return self.output_proj(next_hidden), (next_hidden.astype(hidden.dtype),)
+
+
+class _LSTMMemory(nnx.Module):
+    def __init__(self, d_model: int, hidden_width: int, *, rngs: nnx.Rngs):
+        self.d_model = int(d_model)
+        self.hidden_width = int(hidden_width)
+        self.input_proj = nnx.Linear(self.d_model, self.hidden_width, rngs=rngs)
+        self.input_gates = nnx.Linear(self.hidden_width, 4 * self.hidden_width, rngs=rngs)
+        self.hidden_gates = nnx.Linear(self.hidden_width, 4 * self.hidden_width, use_bias=False, rngs=rngs)
+        self.output_proj = nnx.Linear(self.hidden_width, self.d_model, rngs=rngs)
+
+    def initial_state(self, batch_size: int, dtype=jnp.float32):
+        shape = (int(batch_size), self.hidden_width)
+        return jnp.zeros(shape, dtype=dtype), jnp.zeros(shape, dtype=dtype)
+
+    def step(self, step_input: jax.Array, state):
+        hidden, cell = state
+        projected = nnx.swish(self.input_proj(step_input))
+        gates = self.input_gates(projected) + self.hidden_gates(hidden)
+        input_gate, forget_gate, candidate, output_gate = jnp.split(gates, 4, axis=-1)
+        next_cell = jax.nn.sigmoid(forget_gate) * cell + jax.nn.sigmoid(input_gate) * jnp.tanh(candidate)
+        next_hidden = jax.nn.sigmoid(output_gate) * jnp.tanh(next_cell)
+        return self.output_proj(next_hidden), (next_hidden.astype(hidden.dtype), next_cell.astype(cell.dtype))
+
+
+class _FrameStackMemory(nnx.Module):
+    def __init__(self, d_model: int, frame_stack_window: int, hidden_width: int, *, rngs: nnx.Rngs):
+        self.d_model = int(d_model)
+        self.frame_stack_window = int(frame_stack_window)
+        self.hidden_width = int(hidden_width)
+        self.stack_proj = nnx.Linear(self.frame_stack_window * self.d_model, self.hidden_width, rngs=rngs)
+        self.output_proj = nnx.Linear(self.hidden_width, self.d_model, rngs=rngs)
+
+    def initial_state(self, batch_size: int, dtype=jnp.float32):
+        return (jnp.zeros((int(batch_size), self.frame_stack_window, self.d_model), dtype=dtype),)
+
+    def step(self, step_input: jax.Array, state):
+        history = jnp.concatenate([state[0][:, 1:], step_input[:, None, :]], axis=1)
+        stacked = history.reshape(history.shape[0], self.frame_stack_window * self.d_model)
+        hidden = nnx.swish(self.stack_proj(stacked))
+        return self.output_proj(hidden), (history.astype(state[0].dtype),)
+
+
+def _create_memory_backend(config: futuremamba_config.FutureMambaConfig, *, rngs: nnx.Rngs):
+    if config.memory_backend == "mamba":
+        return SelectiveMamba(config.memory, rngs=rngs)
+    if config.memory_backend == "gru":
+        return _GRUMemory(config.memory.d_model, config.memory_backend_hidden_width, rngs=rngs)
+    if config.memory_backend == "lstm":
+        return _LSTMMemory(config.memory.d_model, config.memory_backend_hidden_width, rngs=rngs)
+    if config.memory_backend == "frame_stack":
+        return _FrameStackMemory(
+            config.memory.d_model, config.frame_stack_window, config.memory_backend_hidden_width, rngs=rngs
+        )
+    if config.memory_backend == "none":
+        return None
+    raise ValueError(f"Unknown memory_backend: {config.memory_backend!r}")
+
+
 class _FutureMambaPlugin(nnx.Module):
     def __init__(self, config: futuremamba_config.FutureMambaConfig, *, rngs: nnx.Rngs):
         paligemma_config = _gemma.get_config(config.paligemma_variant)
@@ -59,7 +142,7 @@ class _FutureMambaPlugin(nnx.Module):
         self.executed_action_mlp = nnx.Linear(config.memory.d_model, config.memory.d_model, rngs=rngs)
         self.executed_action_fusion = nnx.Linear(2 * config.memory.d_model, config.memory.d_model, rngs=rngs)
         self.memory_input_fusion = nnx.Linear(2 * config.memory.d_model, config.memory.d_model, rngs=rngs)
-        self.memory = SelectiveMamba(config.memory, rngs=rngs)
+        self.memory = _create_memory_backend(config, rngs=rngs)
         self.memory_token_proj = nnx.Linear(config.memory.d_model, action_expert_config.width, rngs=rngs)
         kv_features = action_expert_config.depth * action_expert_config.num_kv_heads * action_expert_config.head_dim
         self.memory_k_proj = nnx.Linear(action_expert_config.width, kv_features, rngs=rngs)
@@ -203,20 +286,15 @@ class FutureMamba(Pi0):
     def initial_memory_state(self, batch_size: int):
         config = self._futuremamba_config
         batch_size = int(batch_size)
-        if config.memory_backend == "mamba":
-            return self.futuremamba.memory.initial_state(batch_size, dtype=jnp.float32)
-        if config.memory_backend == "lstm":
-            return (
-                jnp.zeros((batch_size, config.memory.d_model), dtype=jnp.float32),
-                jnp.zeros((batch_size, config.memory.d_model), dtype=jnp.float32),
-            )
-        if config.memory_backend == "frame_stack":
-            return (jnp.zeros((batch_size, config.frame_stack_window, config.memory.d_model), dtype=jnp.float32),)
-        if config.memory_backend in ("gru", "none"):
+        if config.memory_backend == "none":
             return (jnp.zeros((batch_size, config.memory.d_model), dtype=jnp.float32),)
+        if config.memory_backend in ("mamba", "gru", "lstm", "frame_stack"):
+            return self.futuremamba.memory.initial_state(batch_size, dtype=jnp.float32)
         raise ValueError(f"Unknown memory_backend: {config.memory_backend!r}")
 
-    def _encode_memory_inputs(self, prefix_out: jax.Array, prefix_mask: jax.Array, mode: str | None = None) -> jax.Array:
+    def _encode_memory_inputs(
+        self, prefix_out: jax.Array, prefix_mask: jax.Array, mode: str | None = None
+    ) -> jax.Array:
         mode = self._futuremamba_config.conditioning_pool if mode is None else mode
         if mode == "last_valid":
             return _last_valid(prefix_out, prefix_mask)
@@ -241,21 +319,10 @@ class FutureMamba(Pi0):
 
     def _memory_step(self, step_input: jax.Array, state):
         backend = self._futuremamba_config.memory_backend
-        if backend == "mamba":
-            return self.futuremamba.memory.step(step_input, state)
         if backend == "none":
             return step_input, state
-        if backend == "gru":
-            hidden = jnp.tanh(state[0] + step_input)
-            return hidden, (hidden,)
-        if backend == "lstm":
-            hidden, cell = state
-            cell = jnp.tanh(cell + step_input)
-            hidden = jnp.tanh(hidden + cell)
-            return hidden, (hidden, cell)
-        if backend == "frame_stack":
-            history = jnp.concatenate([state[0][:, 1:], step_input[:, None, :]], axis=1)
-            return jnp.mean(history, axis=1), (history,)
+        if backend in ("mamba", "gru", "lstm", "frame_stack"):
+            return self.futuremamba.memory.step(step_input, state)
         raise ValueError(f"Unknown memory_backend: {backend!r}")
 
     def _scan_memory(
@@ -294,14 +361,20 @@ class FutureMamba(Pi0):
                 token = jnp.where(valid, token, previous_token)
                 previous_token = token
                 query_tokens.append(token)
-                if bptt_window is not None and (query_index + 1) % int(bptt_window) == 0 and query_index + 1 < num_queries:
+                if (
+                    bptt_window is not None
+                    and (query_index + 1) % int(bptt_window) == 0
+                    and query_index + 1 < num_queries
+                ):
                     carry = jax.tree.map(jax.lax.stop_gradient, carry)
                     previous_token = jax.lax.stop_gradient(previous_token)
 
             batch_tokens.append(jnp.stack(query_tokens, axis=1))
             batch_states.append(carry)
 
-        return jnp.concatenate(batch_tokens, axis=0), jax.tree.map(lambda *leaves: jnp.concatenate(leaves, axis=0), *batch_states)
+        return jnp.concatenate(batch_tokens, axis=0), jax.tree.map(
+            lambda *leaves: jnp.concatenate(leaves, axis=0), *batch_states
+        )
 
     def _prepare_memory_context(
         self,
@@ -419,7 +492,9 @@ class FutureMamba(Pi0):
         if self._futuremamba_config.decoder_mode == "action_memory_full":
 
             def action_velocity(x_t, timestep):
-                return self._action_velocity_with_memory_full(observation, x_t, timestep, prefix_mask, kv_cache, memory_token)
+                return self._action_velocity_with_memory_full(
+                    observation, x_t, timestep, prefix_mask, kv_cache, memory_token
+                )
 
             actions, diagnostics = integrate_handoff(
                 noise,
@@ -502,7 +577,9 @@ class FutureMamba(Pi0):
         )
         return jnp.mean(episode_error)
 
-    def _sample_high_noise_time(self, rng: at.KeyArrayLike, shape: tuple[int, ...], *, handoff_steps: int, num_steps: int):
+    def _sample_high_noise_time(
+        self, rng: at.KeyArrayLike, shape: tuple[int, ...], *, handoff_steps: int, num_steps: int
+    ):
         lower = 1.0 - (float(handoff_steps) / float(num_steps))
         lower = min(max(lower, 0.0), 1.0)
         beta_sample = jax.random.beta(rng, 1.5, 1.0, shape=shape, dtype=jnp.float32)
@@ -544,12 +621,11 @@ class FutureMamba(Pi0):
             and config.memory_input == "token_action"
             and float(config.executed_action_noise_std) > 0.0
         ):
-            executed_noise = jax.random.normal(
-                executed_noise_rng, executed_actions.shape, dtype=executed_actions.dtype
-            )
+            executed_noise = jax.random.normal(executed_noise_rng, executed_actions.shape, dtype=executed_actions.dtype)
             executed_actions = jnp.where(
                 executed_action_mask[..., None],
-                executed_actions + jnp.asarray(config.executed_action_noise_std, dtype=executed_actions.dtype) * executed_noise,
+                executed_actions
+                + jnp.asarray(config.executed_action_noise_std, dtype=executed_actions.dtype) * executed_noise,
                 executed_actions,
             )
         reset_mask = getattr(batch, "reset_mask", jnp.zeros((batch_size, num_queries), dtype=jnp.bool_))
@@ -561,7 +637,12 @@ class FutureMamba(Pi0):
         noise = jax.random.normal(noise_rng, actions.shape)
         noise = jnp.where(valid_action_mask[..., None], noise, 0.0)
         handoff_steps = self._handoff_steps(config.handoff_ratio, config.num_denoise_steps)
-        time = self._sample_high_noise_time(time_rng, (batch_size, num_queries), handoff_steps=handoff_steps, num_steps=config.num_denoise_steps)
+        if config.decoder_mode == "action_memory_full":
+            time = jax.random.beta(time_rng, 1.5, 1.0, (batch_size, num_queries), dtype=jnp.float32) * 0.999 + 0.001
+        else:
+            time = self._sample_high_noise_time(
+                time_rng, (batch_size, num_queries), handoff_steps=handoff_steps, num_steps=config.num_denoise_steps
+            )
         x_t = time[..., None, None] * noise + (1.0 - time[..., None, None]) * safe_actions
         target_velocity = noise - safe_actions
 
@@ -579,10 +660,29 @@ class FutureMamba(Pi0):
             reset_mask,
             self.initial_memory_state(batch_size),
         )
-        flat_memory_token = self.futuremamba.project_memory_token(memory_tokens.reshape(batch_size * num_queries, -1))[:, None, :]
+        flat_memory_token = self.futuremamba.project_memory_token(memory_tokens.reshape(batch_size * num_queries, -1))[
+            :, None, :
+        ]
 
         flat_x_t = x_t.reshape(batch_size * num_queries, self.action_horizon, self.action_dim)
         flat_time = time.reshape(batch_size * num_queries)
+        if config.decoder_mode == "action_memory_full":
+            pred_velocity = self._action_velocity_with_memory_full(
+                flat_observation, flat_x_t, flat_time, prefix_mask, kv_cache, flat_memory_token
+            )
+            pred_velocity = pred_velocity.reshape(batch_size, num_queries, self.action_horizon, self.action_dim)
+            flow_error_steps = jnp.mean(jnp.square(pred_velocity - target_velocity), axis=-1)
+            flow_loss = self._mean_masked_action_error(flow_error_steps, action_mask, query_mask)
+            zero_loss = jnp.asarray(0.0, dtype=jnp.float32)
+            return {
+                "loss": flow_loss,
+                "flow_loss": flow_loss,
+                "handoff_loss": zero_loss,
+                "handoff_error": zero_loss,
+                "boundary_loss": zero_loss,
+                "boundary_error": zero_loss,
+            }
+
         pred_velocity = self._progress_velocity(prefix_mask, kv_cache, flat_memory_token, flat_x_t, flat_time)
         pred_velocity = pred_velocity.reshape(batch_size, num_queries, self.action_horizon, self.action_dim)
         flow_error_steps = jnp.mean(jnp.square(pred_velocity - target_velocity), axis=-1)
@@ -605,7 +705,9 @@ class FutureMamba(Pi0):
             boundary_time = jnp.full((batch_size, num_queries), boundary_time_value, dtype=jnp.float32)
 
         if config.handoff_loss_weight > 0:
-            target_boundary = boundary_time[..., None, None] * noise + (1.0 - boundary_time[..., None, None]) * safe_actions
+            target_boundary = (
+                boundary_time[..., None, None] * noise + (1.0 - boundary_time[..., None, None]) * safe_actions
+            )
             handoff_error_steps = jnp.mean(jnp.square(boundary_state - target_boundary), axis=-1)
             handoff_error = self._mean_masked_action_error(handoff_error_steps, action_mask, query_mask)
 
@@ -613,7 +715,9 @@ class FutureMamba(Pi0):
             boundary_state = jax.lax.stop_gradient(boundary_state)
             flat_boundary = boundary_state.reshape(batch_size * num_queries, self.action_horizon, self.action_dim)
             flat_boundary_time = boundary_time.reshape(batch_size * num_queries)
-            progress_boundary = self._progress_velocity(prefix_mask, kv_cache, flat_memory_token, flat_boundary, flat_boundary_time)
+            progress_boundary = self._progress_velocity(
+                prefix_mask, kv_cache, flat_memory_token, flat_boundary, flat_boundary_time
+            )
             action_boundary = self.action_velocity(
                 flat_observation,
                 flat_boundary,

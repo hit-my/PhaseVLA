@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable, Mapping, Sequence
 import dataclasses
 import importlib
 import json
 import math
 from pathlib import Path
-import statistics
-import sys
+import re
 import time
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 SOLVER_STEPS = 10
 BATCH_SIZE = 1
@@ -61,6 +61,66 @@ def count_parameters(params: Any) -> int:
     return sum(_leaf_size(leaf) for leaf in _tree_leaves(params))
 
 
+def _optional_import(module_name: str):
+    try:
+        return importlib.import_module(module_name)
+    except ModuleNotFoundError:
+        return None
+
+
+def _path_to_str(path: Any) -> str:
+    if isinstance(path, tuple):
+        return "/".join(str(part) for part in path)
+    return str(path)
+
+
+def _parameter_value(value: Any) -> Any:
+    return getattr(value, "value", value)
+
+
+def _flat_state_items(state: Any):
+    if not hasattr(state, "flat_state"):
+        return ()
+    flat = state.flat_state()
+    if not hasattr(flat, "items"):
+        return ()
+    return tuple(flat.items())
+
+
+def _count_state_parameters(state: Any) -> int:
+    items = _flat_state_items(state)
+    if items:
+        return sum(_leaf_size(_parameter_value(value)) for _, value in items)
+    return count_parameters(state)
+
+
+def _model_config(model: Any) -> Any | None:
+    config = getattr(model, "config", None)
+    if config is not None:
+        return config() if callable(config) else config
+    config = getattr(model, "_futuremamba_config", None)
+    if config is not None:
+        return config() if callable(config) else config
+    plugin = getattr(model, "futuremamba", None)
+    config = getattr(plugin, "config", None)
+    if config is not None:
+        return config() if callable(config) else config
+    return None
+
+
+def _trainable_filter(model: Any) -> Any | None:
+    for owner in (_model_config(model), model):
+        if owner is None:
+            continue
+        get_filter = getattr(owner, "get_trainable_filter", None)
+        if callable(get_filter):
+            return get_filter()
+        trainable_filter = getattr(owner, "trainable_filter", None)
+        if trainable_filter is not None:
+            return trainable_filter
+    return None
+
+
 def percentile(values: Sequence[float], q: float) -> float:
     if not values:
         raise ValueError("cannot compute percentile of empty values")
@@ -102,10 +162,34 @@ def _model_parameter_counts(model: Any) -> dict[str, int]:
             "trainable": int(counts["trainable"]),
             "plugin": int(counts.get("plugin", counts["trainable"])),
         }
+
+    nnx = _optional_import("flax.nnx")
+    if nnx is not None:
+        try:
+            params = nnx.state(model, nnx.Param)
+        except Exception:
+            params = None
+        if params is not None:
+            total = _count_state_parameters(params)
+            if total:
+                trainable_filter = _trainable_filter(model)
+                if trainable_filter is not None:
+                    trainable = _count_state_parameters(nnx.state(model, nnx.All(nnx.Param, trainable_filter)))
+                else:
+                    trainable = count_parameters(
+                        getattr(model, "trainable_params", getattr(model, "futuremamba_params", {}))
+                    )
+                plugin = sum(
+                    _leaf_size(_parameter_value(value))
+                    for path, value in _flat_state_items(params)
+                    if re.fullmatch(r"futuremamba/.*", _path_to_str(path))
+                )
+                return {"total": total, "trainable": trainable, "plugin": plugin}
+
     if hasattr(model, "params"):
         total = count_parameters(model.params)
     else:
-        raise RuntimeError("model must expose parameter_counts() or params for profiling")
+        raise RuntimeError("model must expose parameter_counts(), NNX Param state, or params for profiling")
     trainable = count_parameters(getattr(model, "trainable_params", getattr(model, "futuremamba_params", {})))
     plugin = count_parameters(getattr(model, "futuremamba_params", getattr(model, "trainable_params", {})))
     return {"total": total, "trainable": trainable, "plugin": plugin}
@@ -114,9 +198,30 @@ def _model_parameter_counts(model: Any) -> dict[str, int]:
 def _empty_batch(model: Any) -> tuple[Any, Any, Any, Any]:
     if hasattr(model, "profile_batch"):
         batch = model.profile_batch(batch_size=BATCH_SIZE)
-        return batch["observation"], batch.get("executed_actions"), batch.get("executed_action_mask"), batch.get("rng", 0)
+        return (
+            batch["observation"],
+            batch.get("executed_actions"),
+            batch.get("executed_action_mask"),
+            batch.get("rng", 0),
+        )
+
+    config = _model_config(model)
+    fake_obs = getattr(config, "fake_obs", None) if config is not None else None
+    if fake_obs is None:
+        fake_obs = getattr(model, "fake_obs", None)
+    if callable(fake_obs):
+        jax = importlib.import_module("jax")
+        jnp = importlib.import_module("jax.numpy")
+        action_dim = int(getattr(model, "action_dim", getattr(config, "action_dim", 7)))
+        executed_horizon = int(getattr(config, "executed_horizon", getattr(model, "executed_horizon", 5)))
+        observation = fake_obs(batch_size=BATCH_SIZE)
+        executed_actions = jnp.zeros((BATCH_SIZE, executed_horizon, action_dim), dtype=jnp.float32)
+        executed_action_mask = jnp.zeros((BATCH_SIZE, executed_horizon), dtype=jnp.bool_)
+        rng_factory = getattr(jax.random, "key", None) or jax.random.PRNGKey
+        return observation, executed_actions, executed_action_mask, rng_factory(0)
+
     action_dim = int(getattr(model, "action_dim", 7))
-    executed_horizon = int(getattr(getattr(model, "config", object()), "executed_horizon", 5))
+    executed_horizon = int(getattr(config, "executed_horizon", getattr(model, "executed_horizon", 5)))
     observation = getattr(model, "fake_observation", {"batch_size": BATCH_SIZE})
     executed_actions = [[[0.0 for _ in range(action_dim)] for _ in range(executed_horizon)] for _ in range(BATCH_SIZE)]
     executed_action_mask = [[False for _ in range(executed_horizon)] for _ in range(BATCH_SIZE)]
@@ -274,17 +379,24 @@ def load_real_model(config_name: str, checkpoint_root: str | Path | None):
     except Exception as error:
         raise RuntimeError(f"Unable to resolve training config {config_name!r}") from error
 
-    params_path = resolve_checkpoint_params(checkpoint_root)
-    if params_path is not None:
-        config = dataclasses.replace(config, weight_loader=weight_loaders.CheckpointWeightLoader(str(params_path)))
+    if checkpoint_root is not None:
+        config = dataclasses.replace(
+            config,
+            weight_loader=weight_loaders.LatestCheckpointWeightLoader(str(checkpoint_root)),
+        )
 
     try:
-        model = config.model.create(jax.random.key(0))
-        params = nnx.state(model, nnx.Param)
-        loaded = config.weight_loader.load(params)
-        nnx.update(model, loaded)
+        reference_model = nnx.eval_shape(config.model.create, jax.random.key(0))
+        reference_params = nnx.state(reference_model, nnx.Param).to_pure_dict()
+        loaded_params = config.weight_loader.load(reference_params)
+        model = config.model.load(loaded_params)
     except Exception as error:
         raise RuntimeError(f"Unable to instantiate FutureMamba model for {config_name!r}") from error
+
+    if _model_config(model) is None:
+        model.config = config.model
+    if _model_config(model) is None:
+        raise RuntimeError(f"FutureMamba model for {config_name!r} does not expose its model config")
     return model
 
 
@@ -292,7 +404,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Profile FutureMamba batch=1 10-step query efficiency.")
     parser.add_argument("--config", default="futuremamba_libero_mem")
     parser.add_argument("--checkpoint-root", type=Path, default=None)
-    parser.add_argument("--fake-smoke", action="store_true", help="Run deterministic offline smoke without real JAX/OpenPI deps.")
+    parser.add_argument(
+        "--fake-smoke", action="store_true", help="Run deterministic offline smoke without real JAX/OpenPI deps."
+    )
     parser.add_argument("--warmup-queries", type=int, default=3)
     parser.add_argument("--measured-queries", type=int, default=20)
     args = parser.parse_args(argv)

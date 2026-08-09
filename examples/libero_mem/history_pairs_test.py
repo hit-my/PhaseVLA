@@ -10,12 +10,16 @@ import pytest
 
 _MODULE_DIR = pathlib.Path(__file__).parent
 
-_BUILD_SPEC = importlib.util.spec_from_file_location("libero_mem_build_history_pairs", _MODULE_DIR / "build_history_pairs.py")
+_BUILD_SPEC = importlib.util.spec_from_file_location(
+    "libero_mem_build_history_pairs", _MODULE_DIR / "build_history_pairs.py"
+)
 build_history_pairs = importlib.util.module_from_spec(_BUILD_SPEC)
 sys.modules[_BUILD_SPEC.name] = build_history_pairs
 _BUILD_SPEC.loader.exec_module(build_history_pairs)
 
-_EVAL_SPEC = importlib.util.spec_from_file_location("libero_mem_eval_history_pairs", _MODULE_DIR / "eval_history_pairs.py")
+_EVAL_SPEC = importlib.util.spec_from_file_location(
+    "libero_mem_eval_history_pairs", _MODULE_DIR / "eval_history_pairs.py"
+)
 eval_history_pairs = importlib.util.module_from_spec(_EVAL_SPEC)
 sys.modules[_EVAL_SPEC.name] = eval_history_pairs
 _EVAL_SPEC.loader.exec_module(eval_history_pairs)
@@ -110,10 +114,18 @@ def _candidate(
 
 def test_build_pairs_greedy_selects_only_valid_non_overlapping_history_contrast():
     candidates = [
-        _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0, 0.0], history_indices=[0, 1]),
-        _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[0.96, 0.0], history_indices=[2, 3]),
-        _candidate(3, "c", progress_label="before", next_predicate="lift(cube)", token=[1.0, 0.0], history_indices=[4, 5]),
-        _candidate(1, "d", progress_label="after", next_predicate="push(drawer)", token=[0.98, 0.0], history_indices=[6, 7]),
+        _candidate(
+            1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0, 0.0], history_indices=[0, 1]
+        ),
+        _candidate(
+            2, "b", progress_label="after", next_predicate="push(drawer)", token=[0.96, 0.0], history_indices=[2, 3]
+        ),
+        _candidate(
+            3, "c", progress_label="before", next_predicate="lift(cube)", token=[1.0, 0.0], history_indices=[4, 5]
+        ),
+        _candidate(
+            1, "d", progress_label="after", next_predicate="push(drawer)", token=[0.98, 0.0], history_indices=[6, 7]
+        ),
     ]
 
     pairs = build_history_pairs.build_history_pairs(candidates, similarity_threshold=0.95, noise_seed=123)
@@ -132,7 +144,9 @@ def test_build_pairs_greedy_selects_only_valid_non_overlapping_history_contrast(
 def test_manifest_validation_rejects_missing_required_fields():
     pair = build_history_pairs.build_history_pairs(
         [
-            _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]),
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]
+            ),
             _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[1]),
         ],
         similarity_threshold=0.9,
@@ -148,7 +162,9 @@ def test_manifest_validation_rejects_missing_required_fields():
 def test_checksums_require_same_current_observation_and_canonical_physical_state_but_distinct_progress_state():
     pair = build_history_pairs.build_history_pairs(
         [
-            _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]),
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]
+            ),
             _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[1]),
         ],
         similarity_threshold=0.9,
@@ -158,7 +174,9 @@ def test_checksums_require_same_current_observation_and_canonical_physical_state
     assert pair.manifest["canonical_physical_state_checksum"] == build_history_pairs.stable_checksum(
         pair.canonical_physical_state
     )
-    assert pair.manifest["current_observation_checksum"] == build_history_pairs.stable_checksum(pair.current_observation)
+    assert pair.manifest["current_observation_checksum"] == build_history_pairs.stable_checksum(
+        pair.current_observation
+    )
     assert pair.manifest["a"]["evaluator_progress_checksum"] != pair.manifest["b"]["evaluator_progress_checksum"]
     assert pair.manifest["a"]["evaluator_progress_state"] == {"label": "before", "hidden_counter": 1}
     assert "evaluator_progress_state" not in pair.model_inputs["a"]
@@ -168,7 +186,9 @@ def test_checksums_require_same_current_observation_and_canonical_physical_state
 def test_load_manifest_rejects_tampered_recomputable_physical_observation_and_progress_checksums(tmp_path):
     pair = build_history_pairs.build_history_pairs(
         [
-            _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]),
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[0]
+            ),
             _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[1]),
         ],
         similarity_threshold=0.9,
@@ -195,7 +215,9 @@ def test_load_manifest_rejects_tampered_recomputable_physical_observation_and_pr
         lambda row: row["canonical_physical_state"].update({"drawer": "open"}),
         "canonical_physical_state_checksum",
     )
-    assert_tamper_rejected(lambda row: row["current_observation"].update({"robot": [9.9]}), "current_observation_checksum")
+    assert_tamper_rejected(
+        lambda row: row["current_observation"].update({"robot": [9.9]}), "current_observation_checksum"
+    )
     assert_tamper_rejected(
         lambda row: row["a"]["evaluator_progress_state"].update({"hidden_counter": 99}),
         "evaluator_progress_checksum",
@@ -205,8 +227,17 @@ def test_load_manifest_rejects_tampered_recomputable_physical_observation_and_pr
 def test_evaluator_runs_all_history_state_interventions_with_fixed_inputs_noise_and_semantic_scorer():
     pair = build_history_pairs.build_history_pairs(
         [
-            _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10, 11, 12]),
-            _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20, 21, 22]),
+            _candidate(
+                1,
+                "a",
+                progress_label="before",
+                next_predicate="pull(drawer)",
+                token=[1.0],
+                history_indices=[10, 11, 12],
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20, 21, 22]
+            ),
         ],
         similarity_threshold=0.9,
         noise_seed=99,
@@ -261,8 +292,12 @@ def test_evaluator_runs_all_history_state_interventions_with_fixed_inputs_noise_
 def test_evaluator_recomputes_branch_correct_from_events_not_scorer_boolean():
     pair = build_history_pairs.build_history_pairs(
         [
-            _candidate(1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10]),
-            _candidate(2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20]),
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10]
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20]
+            ),
         ],
         similarity_threshold=0.9,
         noise_seed=99,
@@ -381,3 +416,114 @@ def test_build_and_eval_cli_supports_injected_offline_smoke(tmp_path):
     assert envs == [(loaded_pairs[0].pair_id, envs[0][1])]
     assert {row["condition"] for row in result_rows} >= {"correct", "swapped"}
     assert all("event_trace" in row and "observed_branch" in row for row in result_rows)
+
+
+def test_real_history_replayer_rejects_branch_only_manifest_policy_snapshots_without_replayable_dataset():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10, 11]
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20, 21]
+            ),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=99,
+    )[0]
+    pair.manifest["a"]["policy_state_snapshot"] = {"branch": "a", "history": [10, 11]}
+    pair.manifest["b"]["policy_state_snapshot"] = {"branch": "b", "history": [20, 21]}
+
+    class Args:
+        history_repo_id = None
+        history_dataset_root = None
+
+    with pytest.raises(ValueError, match="replayable.*history.*per-condition"):
+        eval_history_pairs._load_real_history_replayer(args=Args(), pairs=[pair], policy=RecordingPolicy())
+
+
+def test_evaluate_history_pairs_closes_callable_environment_when_evaluation_fails():
+    pair = build_history_pairs.build_history_pairs(
+        [
+            _candidate(
+                1, "a", progress_label="before", next_predicate="pull(drawer)", token=[1.0], history_indices=[10]
+            ),
+            _candidate(
+                2, "b", progress_label="after", next_predicate="push(drawer)", token=[1.0], history_indices=[20]
+            ),
+        ],
+        similarity_threshold=0.9,
+        noise_seed=99,
+    )[0]
+
+    class ClosableEnvironment(RecordingEnvironment):
+        def __init__(self):
+            super().__init__()
+            self.close_calls = 0
+
+        def close(self):
+            self.close_calls += 1
+
+    class ExplodingBranchScorer:
+        def __call__(self, action, *, target_branch, task, progress_label):
+            raise RuntimeError("scorer failed")
+
+    created_envs = []
+
+    def environment_factory(pair):
+        del pair
+        env = ClosableEnvironment()
+        created_envs.append(env)
+        return env
+
+    with pytest.raises(RuntimeError, match="scorer failed"):
+        eval_history_pairs.evaluate_history_pairs(
+            [pair],
+            policy=RecordingPolicy(),
+            environment_factory=environment_factory,
+            history_replayer=SyntheticHistoryReplayer(),
+            branch_scorer=ExplodingBranchScorer(),
+            truncated_k=1,
+        )
+
+    assert len(created_envs) == 1
+    assert created_envs[0].close_calls == 1
+
+
+def test_restorable_libero_environment_close_closes_raw_env_once():
+    class RawEnv:
+        def __init__(self):
+            self.close_calls = 0
+
+        def close(self):
+            self.close_calls += 1
+
+    class FakeAdapter:
+        def __init__(self, env, *, task_text):
+            del task_text
+            self.env = env
+
+    class FakeAdapterModule:
+        LiberoMemEnvAdapter = FakeAdapter
+
+    raw_env = RawEnv()
+    environment = eval_history_pairs._RestorableLiberoMemEnvironment(
+        raw_env,
+        task_text="pick and place",
+        env_adapter_module=FakeAdapterModule,
+    )
+
+    environment.close()
+    environment.close()
+
+    assert raw_env.close_calls == 1
+
+
+def test_snapshot_satisfied_propagates_snapshot_failures_with_context():
+    class BrokenAdapter:
+        def snapshot(self, observation, *, success):
+            del observation, success
+            raise RuntimeError("snapshot broke")
+
+    with pytest.raises(RuntimeError, match="snapshot_satisfied.*snapshot broke"):
+        eval_history_pairs._snapshot_satisfied(BrokenAdapter(), {"rgb": [[1]]})

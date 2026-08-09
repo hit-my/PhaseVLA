@@ -1,7 +1,6 @@
 import dataclasses
 
 from flax import nnx
-from flax import traverse_util
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -10,7 +9,8 @@ import pytest
 from openpi.models import futuremamba as _futuremamba
 from openpi.models import futuremamba_config as _futuremamba_config
 from openpi.models import model as _model
-from openpi.models.futuremamba import FutureMamba, integrate_handoff
+from openpi.models.futuremamba import FutureMamba
+from openpi.models.futuremamba import integrate_handoff
 from openpi.models.mamba import MambaConfig
 from openpi.models.progress_expert import make_layer_mapping
 
@@ -19,6 +19,10 @@ def _flat_param_paths(config: _futuremamba_config.FutureMambaConfig):
     model = nnx.eval_shape(config.create, jax.random.key(0))
     state = nnx.state(model, nnx.Param)
     return {"/".join(str(part) for part in path): value for path, value in state.flat_state().items()}
+
+
+def _param_shape(param):
+    return param.value.shape if hasattr(param, "value") else param.shape
 
 
 def _dummy_config(**kwargs) -> _futuremamba_config.FutureMambaConfig:
@@ -59,7 +63,12 @@ def test_config_forces_pi05_and_discrete_state_input():
     ],
 )
 def test_config_validation_rejects_invalid_scalars(field, value, match):
-    kwargs = {"memory": MambaConfig(d_model=64), "paligemma_variant": "dummy", "action_expert_variant": "dummy", field: value}
+    kwargs = {
+        "memory": MambaConfig(d_model=64),
+        "paligemma_variant": "dummy",
+        "action_expert_variant": "dummy",
+        field: value,
+    }
     with pytest.raises(ValueError, match=match):
         _futuremamba_config.FutureMambaConfig(**kwargs)
 
@@ -151,6 +160,83 @@ def test_futuremamba_creates_real_plugin_components_under_single_path():
     assert non_base_top_levels == {"futuremamba"}
 
 
+@pytest.mark.parametrize(
+    ("backend", "expected_shapes"),
+    [
+        (
+            "gru",
+            {
+                "input_proj/kernel": lambda config: (config.memory.d_model, config.memory_backend_hidden_width),
+                "input_gates/kernel": lambda config: (
+                    config.memory_backend_hidden_width,
+                    3 * config.memory_backend_hidden_width,
+                ),
+                "hidden_gates/kernel": lambda config: (
+                    config.memory_backend_hidden_width,
+                    3 * config.memory_backend_hidden_width,
+                ),
+                "output_proj/kernel": lambda config: (config.memory_backend_hidden_width, config.memory.d_model),
+            },
+        ),
+        (
+            "lstm",
+            {
+                "input_proj/kernel": lambda config: (config.memory.d_model, config.memory_backend_hidden_width),
+                "input_gates/kernel": lambda config: (
+                    config.memory_backend_hidden_width,
+                    4 * config.memory_backend_hidden_width,
+                ),
+                "hidden_gates/kernel": lambda config: (
+                    config.memory_backend_hidden_width,
+                    4 * config.memory_backend_hidden_width,
+                ),
+                "output_proj/kernel": lambda config: (config.memory_backend_hidden_width, config.memory.d_model),
+            },
+        ),
+        (
+            "frame_stack",
+            {
+                "stack_proj/kernel": lambda config: (
+                    config.frame_stack_window * config.memory.d_model,
+                    config.memory_backend_hidden_width,
+                ),
+                "output_proj/kernel": lambda config: (config.memory_backend_hidden_width, config.memory.d_model),
+            },
+        ),
+    ],
+)
+def test_futuremamba_instantiates_trainable_non_mamba_memory_backends(backend, expected_shapes):
+    config = _dummy_config(memory_backend=backend, frame_stack_window=3)
+    flat_params = _flat_param_paths(config)
+
+    backend_paths = {path: value for path, value in flat_params.items() if path.startswith("futuremamba/memory/")}
+    assert backend_paths
+    assert not any("layers/" in path for path in backend_paths)
+    assert not any("A_log" in path or "conv_kernel" in path for path in backend_paths)
+    for suffix, expected_shape in expected_shapes.items():
+        assert _param_shape(backend_paths[f"futuremamba/memory/{suffix}"]) == expected_shape(config)
+
+
+def test_futuremamba_none_backend_has_no_backend_parameters():
+    flat_params = _flat_param_paths(_dummy_config(memory_backend="none"))
+
+    assert not any(path.startswith("futuremamba/memory/") for path in flat_params)
+
+
+@pytest.mark.parametrize("backend", ("gru", "lstm", "frame_stack"))
+def test_trainable_memory_backend_step_output_depends_on_backend_parameters(backend):
+    config = _dummy_config(memory_backend=backend, frame_stack_window=3)
+    model = config.create(jax.random.key(0))
+    step_input = jnp.ones((1, config.memory.d_model), dtype=jnp.float32)
+    state = model.initial_memory_state(batch_size=1)
+
+    before, _ = model._memory_step(step_input, state)
+    model.futuremamba.memory.output_proj.bias.value = model.futuremamba.memory.output_proj.bias.value + 1.0
+    after, _ = model._memory_step(step_input, state)
+
+    assert not np.allclose(before, after)
+
+
 def test_futuremamba_filters_partition_all_params_exactly():
     config = _dummy_config()
     model = nnx.eval_shape(config.create, jax.random.key(0))
@@ -193,6 +279,7 @@ def _episode_obs(config: _futuremamba_config.FutureMambaConfig, *, batch_size: i
         lambda x: jnp.broadcast_to(x[:, None], (batch_size, num_queries, *x.shape[1:])),
         config.fake_obs(batch_size=batch_size),
     )
+
 
 def _episode_batch(
     config: _futuremamba_config.FutureMambaConfig,
@@ -303,7 +390,9 @@ def test_memory_scan_resets_before_step_and_freezes_invalid_queries():
     reset_mask = jnp.array([[True, False, True], [True, False, True]])
 
     zero_state = model.initial_memory_state(batch_size=2)
-    tokens, next_state = model._scan_memory(prefix_inputs, executed_actions, executed_mask, query_mask, reset_mask, zero_state)
+    tokens, next_state = model._scan_memory(
+        prefix_inputs, executed_actions, executed_mask, query_mask, reset_mask, zero_state
+    )
     single_tokens, single_state = model._scan_memory(
         prefix_inputs[1:2, 2:3],
         executed_actions[1:2, 2:3],
@@ -315,7 +404,11 @@ def test_memory_scan_resets_before_step_and_freezes_invalid_queries():
 
     np.testing.assert_allclose(tokens[1, 1], tokens[1, 0], rtol=1e-5, atol=1e-5)
     np.testing.assert_allclose(tokens[1, 2], single_tokens[0, 0], rtol=1e-5, atol=1e-5)
-    jax.tree.map(lambda expected, got: np.testing.assert_allclose(got[1:2], expected, rtol=1e-5, atol=1e-5), single_state, next_state)
+    jax.tree.map(
+        lambda expected, got: np.testing.assert_allclose(got[1:2], expected, rtol=1e-5, atol=1e-5),
+        single_state,
+        next_state,
+    )
 
 
 @pytest.mark.parametrize(
@@ -368,9 +461,12 @@ def test_sample_actions_with_memory_matches_parent_at_zero_handoff_and_skips_act
     state = model.initial_memory_state(batch_size=2)
     executed_actions = jnp.zeros((2, config.executed_horizon, config.action_dim), dtype=jnp.float32)
     executed_mask = jnp.zeros((2, config.executed_horizon), dtype=jnp.bool_)
-    noise = jnp.arange(2 * config.action_horizon * config.action_dim, dtype=jnp.float32).reshape(
-        2, config.action_horizon, config.action_dim
-    ) / 100.0
+    noise = (
+        jnp.arange(2 * config.action_horizon * config.action_dim, dtype=jnp.float32).reshape(
+            2, config.action_horizon, config.action_dim
+        )
+        / 100.0
+    )
 
     parent = super(FutureMamba, model).sample_actions(jax.random.key(1), obs, num_steps=3, noise=noise)
     actual, next_state, diagnostics = model.sample_actions_with_memory(
@@ -407,7 +503,9 @@ def test_compute_episode_loss_masks_padding_queries_and_returns_fixed_keys(monke
         "observation": obs,
         "actions": actions,
         "action_mask": action_mask,
-        "executed_actions": jnp.zeros((batch_size, num_queries, config.executed_horizon, config.action_dim), dtype=jnp.float32),
+        "executed_actions": jnp.zeros(
+            (batch_size, num_queries, config.executed_horizon, config.action_dim), dtype=jnp.float32
+        ),
         "executed_action_mask": jnp.zeros((batch_size, num_queries, config.executed_horizon), dtype=jnp.bool_),
         "query_mask": query_mask,
         "reset_mask": jnp.array([[True, False, False], [True, False, False]]),
@@ -600,6 +698,7 @@ def test_boundary_loss_stops_gradient_through_handoff_state_and_action_velocity(
 
     np.testing.assert_allclose(grad, 0.0, rtol=1e-6, atol=1e-6)
 
+
 def test_initial_memory_state_is_stable_pytree_for_all_backends():
     for backend in ("mamba", "gru", "lstm", "frame_stack", "none"):
         config = _dummy_config(memory_backend=backend, frame_stack_window=3)
@@ -615,7 +714,9 @@ def test_initial_memory_state_is_stable_pytree_for_all_backends():
         executed_mask = jnp.zeros((2, 3, config.executed_horizon), dtype=jnp.bool_)
         query_mask = jnp.ones((2, 3), dtype=jnp.bool_)
         reset_mask = jnp.zeros((2, 3), dtype=jnp.bool_)
-        tokens, next_state = model._scan_memory(prefix_inputs, executed_actions, executed_mask, query_mask, reset_mask, state)
+        tokens, next_state = model._scan_memory(
+            prefix_inputs, executed_actions, executed_mask, query_mask, reset_mask, state
+        )
         assert tokens.shape == (2, 3, config.memory.d_model)
         assert jax.tree.structure(next_state) == jax.tree.structure(state)
 
@@ -668,11 +769,46 @@ def test_action_memory_full_skips_progress_and_conditions_all_solver_steps(monke
     assert diagnostics["action_calls"] == 3
 
 
+def test_compute_episode_loss_action_memory_full_trains_full_action_path_and_skips_progress_losses(monkeypatch):
+    config = _dummy_config(
+        action_horizon=4,
+        executed_horizon=2,
+        decoder_mode="action_memory_full",
+        handoff_loss_weight=3.0,
+        boundary_loss_weight=5.0,
+    )
+    model = config.create(jax.random.key(0))
+    calls = {"action_memory": 0}
+
+    def fail_progress(*args, **kwargs):
+        raise AssertionError("Progress Expert path must not train action_memory_full")
+
+    def action_memory_velocity(observation, x_t, timestep, prefix_mask, kv_cache, memory_token):
+        del observation, prefix_mask, kv_cache
+        calls["action_memory"] += 1
+        assert timestep.shape == (1,)
+        assert memory_token.shape[1] == 1
+        return jnp.zeros_like(x_t)
+
+    monkeypatch.setattr(model, "_progress_velocity", fail_progress)
+    monkeypatch.setattr(model, "_action_velocity_with_memory_full", action_memory_velocity)
+
+    losses = model.compute_episode_loss(jax.random.key(0), _episode_batch(config))
+
+    assert calls["action_memory"] == 1
+    assert set(losses) == {"loss", "flow_loss", "handoff_loss", "handoff_error", "boundary_loss", "boundary_error"}
+    np.testing.assert_allclose(losses["loss"], losses["flow_loss"], rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(losses["handoff_loss"], 0.0, rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(losses["boundary_loss"], 0.0, rtol=1e-6, atol=1e-6)
+
+
 def test_action_memory_full_appends_trainable_memory_kv_without_mutating_prefix_cache():
     config = _dummy_config(decoder_mode="action_memory_full")
     model = config.create(jax.random.key(0))
     action_config = _futuremamba._gemma.get_config(config.action_expert_variant)
-    prefix_k = jnp.zeros((action_config.depth, 2, 3, action_config.num_kv_heads, action_config.head_dim), dtype=jnp.float32)
+    prefix_k = jnp.zeros(
+        (action_config.depth, 2, 3, action_config.num_kv_heads, action_config.head_dim), dtype=jnp.float32
+    )
     prefix_v = jnp.zeros_like(prefix_k)
     memory_token = jnp.ones((2, 1, action_config.width), dtype=jnp.float32)
 
@@ -698,7 +834,9 @@ def test_bptt_window_stops_gradient_at_window_boundary_but_uses_real_burn_in(mon
             return next_value, (next_value,)
 
     monkeypatch.setattr(model.futuremamba, "memory", AdditiveMemory())
-    monkeypatch.setattr(model, "_memory_step_input", lambda prefix_input, executed_actions, executed_action_mask: prefix_input)
+    monkeypatch.setattr(
+        model, "_memory_step_input", lambda prefix_input, executed_actions, executed_action_mask: prefix_input
+    )
     prefix_inputs = jnp.arange(4 * config.memory.d_model, dtype=jnp.float32).reshape(1, 4, config.memory.d_model) / 10.0
     executed_actions = jnp.zeros((1, 4, config.executed_horizon, config.action_dim), dtype=jnp.float32)
     executed_mask = jnp.zeros((1, 4, config.executed_horizon), dtype=jnp.bool_)
@@ -729,5 +867,3 @@ def test_bptt_window_stops_gradient_at_window_boundary_but_uses_real_burn_in(mon
     grad = jax.grad(final_sum)(prefix_inputs)
     np.testing.assert_allclose(grad[:, :2], 0.0, rtol=1e-6, atol=1e-6)
     np.testing.assert_allclose(grad[:, 2:], 1.0, rtol=1e-6, atol=1e-6)
-
-

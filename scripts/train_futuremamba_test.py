@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import dataclasses
 import hashlib
 import pathlib
@@ -12,7 +11,6 @@ import numpy as np
 import pytest
 
 from openpi.models import futuremamba_config as _futuremamba_config
-from openpi.models.mamba import MambaConfig
 from openpi.shared import normalize as _normalize
 from openpi.training import config as _config
 from openpi.training import episode_data_loader as _episode_loader
@@ -263,6 +261,78 @@ def test_trainable_path_validation_rejects_non_futuremamba_parameters():
 
     with pytest.raises(ValueError, match="non-FutureMamba trainable parameter.*base"):
         train_futuremamba.validate_futuremamba_trainables(config, model)
+
+
+def test_resume_restores_checkpoint_before_consuming_episode_batch(monkeypatch, tmp_path):
+    @dataclasses.dataclass
+    class _FakeState:
+        step: int
+        params: dict
+        model_def: object
+
+    class _FakeCheckpointManager:
+        def wait_until_finished(self):
+            pass
+
+    class _CountingEpisodeLoader:
+        def __init__(self, data_config):
+            self._data_config = data_config
+            self.consumed = 0
+
+        def data_config(self):
+            return self._data_config
+
+        def __iter__(self):
+            index = 0
+            while True:
+                self.consumed += 1
+                yield _episode_batch(float(index))
+                index += 1
+
+    loader = _CountingEpisodeLoader(_config.DataConfig(repo_id="fake"))
+    trained_offsets = []
+
+    def fake_restore_state(checkpoint_manager, train_state, data_loader):
+        del checkpoint_manager, train_state
+        assert data_loader is loader
+        assert loader.consumed == 0
+        return _FakeState(step=2, params={}, model_def=object())
+
+    def fake_train_step(config, rng, state, batch):
+        del config, rng
+        trained_offsets.append(float(np.asarray(batch.actions)[0, 0, 0, 0] - 1.0))
+        return _FakeState(step=state.step + 1, params={}, model_def=state.model_def), {
+            "loss": jnp.asarray(0.0),
+            "flow_loss": jnp.asarray(0.0),
+            "handoff_loss": jnp.asarray(0.0),
+            "handoff_error": jnp.asarray(0.0),
+            "boundary_loss": jnp.asarray(0.0),
+            "boundary_error": jnp.asarray(0.0),
+            "grad_norm": jnp.asarray(0.0),
+            "trainable_param_count": jnp.asarray(0.0),
+        }
+
+    monkeypatch.setattr(train_futuremamba, "init_wandb", lambda *args, **kwargs: None)
+    monkeypatch.setattr(train_futuremamba, "_create_episode_loader", lambda *args, **kwargs: loader)
+    monkeypatch.setattr(
+        train_futuremamba, "init_train_state", lambda *args, **kwargs: (_FakeState(0, {}, object()), None)
+    )
+    monkeypatch.setattr(train_futuremamba, "train_step", fake_train_step)
+    monkeypatch.setattr(train_futuremamba, "trainable_param_paths", lambda *args, **kwargs: ("futuremamba/kernel",))
+    monkeypatch.setattr(train_futuremamba.nnx, "merge", lambda *args, **kwargs: object())
+    monkeypatch.setattr(train_futuremamba.jax, "block_until_ready", lambda value: value)
+    monkeypatch.setattr(train_futuremamba.jax, "jit", lambda fn, **kwargs: fn)
+    monkeypatch.setattr(
+        train_futuremamba._checkpoints,
+        "initialize_checkpoint_dir",
+        lambda *args, **kwargs: (_FakeCheckpointManager(), True),
+    )
+    monkeypatch.setattr(train_futuremamba._checkpoints, "restore_state", fake_restore_state)
+    monkeypatch.setattr(train_futuremamba._checkpoints, "save_state", lambda *args, **kwargs: None)
+
+    train_futuremamba.main(_tiny_config(tmp_path, resume=True, num_train_steps=3))
+
+    assert trained_offsets == [2.0]
 
 
 def test_two_step_fake_episode_training_updates_plugin_only_and_resumes_to_step_four(monkeypatch, tmp_path):
