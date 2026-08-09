@@ -59,6 +59,9 @@ class _FutureMambaPlugin(nnx.Module):
         self.memory_input_fusion = nnx.Linear(2 * config.memory.d_model, config.memory.d_model, rngs=rngs)
         self.memory = SelectiveMamba(config.memory, rngs=rngs)
         self.memory_token_proj = nnx.Linear(config.memory.d_model, action_expert_config.width, rngs=rngs)
+        kv_features = action_expert_config.depth * action_expert_config.num_kv_heads * action_expert_config.head_dim
+        self.memory_k_proj = nnx.Linear(action_expert_config.width, kv_features, rngs=rngs)
+        self.memory_v_proj = nnx.Linear(action_expert_config.width, kv_features, rngs=rngs)
 
         progress_expert = nnx_bridge.ToNNX(
             ProgressExpert(
@@ -132,41 +135,58 @@ def integrate_handoff(
     handoff_steps: int,
     progress_velocity,
     action_velocity,
-) -> tuple[jax.Array, dict[str, jax.Array | int]]:
+    coupling: str = "hard",
+) -> tuple[jax.Array, dict[str, jax.Array | int | float]]:
     num_steps = int(num_steps)
     handoff_steps = min(max(int(handoff_steps), 0), num_steps)
     dt = -1.0 / num_steps
     x_t = noise
+    time = jnp.asarray(1.0, dtype=noise.dtype)
     handoff_state = noise
+    progress_calls = 0
+    action_calls = 0
 
     for step in range(num_steps):
-        time = jnp.broadcast_to(jnp.asarray(1.0 + step * dt, dtype=noise.dtype), (noise.shape[0],))
+        step_time = jnp.broadcast_to(time, (noise.shape[0],))
         if step < handoff_steps:
-            velocity = progress_velocity(x_t, time)
+            progress_v = progress_velocity(x_t, step_time)
+            progress_calls += 1
+            if coupling == "hard":
+                velocity = progress_v
+            else:
+                action_v = action_velocity(x_t, step_time)
+                action_calls += 1
+                alpha = jnp.asarray((handoff_steps - step) / handoff_steps, dtype=noise.dtype)
+                if coupling == "convex":
+                    velocity = alpha * progress_v + (1.0 - alpha) * action_v
+                elif coupling == "residual":
+                    velocity = action_v + alpha * progress_v
+                else:
+                    raise ValueError(f"Unknown coupling: {coupling!r}")
         else:
             if step == handoff_steps:
                 handoff_state = x_t
-            velocity = action_velocity(x_t, time)
+            velocity = action_velocity(x_t, step_time)
+            action_calls += 1
         x_t = x_t + dt * velocity
+        time = time + dt
 
     if handoff_steps == num_steps:
         handoff_state = x_t
 
     diagnostics = {
-        "progress_calls": handoff_steps,
-        "action_calls": num_steps - handoff_steps,
+        "progress_calls": progress_calls,
+        "action_calls": action_calls,
         "handoff_steps": handoff_steps,
         "handoff_state": handoff_state,
+        "solver_steps": num_steps,
+        "solver_dt": dt,
     }
     return x_t, diagnostics
 
 
 class FutureMamba(Pi0):
     def __init__(self, config: futuremamba_config.FutureMambaConfig, rngs: nnx.Rngs):
-        if config.memory_backend != "mamba":
-            raise NotImplementedError(f"FutureMamba memory_backend={config.memory_backend!r} is not implemented")
-        if config.decoder_mode != "handoff":
-            raise NotImplementedError(f"FutureMamba decoder_mode={config.decoder_mode!r} is not implemented")
         super().__init__(config, rngs)
         self.futuremamba = _FutureMambaPlugin(config, rngs=rngs)
 
@@ -179,7 +199,20 @@ class FutureMamba(Pi0):
         return min(max(int(round(float(ratio) * int(num_steps))), 0), int(num_steps))
 
     def initial_memory_state(self, batch_size: int):
-        return self.futuremamba.memory.initial_state(int(batch_size), dtype=jnp.float32)
+        config = self._futuremamba_config
+        batch_size = int(batch_size)
+        if config.memory_backend == "mamba":
+            return self.futuremamba.memory.initial_state(batch_size, dtype=jnp.float32)
+        if config.memory_backend == "lstm":
+            return (
+                jnp.zeros((batch_size, config.memory.d_model), dtype=jnp.float32),
+                jnp.zeros((batch_size, config.memory.d_model), dtype=jnp.float32),
+            )
+        if config.memory_backend == "frame_stack":
+            return (jnp.zeros((batch_size, config.frame_stack_window, config.memory.d_model), dtype=jnp.float32),)
+        if config.memory_backend in ("gru", "none"):
+            return (jnp.zeros((batch_size, config.memory.d_model), dtype=jnp.float32),)
+        raise ValueError(f"Unknown memory_backend: {config.memory_backend!r}")
 
     def _encode_memory_inputs(self, prefix_out: jax.Array, prefix_mask: jax.Array, mode: str | None = None) -> jax.Array:
         mode = self._futuremamba_config.conditioning_pool if mode is None else mode
@@ -204,6 +237,25 @@ class FutureMamba(Pi0):
         action_summary = self.futuremamba.summarize_executed_actions(executed_actions, executed_action_mask)
         return self.futuremamba.fuse_memory_input(prefix_input, action_summary)
 
+    def _memory_step(self, step_input: jax.Array, state):
+        backend = self._futuremamba_config.memory_backend
+        if backend == "mamba":
+            return self.futuremamba.memory.step(step_input, state)
+        if backend == "none":
+            return step_input, state
+        if backend == "gru":
+            hidden = jnp.tanh(state[0] + step_input)
+            return hidden, (hidden,)
+        if backend == "lstm":
+            hidden, cell = state
+            cell = jnp.tanh(cell + step_input)
+            hidden = jnp.tanh(hidden + cell)
+            return hidden, (hidden, cell)
+        if backend == "frame_stack":
+            history = jnp.concatenate([state[0][:, 1:], step_input[:, None, :]], axis=1)
+            return jnp.mean(history, axis=1), (history,)
+        raise ValueError(f"Unknown memory_backend: {backend!r}")
+
     def _scan_memory(
         self,
         prefix_inputs: jax.Array,
@@ -217,27 +269,37 @@ class FutureMamba(Pi0):
         if num_queries == 0:
             return jnp.zeros_like(prefix_inputs), state
 
-        zero_state = self.initial_memory_state(batch_size)
-        carry = state
-        previous_token = jnp.zeros((batch_size, self._futuremamba_config.memory.d_model), dtype=prefix_inputs.dtype)
-        memory_tokens = []
+        batch_tokens = []
+        batch_states = []
+        bptt_window = self._futuremamba_config.bptt_window_queries
+        for batch_index in range(batch_size):
+            carry = jax.tree.map(lambda leaf: leaf[batch_index : batch_index + 1], state)
+            zero_state = self.initial_memory_state(1)
+            previous_token = jnp.zeros((1, self._futuremamba_config.memory.d_model), dtype=prefix_inputs.dtype)
+            query_tokens = []
 
-        for query_index in range(num_queries):
-            valid = query_mask[:, query_index]
-            reset = reset_mask[:, query_index]
-            step_state = _batch_where(reset, zero_state, carry)
-            step_input = self._memory_step_input(
-                prefix_inputs[:, query_index],
-                executed_actions[:, query_index],
-                executed_action_mask[:, query_index],
-            )
-            token, stepped_state = self.futuremamba.memory.step(step_input, step_state)
-            carry = _batch_where(valid, stepped_state, carry)
-            token = jnp.where(valid[:, None], token, previous_token)
-            previous_token = token
-            memory_tokens.append(token)
+            for query_index in range(num_queries):
+                valid = query_mask[batch_index, query_index]
+                reset = reset_mask[batch_index, query_index]
+                step_state = _batch_where(reset, zero_state, carry)
+                step_input = self._memory_step_input(
+                    prefix_inputs[batch_index : batch_index + 1, query_index],
+                    executed_actions[batch_index : batch_index + 1, query_index],
+                    executed_action_mask[batch_index : batch_index + 1, query_index],
+                )
+                token, stepped_state = self._memory_step(step_input, step_state)
+                carry = _batch_where(valid, stepped_state, carry)
+                token = jnp.where(valid, token, previous_token)
+                previous_token = token
+                query_tokens.append(token)
+                if bptt_window is not None and (query_index + 1) % int(bptt_window) == 0 and query_index + 1 < num_queries:
+                    carry = jax.tree.map(jax.lax.stop_gradient, carry)
+                    previous_token = jax.lax.stop_gradient(previous_token)
 
-        return jnp.stack(memory_tokens, axis=1), carry
+            batch_tokens.append(jnp.stack(query_tokens, axis=1))
+            batch_states.append(carry)
+
+        return jnp.concatenate(batch_tokens, axis=0), jax.tree.map(lambda *leaves: jnp.concatenate(leaves, axis=0), *batch_states)
 
     def _prepare_memory_context(
         self,
@@ -289,6 +351,39 @@ class FutureMamba(Pi0):
             deterministic=self.deterministic,
         )
 
+    def _augment_kv_cache_with_memory(self, kv_cache, memory_token: jax.Array):
+        action_config = _gemma.get_config(self._futuremamba_config.action_expert_variant)
+        batch_size = memory_token.shape[0]
+
+        def project(proj):
+            projected = proj(memory_token)
+            projected = projected.reshape(
+                batch_size,
+                memory_token.shape[1],
+                action_config.depth,
+                action_config.num_kv_heads,
+                action_config.head_dim,
+            )
+            return jnp.transpose(projected, (2, 0, 1, 3, 4))
+
+        memory_k = project(self.futuremamba.memory_k_proj).astype(kv_cache[0].dtype)
+        memory_v = project(self.futuremamba.memory_v_proj).astype(kv_cache[1].dtype)
+        return jnp.concatenate([kv_cache[0], memory_k], axis=2), jnp.concatenate([kv_cache[1], memory_v], axis=2)
+
+    def _action_velocity_with_memory_full(
+        self,
+        observation: _model.Observation,
+        x_t: jax.Array,
+        timestep: jax.Array,
+        prefix_mask: jax.Array,
+        kv_cache,
+        memory_token: jax.Array,
+    ) -> jax.Array:
+        augmented_cache = self._augment_kv_cache_with_memory(kv_cache, memory_token)
+        memory_mask = jnp.ones(memory_token.shape[:2], dtype=prefix_mask.dtype)
+        augmented_prefix_mask = jnp.concatenate([prefix_mask, memory_mask], axis=1)
+        return self.action_velocity(observation, x_t, timestep, augmented_prefix_mask, augmented_cache)
+
     def sample_actions_with_memory(
         self,
         rng: at.KeyArrayLike,
@@ -319,6 +414,21 @@ class FutureMamba(Pi0):
         )
         handoff_steps = self._handoff_steps(handoff_ratio, int(num_steps))
 
+        if self._futuremamba_config.decoder_mode == "action_memory_full":
+
+            def action_velocity(x_t, timestep):
+                return self._action_velocity_with_memory_full(observation, x_t, timestep, prefix_mask, kv_cache, memory_token)
+
+            actions, diagnostics = integrate_handoff(
+                noise,
+                num_steps=int(num_steps),
+                handoff_steps=0,
+                progress_velocity=lambda _x, _t: jnp.zeros_like(_x),
+                action_velocity=action_velocity,
+                coupling="hard",
+            )
+            return actions, next_state, diagnostics
+
         def progress_velocity(x_t, timestep):
             return self._progress_velocity(prefix_mask, kv_cache, memory_token, x_t, timestep)
 
@@ -331,6 +441,7 @@ class FutureMamba(Pi0):
             handoff_steps=handoff_steps,
             progress_velocity=progress_velocity,
             action_velocity=action_velocity,
+            coupling=self._futuremamba_config.coupling,
         )
         return actions, next_state, diagnostics
 
@@ -340,7 +451,14 @@ class FutureMamba(Pi0):
         executed_action_mask = kwargs.pop("executed_action_mask", None)
         return_memory = bool(kwargs.pop("return_memory", False))
         handoff_ratio = kwargs.pop("handoff_ratio", None)
-        if memory_state is None and executed_actions is None and executed_action_mask is None and handoff_ratio is None and not return_memory:
+        if (
+            self._futuremamba_config.decoder_mode == "handoff"
+            and memory_state is None
+            and executed_actions is None
+            and executed_action_mask is None
+            and handoff_ratio is None
+            and not return_memory
+        ):
             return super().sample_actions(rng, observation, **kwargs)
         actions, next_state, diagnostics = self.sample_actions_with_memory(
             rng,
