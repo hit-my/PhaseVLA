@@ -194,6 +194,46 @@ def _episode_obs(config: _futuremamba_config.FutureMambaConfig, *, batch_size: i
         config.fake_obs(batch_size=batch_size),
     )
 
+def _episode_batch(
+    config: _futuremamba_config.FutureMambaConfig,
+    *,
+    batch_size: int = 1,
+    num_queries: int = 1,
+    actions=None,
+    action_mask=None,
+    query_mask=None,
+    executed_actions=None,
+    executed_action_mask=None,
+    reset_mask=None,
+):
+    if actions is None:
+        actions = jnp.zeros((batch_size, num_queries, config.action_horizon, config.action_dim), dtype=jnp.float32)
+    if action_mask is None:
+        action_mask = jnp.ones((batch_size, num_queries, config.action_horizon), dtype=jnp.bool_)
+    if query_mask is None:
+        query_mask = jnp.ones((batch_size, num_queries), dtype=jnp.bool_)
+    if executed_actions is None:
+        executed_actions = jnp.zeros(
+            (batch_size, num_queries, config.executed_horizon, config.action_dim), dtype=actions.dtype
+        )
+    if executed_action_mask is None:
+        executed_action_mask = jnp.zeros(executed_actions.shape[:-1], dtype=jnp.bool_)
+    if reset_mask is None:
+        reset_mask = jnp.zeros((batch_size, num_queries), dtype=jnp.bool_)
+    return type(
+        "EpisodeBatch",
+        (),
+        {
+            "observation": _episode_obs(config, batch_size=batch_size, num_queries=num_queries),
+            "actions": actions,
+            "action_mask": action_mask,
+            "executed_actions": executed_actions,
+            "executed_action_mask": executed_action_mask,
+            "query_mask": query_mask,
+            "reset_mask": reset_mask,
+        },
+    )()
+
 
 def test_memory_pooling_ignores_padding_and_uses_rightmost_valid_token():
     config = _dummy_config()
@@ -390,6 +430,175 @@ def test_compute_episode_loss_masks_padding_queries_and_returns_fixed_keys(monke
     sampled_time = model._sample_high_noise_time(jax.random.key(1), (1024,), handoff_steps=2, num_steps=10)
     assert jnp.all(sampled_time >= 0.8)
 
+
+@pytest.mark.parametrize(
+    ("rho", "expected_steps"),
+    [
+        (0.0, 0),
+        (0.05, 1),
+        (0.25, 3),
+        (1.0, 10),
+    ],
+)
+def test_handoff_steps_uses_ceiling_and_clamps_ratio(rho, expected_steps):
+    config = _dummy_config(handoff_ratio=rho)
+    model = config.create(jax.random.key(0))
+
+    assert model._handoff_steps(None, 10) == expected_steps
+
+
+def test_high_noise_time_uses_beta_tail_rescaled_to_handoff_interval():
+    config = _dummy_config()
+    model = config.create(jax.random.key(0))
+
+    samples = model._sample_high_noise_time(jax.random.key(1), (32768,), handoff_steps=2, num_steps=10)
+
+    assert jnp.all(samples >= 0.8)
+    assert jnp.all(samples <= 1.0)
+    np.testing.assert_allclose(jnp.mean(samples), 0.8 + 0.2 * (1.5 / 2.5), atol=0.003)
+
+
+def test_mean_masked_action_error_weights_actions_queries_and_episodes_equally():
+    config = _dummy_config()
+    model = config.create(jax.random.key(0))
+    error = jnp.array(
+        [
+            [[1.0, 3.0, 999.0, 999.0], [9.0, 999.0, 999.0, 999.0]],
+            [[100.0, 100.0, 100.0, 100.0], [1000.0, 1000.0, 1000.0, 1000.0]],
+        ],
+        dtype=jnp.float32,
+    )
+    action_mask = jnp.array(
+        [
+            [[True, True, False, False], [True, False, False, False]],
+            [[True, True, True, True], [True, True, True, True]],
+        ]
+    )
+    query_mask = jnp.array([[True, True], [True, False]])
+
+    actual = model._mean_masked_action_error(error, action_mask, query_mask)
+
+    np.testing.assert_allclose(actual, ((2.0 + 9.0) / 2.0 + 100.0) / 2.0, rtol=1e-6, atol=1e-6)
+
+
+def test_compute_episode_loss_adds_executed_action_noise_only_for_enabled_token_action(monkeypatch):
+    base_config = _dummy_config(
+        action_horizon=4,
+        executed_horizon=2,
+        handoff_loss_weight=0.0,
+        boundary_loss_weight=0.0,
+        executed_action_noise_std=10.0,
+    )
+    executed_actions = jnp.zeros((1, 2, base_config.executed_horizon, base_config.action_dim), dtype=jnp.float32)
+    executed_action_mask = jnp.array([[[True, False], [True, True]]])
+    batch = _episode_batch(
+        base_config,
+        batch_size=1,
+        num_queries=2,
+        executed_actions=executed_actions,
+        executed_action_mask=executed_action_mask,
+    )
+
+    def install_capture(config):
+        model = config.create(jax.random.key(0))
+        seen = []
+
+        def capture_scan(prefix_inputs, scanned_actions, scanned_action_mask, query_mask, reset_mask, state):
+            del scanned_action_mask, query_mask, reset_mask
+            seen.append(scanned_actions)
+            return prefix_inputs, state
+
+        def zero_progress(prefix_kv_cache, prefix_mask, memory_token, noisy_actions, timestep, **kwargs):
+            del prefix_kv_cache, prefix_mask, memory_token, timestep, kwargs
+            return jnp.zeros_like(noisy_actions)
+
+        monkeypatch.setattr(model, "_scan_memory", capture_scan)
+        monkeypatch.setattr(model.futuremamba, "progress_expert", zero_progress)
+        return model, seen
+
+    model, seen = install_capture(base_config)
+    no_noise_loss = model.compute_episode_loss(jax.random.key(7), batch, add_executed_action_noise=False)["flow_loss"]
+    no_noise_actions = seen[-1]
+    noisy_loss = model.compute_episode_loss(jax.random.key(7), batch, add_executed_action_noise=True)["flow_loss"]
+    noisy_actions = seen[-1]
+
+    np.testing.assert_allclose(no_noise_loss, noisy_loss, rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(no_noise_actions, executed_actions, rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(
+        np.asarray(noisy_actions)[np.asarray(~executed_action_mask)],
+        np.asarray(executed_actions)[np.asarray(~executed_action_mask)],
+        rtol=1e-6,
+        atol=1e-6,
+    )
+    assert not np.allclose(
+        np.asarray(noisy_actions)[np.asarray(executed_action_mask)],
+        np.asarray(executed_actions)[np.asarray(executed_action_mask)],
+    )
+
+    token_only_config = dataclasses.replace(base_config, memory_input="token_only")
+    token_only_model, token_only_seen = install_capture(token_only_config)
+    token_only_model.compute_episode_loss(jax.random.key(7), batch, add_executed_action_noise=True)
+    np.testing.assert_allclose(token_only_seen[-1], executed_actions, rtol=1e-6, atol=1e-6)
+
+    zero_std_config = dataclasses.replace(base_config, executed_action_noise_std=0.0)
+    zero_std_model, zero_std_seen = install_capture(zero_std_config)
+    zero_std_model.compute_episode_loss(jax.random.key(7), batch, add_executed_action_noise=True)
+    np.testing.assert_allclose(zero_std_seen[-1], executed_actions, rtol=1e-6, atol=1e-6)
+
+
+def test_boundary_loss_stops_gradient_through_handoff_state_and_action_velocity(monkeypatch):
+    config = _dummy_config(
+        action_horizon=2,
+        executed_horizon=1,
+        handoff_ratio=0.5,
+        num_denoise_steps=2,
+        handoff_loss_weight=0.0,
+        boundary_loss_weight=1.0,
+    )
+    model = config.create(jax.random.key(0))
+    actions = jnp.zeros((1, 1, config.action_horizon, config.action_dim), dtype=jnp.float32)
+    executed_action_mask = jnp.ones((1, 1, config.executed_horizon), dtype=jnp.bool_)
+    current_executed = {"value": None}
+
+    def scan_from_executed(prefix_inputs, scanned_actions, scanned_action_mask, query_mask, reset_mask, state):
+        del prefix_inputs, scanned_action_mask, query_mask, reset_mask
+        memory_tokens = jnp.zeros((1, 1, config.memory.d_model), dtype=scanned_actions.dtype)
+        memory_tokens = memory_tokens.at[..., : config.action_dim].set(scanned_actions[:, :, 0, :])
+        return memory_tokens, state
+
+    def project_identity(memory_tokens):
+        return memory_tokens
+
+    def progress_velocity(prefix_mask, kv_cache, memory_token, x_t, timestep):
+        del prefix_mask, kv_cache
+        rollout_velocity = jnp.broadcast_to(memory_token[:, :, : config.action_dim], x_t.shape)
+        is_rollout = (timestep == 1.0)[:, None, None]
+        return jnp.where(is_rollout, rollout_velocity, x_t)
+
+    def action_velocity(observation, x_t, timestep, prefix_mask, kv_cache):
+        del observation, x_t, timestep, prefix_mask, kv_cache
+        action_from_executed = current_executed["value"].reshape(1, config.executed_horizon, config.action_dim)[:, 0]
+        return jnp.broadcast_to(action_from_executed[:, None, :], (1, config.action_horizon, config.action_dim))
+
+    monkeypatch.setattr(model, "_scan_memory", scan_from_executed)
+    monkeypatch.setattr(model.futuremamba, "project_memory_token", project_identity)
+    monkeypatch.setattr(model, "_progress_velocity", progress_velocity)
+    monkeypatch.setattr(model, "action_velocity", action_velocity)
+
+    def boundary_loss(executed_actions):
+        current_executed["value"] = executed_actions
+        batch = _episode_batch(
+            config,
+            actions=actions,
+            executed_actions=executed_actions,
+            executed_action_mask=executed_action_mask,
+        )
+        return model.compute_episode_loss(jax.random.key(3), batch)["boundary_loss"]
+
+    executed_actions = jnp.ones((1, 1, config.executed_horizon, config.action_dim), dtype=jnp.float32)
+    grad = jax.grad(boundary_loss)(executed_actions)
+
+    np.testing.assert_allclose(grad, 0.0, rtol=1e-6, atol=1e-6)
 
 def test_initial_memory_state_is_stable_pytree_for_all_backends():
     for backend in ("mamba", "gru", "lstm", "frame_stack", "none"):

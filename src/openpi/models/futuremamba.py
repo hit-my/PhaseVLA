@@ -1,3 +1,5 @@
+import math
+
 from flax import nnx
 import flax.nnx.bridge as nnx_bridge
 import jax
@@ -196,7 +198,7 @@ class FutureMamba(Pi0):
 
     def _handoff_steps(self, handoff_ratio: float | None, num_steps: int) -> int:
         ratio = self._futuremamba_config.handoff_ratio if handoff_ratio is None else handoff_ratio
-        return min(max(int(round(float(ratio) * int(num_steps))), 0), int(num_steps))
+        return min(max(int(math.ceil(float(ratio) * int(num_steps))), 0), int(num_steps))
 
     def initial_memory_state(self, batch_size: int):
         config = self._futuremamba_config
@@ -490,19 +492,32 @@ class FutureMamba(Pi0):
         )
 
     def _mean_masked_action_error(self, error: jax.Array, action_mask: jax.Array, query_mask: jax.Array) -> jax.Array:
-        valid = jnp.logical_and(action_mask, query_mask[..., None])
-        total = jnp.sum(jnp.where(valid, error, 0.0))
-        count = jnp.sum(valid.astype(error.dtype))
-        return total / jnp.maximum(count, 1.0)
+        action_weights = action_mask.astype(error.dtype)
+        query_error = jnp.sum(jnp.where(action_mask, error, 0.0), axis=-1) / jnp.maximum(
+            jnp.sum(action_weights, axis=-1), 1.0
+        )
+        query_weights = query_mask.astype(error.dtype)
+        episode_error = jnp.sum(query_error * query_weights, axis=-1) / jnp.maximum(
+            jnp.sum(query_weights, axis=-1), 1.0
+        )
+        return jnp.mean(episode_error)
 
     def _sample_high_noise_time(self, rng: at.KeyArrayLike, shape: tuple[int, ...], *, handoff_steps: int, num_steps: int):
         lower = 1.0 - (float(handoff_steps) / float(num_steps))
         lower = min(max(lower, 0.0), 1.0)
-        return lower + (1.0 - lower) * jax.random.uniform(rng, shape, dtype=jnp.float32)
+        beta_sample = jax.random.beta(rng, 1.5, 1.0, shape=shape, dtype=jnp.float32)
+        return lower + (1.0 - lower) * beta_sample
 
-    def compute_episode_loss(self, rng: at.KeyArrayLike, batch, *, train: bool = False) -> dict[str, jax.Array]:
+    def compute_episode_loss(
+        self,
+        rng: at.KeyArrayLike,
+        batch,
+        *,
+        add_executed_action_noise: bool = False,
+        train: bool = False,
+    ) -> dict[str, jax.Array]:
         config = self._futuremamba_config
-        preprocess_rng, noise_rng, time_rng = jax.random.split(rng, 3)
+        preprocess_rng, noise_rng, time_rng, executed_noise_rng = jax.random.split(rng, 4)
         actions = batch.actions
         batch_size, num_queries = actions.shape[:2]
         flat_observation = self._flatten_episode_observation(batch.observation, batch_size, num_queries)
@@ -524,6 +539,19 @@ class FutureMamba(Pi0):
             "executed_action_mask",
             jnp.zeros(executed_actions.shape[:-1], dtype=jnp.bool_),
         )
+        if (
+            add_executed_action_noise
+            and config.memory_input == "token_action"
+            and float(config.executed_action_noise_std) > 0.0
+        ):
+            executed_noise = jax.random.normal(
+                executed_noise_rng, executed_actions.shape, dtype=executed_actions.dtype
+            )
+            executed_actions = jnp.where(
+                executed_action_mask[..., None],
+                executed_actions + jnp.asarray(config.executed_action_noise_std, dtype=executed_actions.dtype) * executed_noise,
+                executed_actions,
+            )
         reset_mask = getattr(batch, "reset_mask", jnp.zeros((batch_size, num_queries), dtype=jnp.bool_))
         if config.reset_memory_every_query:
             reset_mask = jnp.ones_like(reset_mask)
@@ -582,6 +610,7 @@ class FutureMamba(Pi0):
             handoff_error = self._mean_masked_action_error(handoff_error_steps, action_mask, query_mask)
 
         if config.boundary_loss_weight > 0:
+            boundary_state = jax.lax.stop_gradient(boundary_state)
             flat_boundary = boundary_state.reshape(batch_size * num_queries, self.action_horizon, self.action_dim)
             flat_boundary_time = boundary_time.reshape(batch_size * num_queries)
             progress_boundary = self._progress_velocity(prefix_mask, kv_cache, flat_memory_token, flat_boundary, flat_boundary_time)
