@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import math
 
@@ -7,7 +8,7 @@ from torch import nn
 import torch.nn.functional as F  # noqa: N812
 
 import openpi.models.gemma as _gemma
-from openpi.models_pytorch.gemma_pytorch import PaliGemmaWithExpertModel
+from openpi.models_pytorch.gemma_pytorch import PaliGemmaWithExpertModel, clone_cache, detach_cache
 import openpi.models_pytorch.preprocessing_pytorch as _preprocessing
 
 
@@ -79,6 +80,13 @@ def make_att_2d_masks(pad_masks, att_masks):
     att_2d_masks = cumsum[:, None, :] <= cumsum[:, :, None]
     pad_2d_masks = pad_masks[:, None, :] * pad_masks[:, :, None]
     return att_2d_masks & pad_2d_masks
+
+@dataclasses.dataclass(frozen=True)
+class FrozenPrefix:
+    hidden: torch.Tensor
+    pad_mask: torch.BoolTensor
+    kv_cache: object
+
 
 
 class PI0Pytorch(nn.Module):
@@ -372,6 +380,39 @@ class PI0Pytorch(nn.Module):
         v_t = self._apply_checkpoint(action_out_proj_func, suffix_out)
 
         return F.mse_loss(u_t, v_t, reduction="none")
+    @torch.no_grad()
+    def encode_frozen_prefix(self, observation, *, train: bool = False) -> FrozenPrefix:
+        images, img_masks, lang_tokens, lang_masks, _ = self._preprocess_observation(observation, train=train)
+        prefix_embs, prefix_pad_masks, prefix_att_masks = self.embed_prefix(
+            images, img_masks, lang_tokens, lang_masks
+        )
+        prefix_att_2d_masks = make_att_2d_masks(prefix_pad_masks, prefix_att_masks)
+        prefix_position_ids = torch.cumsum(prefix_pad_masks, dim=1) - 1
+        prefix_att_2d_masks_4d = self._prepare_attention_masks_4d(prefix_att_2d_masks)
+        self.paligemma_with_expert.paligemma.language_model.config._attn_implementation = "eager"  # noqa: SLF001
+
+        (prefix_hidden, _), past_key_values = self.paligemma_with_expert.forward(
+            attention_mask=prefix_att_2d_masks_4d,
+            position_ids=prefix_position_ids,
+            past_key_values=None,
+            inputs_embeds=[prefix_embs, None],
+            use_cache=True,
+        )
+        return FrozenPrefix(
+            hidden=prefix_hidden.detach(),
+            pad_mask=prefix_pad_masks.detach(),
+            kv_cache=detach_cache(past_key_values),
+        )
+
+    def last_valid_prefix(self, frozen: FrozenPrefix) -> torch.Tensor:
+        valid_counts = frozen.pad_mask.long().sum(dim=-1)
+        if torch.any(valid_counts == 0):
+            raise ValueError("prefix contains no valid token")
+        positions = torch.arange(frozen.pad_mask.shape[1], device=frozen.pad_mask.device).expand_as(frozen.pad_mask)
+        positions = positions.masked_fill(~frozen.pad_mask, -1)
+        index = positions.max(dim=-1).values
+        return frozen.hidden[torch.arange(index.numel(), device=index.device), index]
+
 
     @torch.no_grad()
     def sample_actions(self, device, observation, noise=None, num_steps=10) -> Tensor:
@@ -382,22 +423,10 @@ class PI0Pytorch(nn.Module):
             noise = self.sample_noise(actions_shape, device)
 
         images, img_masks, lang_tokens, lang_masks, state = self._preprocess_observation(observation, train=False)
+        frozen = self.encode_frozen_prefix(observation, train=False)
 
-        prefix_embs, prefix_pad_masks, prefix_att_masks = self.embed_prefix(images, img_masks, lang_tokens, lang_masks)
-        prefix_att_2d_masks = make_att_2d_masks(prefix_pad_masks, prefix_att_masks)
-        prefix_position_ids = torch.cumsum(prefix_pad_masks, dim=1) - 1
-
-        # Compute image and language key value cache
-        prefix_att_2d_masks_4d = self._prepare_attention_masks_4d(prefix_att_2d_masks)
-        self.paligemma_with_expert.paligemma.language_model.config._attn_implementation = "eager"  # noqa: SLF001
-
-        _, past_key_values = self.paligemma_with_expert.forward(
-            attention_mask=prefix_att_2d_masks_4d,
-            position_ids=prefix_position_ids,
-            past_key_values=None,
-            inputs_embeds=[prefix_embs, None],
-            use_cache=True,
-        )
+        prefix_pad_masks = frozen.pad_mask
+        past_key_values = frozen.kv_cache
 
         dt = -1.0 / num_steps
         dt = torch.tensor(dt, dtype=torch.float32, device=device)
@@ -447,10 +476,12 @@ class PI0Pytorch(nn.Module):
         full_att_2d_masks_4d = self._prepare_attention_masks_4d(full_att_2d_masks)
         self.paligemma_with_expert.gemma_expert.model.config._attn_implementation = "eager"  # noqa: SLF001
 
+        local_past_key_values = clone_cache(past_key_values) if past_key_values is not None else None
+
         outputs_embeds, _ = self.paligemma_with_expert.forward(
             attention_mask=full_att_2d_masks_4d,
             position_ids=position_ids,
-            past_key_values=past_key_values,
+            past_key_values=local_past_key_values,
             inputs_embeds=[None, suffix_embs],
             use_cache=False,
             adarms_cond=[None, adarms_cond],

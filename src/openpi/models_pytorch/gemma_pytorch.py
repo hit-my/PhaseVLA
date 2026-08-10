@@ -1,3 +1,4 @@
+import copy
 from typing import Literal
 
 import torch
@@ -6,6 +7,95 @@ from transformers import GemmaForCausalLM
 from transformers import PaliGemmaForConditionalGeneration
 from transformers.models.auto import CONFIG_MAPPING
 from transformers.models.gemma import modeling_gemma
+
+try:
+    from transformers.cache_utils import Cache
+except ImportError:  # pragma: no cover - transformers is a required runtime dependency.
+    Cache = ()
+
+
+def _is_transformers_cache(cache: object) -> bool:
+    return isinstance(cache, Cache)
+
+
+def _is_legacy_cache_sequence(cache: object) -> bool:
+    return isinstance(cache, (tuple, list))
+
+
+def _map_cache_tensors(cache: object, transform):
+    if torch.is_tensor(cache):
+        return transform(cache)
+    if _is_legacy_cache_sequence(cache):
+        mapped = [_map_cache_tensors(item, transform) for item in cache]
+        return tuple(mapped) if isinstance(cache, tuple) else mapped
+    if _is_transformers_cache(cache):
+        if hasattr(cache, "key_cache") and hasattr(cache, "value_cache"):
+            mapped_cache = copy.copy(cache)
+            mapped_cache.key_cache = [_map_cache_tensors(tensor, transform) for tensor in cache.key_cache]
+            mapped_cache.value_cache = [_map_cache_tensors(tensor, transform) for tensor in cache.value_cache]
+            return mapped_cache
+        if hasattr(cache, "to_legacy_cache") and callable(cache.to_legacy_cache):
+            return _map_cache_tensors(cache.to_legacy_cache(), transform)
+        raise TypeError(f"Unsupported Transformers cache structure: {type(cache).__name__}")
+    raise TypeError(f"Unsupported cache structure: {type(cache).__name__}")
+
+
+def iter_cache_tensors(cache: object):
+    if torch.is_tensor(cache):
+        yield cache
+        return
+    if _is_legacy_cache_sequence(cache):
+        for item in cache:
+            yield from iter_cache_tensors(item)
+        return
+    if _is_transformers_cache(cache):
+        if hasattr(cache, "key_cache") and hasattr(cache, "value_cache"):
+            for tensor in cache.key_cache:
+                yield from iter_cache_tensors(tensor)
+            for tensor in cache.value_cache:
+                yield from iter_cache_tensors(tensor)
+            return
+        if hasattr(cache, "to_legacy_cache") and callable(cache.to_legacy_cache):
+            yield from iter_cache_tensors(cache.to_legacy_cache())
+            return
+        raise TypeError(f"Unsupported Transformers cache structure: {type(cache).__name__}")
+    raise TypeError(f"Unsupported cache structure: {type(cache).__name__}")
+
+
+def detach_cache(cache: object):
+    return _map_cache_tensors(cache, torch.Tensor.detach)
+
+
+def _clone_detached_tensor(tensor: torch.Tensor) -> torch.Tensor:
+    return tensor.detach().clone()
+
+def clone_cache(cache: object):
+    if _is_legacy_cache_sequence(cache):
+        return _map_cache_tensors(cache, _clone_detached_tensor)
+    if _is_transformers_cache(cache):
+        if hasattr(cache, "key_cache") and hasattr(cache, "value_cache"):
+            cloned_cache = copy.copy(cache)
+            cloned_cache.key_cache = [_clone_detached_tensor(tensor) for tensor in cache.key_cache]
+            cloned_cache.value_cache = [_clone_detached_tensor(tensor) for tensor in cache.value_cache]
+            return cloned_cache
+        raise TypeError(f"Unsupported Transformers cache structure: {type(cache).__name__}")
+    raise TypeError(f"Unsupported cache structure: {type(cache).__name__}")
+
+
+def clone_selected_prefix_cache(cache: object, layer_indices):
+    if _is_legacy_cache_sequence(cache):
+        selected = [_map_cache_tensors(cache[layer_idx], _clone_detached_tensor) for layer_idx in layer_indices]
+        return tuple(selected) if isinstance(cache, tuple) else selected
+    if _is_transformers_cache(cache):
+        if hasattr(cache, "key_cache") and hasattr(cache, "value_cache"):
+            cloned_cache = copy.copy(cache)
+            cloned_cache.key_cache = [_clone_detached_tensor(cache.key_cache[layer_idx]) for layer_idx in layer_indices]
+            cloned_cache.value_cache = [_clone_detached_tensor(cache.value_cache[layer_idx]) for layer_idx in layer_indices]
+            if hasattr(cloned_cache, "_seen_tokens"):
+                cloned_cache._seen_tokens = cloned_cache.get_seq_length(0) if cloned_cache.key_cache else 0
+            return cloned_cache
+        raise TypeError(f"Unsupported Transformers cache structure: {type(cache).__name__}")
+    raise TypeError(f"Unsupported cache structure: {type(cache).__name__}")
 
 
 class PaliGemmaWithExpertModel(nn.Module):
