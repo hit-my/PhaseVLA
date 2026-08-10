@@ -1,0 +1,30 @@
+[project]
+name = "openpi-futuremamba-runtime"
+version = "0.0.0"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "openpi",
+    "openpi-client",
+    "torch==2.9.1",
+    "triton==3.5.1",
+    "mamba-ssm",
+    "pytest>=8.3.4",
+]
+
+[tool.uv.sources]
+openpi = { path = "../..", editable = true }
+openpi-client = { path = "../../packages/openpi-client", editable = true }
+lerobot = { git = "https://github.com/huggingface/lerobot", rev = "0cf864870cf29f4738d3ade893e6fd13fbd7cdb5" }
+mamba-ssm = { git = "https://github.com/state-spaces/mamba", rev = "77069de5cdb55cbe98b670889c80df211e031039" }
+
+[tool.uv.extra-build-dependencies]
+mamba-ssm = [{ requirement = "torch==2.9.1", match-runtime = true }]
+
+[tool.uv]
+package = false
+override-dependencies = [
+    "torch==2.9.1",
+    "triton==3.5.1",
+    "ml-dtypes==0.4.1",
+    "tensorstore==0.1.74",
+]
