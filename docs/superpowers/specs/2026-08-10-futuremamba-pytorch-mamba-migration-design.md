@@ -60,13 +60,15 @@ OpenPI 同时已有可训练的 PyTorch $\pi_{0.5}$：
 
 官方 Mamba 当前发布线的事实：
 
-- Mamba-2 基准接入固定为 `v2.2.4`，提交 `95d8aba8a8c75aedcaa6143713b11e745e7cd0d9`；
-- Mamba-3 候选接入固定为 `v2.3.2`，提交 `77069de5cdb55cbe98b670889c80df211e031039`；
+- `mamba_ssm` 同一个 Python 包同时提供 `Mamba2` 与 `Mamba3`，同一环境不能并装两个标签；
+- 两个后端统一固定为官方 `v2.3.2`，提交 `77069de5cdb55cbe98b670889c80df211e031039`，避免后端对比同时混入包版本差异；
 - `v2.3.2` 的 `pyproject.toml` 要求 Triton $\ge 3.5.0$，并引入 TileLang、Quack Kernels 和 Apache TVM FFI；
-- 两个固定版本的仓库许可证均为 Apache-2.0；
-- 当前 `/home/ubuntu/lgd/CoRL2026/openpi/.venv` 未安装 `torch`，所以它不能作为 kernel 可用性的证据。
+- PyTorch `2.9.1` 官方依赖 Triton `3.5.1`，作为隔离兼容性试验的首选精确版本组合；
+- 固定官方 Mamba 版本的仓库许可证为 Apache-2.0；
+- 当前主项目声明 PyTorch `2.7.1`、锁定 Triton `3.3.1`，不能作为 Mamba-3 kernel 可用性的证据。
+- 当前 shell 默认 `nvcc` 为 CUDA `11.5`，低于 Mamba `setup.py` 要求的 CUDA `11.6`，且不能为 RTX 5090 生成 `sm_120`；机器另有 `/usr/local/cuda-12.8`，隔离构建必须显式设置 `CUDA_HOME=/usr/local/cuda-12.8`，不能依赖默认 `PATH`。
 
-结论：不得直接修改主 `uv.lock` 来“试装” Mamba-3。先在隔离环境完成兼容性试验，再决定主环境升级矩阵。
+结论：先在隔离环境验证 PyTorch `2.9.1` + Triton `3.5.1` + Mamba `v2.3.2`，源码构建时显式使用 CUDA 12.8 工具链并强制生成官方扩展。Mamba-2 与 Mamba-3 共用该环境和官方提交；隔离门通过后再一次性更新主 `pyproject.toml` 与 `uv.lock`，禁止在两个不同 Torch/Mamba 栈上生成论文对比结果。
 
 ## 3. 不变量与范围边界
 
@@ -339,11 +341,12 @@ Mamba-2 和 Mamba-3 参数量天然不同。论文必须报告实际参数量、
 ### 6.1 固定来源
 
 - 仓库：`https://github.com/state-spaces/mamba`
-- 标签：`v2.2.4`
-- 提交：`95d8aba8a8c75aedcaa6143713b11e745e7cd0d9`
+- 标签：`v2.3.2`
+- 提交：`77069de5cdb55cbe98b670889c80df211e031039`
+- 类：`mamba_ssm.modules.mamba2.Mamba2`
 - 许可证：Apache-2.0
 
-选择 `v2.2.4` 的原因：它包含官方 Mamba-2，同时未在项目依赖中强制 Triton $\ge3.5.0$，适合作为 OpenPI 当前 Torch 2.7.1 / Triton 3.3.1 的第一兼容性基线。版本仍需实际安装和 GPU 验证，不能仅根据依赖声明判断兼容。
+Mamba-2 与 Mamba-3 必须来自同一安装包、同一提交和同一 Torch/Triton 环境。阶段顺序仍是先完成 Mamba-2 全链路，再开启 Mamba-3 硬门；统一来源只消除依赖混杂，不允许跳过 Mamba-2 验收。
 
 ### 6.2 原生状态
 
@@ -657,7 +660,7 @@ Mamba-3 通过硬门后重复同一矩阵。不能因 Mamba-2 已通过而跳过
 
 | 风险 | 证据 | 处理 |
 |---|---|---|
-| OpenPI Torch/Triton 与 Mamba-3 依赖冲突 | Torch 2.7.1 / Triton 3.3.1；Mamba v2.3.2 要求 Triton $\ge3.5.0$ | 隔离环境验证；通过前不改主锁文件 |
+| OpenPI Torch/Triton 与官方 Mamba 依赖冲突 | 主项目 Torch 2.7.1 / Triton 3.3.1；Mamba v2.3.2 要求 Triton $\ge3.5.0$；默认 `nvcc` 11.5 不能构建 `sm_120` | 先用显式 CUDA 12.8 工具链验证隔离的 Torch 2.9.1 / Triton 3.5.1 / Mamba v2.3.2；通过后一次性更新主锁文件 |
 | Mamba-3 step 未验证 RTX 5090 | 官方源码写明仅在 H100 测试 | 10 项硬门；失败则保留 Mamba-2 |
 | JAX checkpoint 转换漂移 | 基座为 Orbax；官方 issue 曾报告精度和 LoRA 丢失问题 | float32 逐层 parity、LoRA 扫描、闭环基座回归 |
 | Prefix cache 被两个专家共享时被原地修改 | HF cache 可能在 forward 中 update | 独立只读 cache view / detached clone；mutation 测试 |
@@ -685,7 +688,7 @@ Mamba-3 通过硬门后重复同一矩阵。不能因 Mamba-2 已通过而跳过
 
 - OpenPI PyTorch 模型与训练：仓库内 `src/openpi/models_pytorch/`、`scripts/train_pytorch.py`。
 - 官方 Mamba 仓库：https://github.com/state-spaces/mamba
-- Mamba-2 固定版本：https://github.com/state-spaces/mamba/tree/v2.2.4
+- Mamba-2/3 统一固定版本：https://github.com/state-spaces/mamba/tree/v2.3.2
 - Mamba-3 固定版本：https://github.com/state-spaces/mamba/tree/v2.3.2
 - 官方 Mamba-3 模块：https://github.com/state-spaces/mamba/blob/v2.3.2/mamba_ssm/modules/mamba3.py
 - 官方安装说明：https://github.com/state-spaces/mamba#installation
