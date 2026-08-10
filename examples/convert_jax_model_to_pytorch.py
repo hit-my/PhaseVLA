@@ -26,11 +26,14 @@ Example:
     python examples/convert_jax_model_to_pytorch.py --checkpoint_dir /home/$USER/.cache/openpi/openpi-assets/checkpoints/pi05_droid --output_path /home/$USER/.cache/openpi/openpi-assets/checkpoints/pi05_droid_pytorch
 """
 
+import hashlib
 import json
 import os
 import pathlib
 import shutil
-from typing import Literal
+from collections.abc import Mapping
+from typing import Any, Literal
+import tempfile
 
 from flax.nnx import traversals
 import numpy as np
@@ -45,6 +48,154 @@ import openpi.models.pi0_config
 import openpi.models_pytorch.pi0_pytorch
 from openpi.training import utils
 import openpi.training.config as _config
+
+
+LM_HEAD_KEY = "paligemma_with_expert.paligemma.language_model.lm_head.weight"
+CONVERTER_NAME = "openpi.convert_jax_model_to_pytorch"
+MANIFEST_FORMAT_VERSION = 1
+
+
+def _normalize_parameter_path(path: object) -> str:
+    if isinstance(path, tuple):
+        return "/".join(str(part) for part in path)
+    return str(path).replace("\\", "/")
+
+
+def validate_convertible_parameter_tree(flat: Mapping[object, object]) -> None:
+    """Reject checkpoints containing unmerged LoRA adapter parameters."""
+    lora_paths = sorted(
+        path
+        for path, _ in _iter_parameter_values(flat)
+        if "lora_a" in path.lower() or "lora_b" in path.lower()
+    )
+    if lora_paths:
+        raise ValueError(f"LoRA parameters detected; merge adapters before conversion: {lora_paths[0]}")
+
+
+def validate_load_result(
+    missing: list[str] | tuple[str, ...],
+    unexpected: list[str] | tuple[str, ...],
+    tied_weight_verified: bool,
+) -> None:
+    """Require a strict load, allowing one verified tied language head."""
+    missing = list(missing)
+    unexpected = list(unexpected)
+    if unexpected:
+        raise ValueError(f"strict conversion mismatch: unexpected={unexpected}")
+    if len(set(missing)) != len(missing):
+        raise ValueError(f"strict conversion mismatch: duplicate missing={missing}")
+    if not missing:
+        return
+    if missing == [LM_HEAD_KEY] and tied_weight_verified:
+        return
+    if missing == [LM_HEAD_KEY]:
+        raise ValueError("strict conversion mismatch: lm_head missing without verified tied weight")
+    raise ValueError(f"strict conversion mismatch: missing={missing}")
+
+
+def _iter_parameter_values(value: object, prefix: tuple[str, ...] = ()):
+    if isinstance(value, Mapping):
+        for key in sorted(value, key=str):
+            key_parts = tuple(part for part in _normalize_parameter_path(key).split("/") if part)
+            yield from _iter_parameter_values(value[key], prefix + key_parts)
+    else:
+        yield "/".join(prefix), value
+
+
+def _tensor_metadata(value: object) -> dict[str, object]:
+    shape = getattr(value, "shape", ())
+    dtype = getattr(value, "dtype", None)
+    return {"shape": [int(dim) for dim in shape], "dtype": str(dtype).replace("<class 'numpy.", "").replace("'>", "")}
+
+
+def parameter_metadata(parameters: Mapping[object, object]) -> dict[str, dict[str, object]]:
+    entries: dict[str, dict[str, object]] = {}
+    for key, value in _iter_parameter_values(parameters):
+        entries[_normalize_parameter_path(key)] = _tensor_metadata(value)
+    return {key: entries[key] for key in sorted(entries)}
+
+
+def directory_checksum(root: pathlib.Path | str) -> str:
+    """Hash every relative file name and byte contents in deterministic order."""
+    root = pathlib.Path(root)
+    if not root.exists():
+        raise FileNotFoundError(root)
+    files = [root] if root.is_file() else sorted(path for path in root.rglob("*") if path.is_file())
+    digest = hashlib.sha256()
+    for path in files:
+        relative = path.name if root.is_file() else path.relative_to(root).as_posix()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def copy_checkpoint_assets(source_root: pathlib.Path | str, output_root: pathlib.Path | str) -> str:
+    source_assets = pathlib.Path(source_root) / "assets"
+    if not source_assets.is_dir():
+        raise FileNotFoundError(f"checkpoint assets directory not found: {source_assets}")
+    destination_assets = pathlib.Path(output_root) / "assets"
+    if destination_assets.exists():
+        shutil.rmtree(destination_assets)
+    destination_assets.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source_assets, destination_assets)
+    source_checksum = directory_checksum(source_assets)
+    destination_checksum = directory_checksum(destination_assets)
+    if source_checksum != destination_checksum:
+        raise RuntimeError(
+            f"assets copy verification failed: source={source_checksum} destination={destination_checksum}"
+        )
+    return destination_checksum
+
+
+def _json_safe(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(value[key]) for key in sorted(value, key=str)}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, pathlib.Path):
+        return value.as_posix()
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def build_conversion_manifest(
+    *,
+    source_parameters: Mapping[object, object] | None,
+    target_parameters: Mapping[object, object],
+    source_checkpoint_checksum: str,
+    assets_checksum: str,
+    model_checksum: str,
+    config_name: str,
+    model_config: Mapping[str, object],
+    precision: str,
+    source_parameter_metadata: Mapping[str, Mapping[str, object]] | None = None,
+) -> dict[str, object]:
+    source_metadata = (
+        parameter_metadata(source_parameters)
+        if source_parameter_metadata is None
+        else {key: dict(source_parameter_metadata[key]) for key in sorted(source_parameter_metadata)}
+    )
+    return {
+        "format_version": MANIFEST_FORMAT_VERSION,
+        "converter": CONVERTER_NAME,
+        "config_name": config_name,
+        "model_config": _json_safe(model_config),
+        "precision": precision,
+        "source_checkpoint_checksum": source_checkpoint_checksum,
+        "assets_checksum": assets_checksum,
+        "model_checksum": model_checksum,
+        "source_parameters": source_metadata,
+        "target_parameters": parameter_metadata(target_parameters),
+    }
+
+
+def write_conversion_manifest(destination: pathlib.Path | str, manifest: Mapping[str, object]) -> None:
+    pathlib.Path(destination).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def slice_paligemma_state_dict(state_dict, config):
@@ -420,59 +571,39 @@ def load_jax_model_and_print_keys(checkpoint_dir: str):
 
 
 def convert_pi0_checkpoint(
-    checkpoint_dir: str, precision: str, output_path: str, model_config: openpi.models.pi0_config.Pi0Config
+    checkpoint_dir: str,
+    precision: str,
+    output_path: str,
+    model_config: openpi.models.pi0_config.Pi0Config,
+    config_name: str | None = None,
 ):
-    """
-    Convert PI0 JAX checkpoint to PyTorch format.
-
-    Args:
-        checkpoint_dir: Path to the JAX checkpoint
-        precision: Model precision (float32, bfloat16, float16)
-        output_path: Path to save the converted PyTorch model
-        model_config: Model config
-    """
+    """Convert a PI0 JAX checkpoint to PyTorch with strict integrity checks."""
     print(f"Converting PI0 checkpoint from {checkpoint_dir} to {output_path}")
     print(f"Model config: {model_config}")
 
-    # Break down orbax ckpts by restoring via JAX to respect dtype
+    checkpoint_root = pathlib.Path(checkpoint_dir)
+    output_root = pathlib.Path(output_path)
     initial_params = slice_initial_orbax_checkpoint(checkpoint_dir=checkpoint_dir, restore_precision="float32")
+    validate_convertible_parameter_tree(initial_params["paligemma_params"])
+    validate_convertible_parameter_tree(initial_params["projection_params"])
+    source_parameter_metadata = parameter_metadata(initial_params)
 
-    # Process projection params
     if model_config.pi05:
-        keys = [
-            "action_in_proj",
-            "action_out_proj",
-            "time_mlp_in",
-            "time_mlp_out",
-        ]
+        keys = ["action_in_proj", "action_out_proj", "time_mlp_in", "time_mlp_out"]
     else:
-        keys = [
-            "state_proj",
-            "action_in_proj",
-            "action_out_proj",
-            "action_time_mlp_in",
-            "action_time_mlp_out",
-        ]
+        keys = ["state_proj", "action_in_proj", "action_out_proj", "action_time_mlp_in", "action_time_mlp_out"]
 
     projection_params = {}
     for key in keys:
         kernel_params = initial_params["projection_params"][key]["kernel"]
         bias_params = initial_params["projection_params"][key]["bias"]
         if isinstance(kernel_params, dict):
-            weight = kernel_params["value"]
-            bias = bias_params["value"]
+            weight, bias = kernel_params["value"], bias_params["value"]
         else:
-            weight = kernel_params
-            bias = bias_params
+            weight, bias = kernel_params, bias_params
+        projection_params[f"{key}.weight"] = torch.from_numpy(np.array(weight)).T
+        projection_params[f"{key}.bias"] = torch.from_numpy(np.array(bias))
 
-        pytorch_weight_key = f"{key}.weight"
-        pytorch_bias_key = f"{key}.bias"
-
-        projection_params[pytorch_weight_key] = torch.from_numpy(np.array(weight)).T
-        projection_params[pytorch_bias_key] = torch.from_numpy(np.array(bias))
-
-    # Create configs based on checkpoint path
-    # All models use the same PaliGemma config structure
     class PaliGemmaConfig:
         def __init__(self):
             self.vision_config = type(
@@ -501,56 +632,87 @@ def convert_pi0_checkpoint(
 
     paligemma_config = PaliGemmaConfig()
     action_expert_config = openpi.models.gemma.get_config("gemma_300m")
-
-    # Process PaliGemma weights
-    paligemma_params, expert_params = slice_paligemma_state_dict(initial_params["paligemma_params"], paligemma_config)
-
-    # Process Gemma weights from expert_params
-    gemma_params = slice_gemma_state_dict(
-        expert_params, action_expert_config, num_expert=1, checkpoint_dir=checkpoint_dir, pi05=model_config.pi05
+    paligemma_params, expert_params = slice_paligemma_state_dict(
+        initial_params["paligemma_params"], paligemma_config
     )
-
-    # Instantiate model
-    pi0_model = openpi.models_pytorch.pi0_pytorch.PI0Pytorch(model_config)
-
-    # Combine all parameters (no prefix needed for our model structure)
+    gemma_params = slice_gemma_state_dict(
+        expert_params,
+        action_expert_config,
+        num_expert=1,
+        checkpoint_dir=checkpoint_dir,
+        pi05=model_config.pi05,
+    )
     all_params = {**paligemma_params, **gemma_params, **projection_params}
 
-    # Load state dict
-    pi0_model.load_state_dict(all_params, strict=False)
+    pi0_model = openpi.models_pytorch.pi0_pytorch.PI0Pytorch(model_config)
+    incompatible = pi0_model.load_state_dict(all_params, strict=False)
+    language_model = pi0_model.paligemma_with_expert.paligemma.language_model
+    input_embedding = getattr(language_model, "embed_tokens", None)
+    lm_head = getattr(language_model, "lm_head", None)
+    tied_weight_verified = (
+        input_embedding is not None
+        and lm_head is not None
+        and hasattr(input_embedding, "weight")
+        and hasattr(lm_head, "weight")
+        and input_embedding.weight.data_ptr() == lm_head.weight.data_ptr()
+    )
+    validate_load_result(
+        list(incompatible.missing_keys),
+        list(incompatible.unexpected_keys),
+        tied_weight_verified,
+    )
 
     if precision == "float32":
         pi0_model = pi0_model.to(torch.float32)
     elif precision == "bfloat16":
         pi0_model = pi0_model.to(torch.bfloat16)
+    elif precision == "float16":
+        pi0_model = pi0_model.to(torch.float16)
     else:
         raise ValueError(f"Invalid precision: {precision}")
 
-    # Save the converted model using safetensors
-    os.makedirs(output_path, exist_ok=True)
-
-    # Save model weights as SafeTensors using save_model to handle tied weights
-    safetensors.torch.save_model(pi0_model, os.path.join(output_path, "model.safetensors"))
-
-    # Copy assets folder if it exists
-    assets_source = pathlib.Path(checkpoint_dir).parent / "assets"
-    if assets_source.exists():
-        assets_dest = pathlib.Path(output_path) / "assets"
-        if assets_dest.exists():
-            shutil.rmtree(assets_dest)
-        shutil.copytree(assets_source, assets_dest)
-
-    # Save config as JSON for reference
-    config_dict = {
-        "action_dim": model_config.action_dim,
-        "action_horizon": model_config.action_horizon,
-        "paligemma_variant": model_config.paligemma_variant,
-        "action_expert_variant": model_config.action_expert_variant,
-        "precision": precision,
-    }
-    with open(os.path.join(output_path, "config.json"), "w") as f:
-        json.dump(config_dict, f, indent=2)
-
+    output_root.parent.mkdir(parents=True, exist_ok=True)
+    source_checkpoint_checksum = directory_checksum(checkpoint_root)
+    temporary_output_root = pathlib.Path(
+        tempfile.mkdtemp(prefix=f".{output_root.name}.tmp-", dir=str(output_root.parent))
+    )
+    try:
+        assets_checksum = copy_checkpoint_assets(checkpoint_root, temporary_output_root)
+        model_path = temporary_output_root / "model.safetensors"
+        safetensors.torch.save_model(pi0_model, str(model_path))
+        config_dict = {
+            "action_dim": model_config.action_dim,
+            "action_horizon": model_config.action_horizon,
+            "paligemma_variant": model_config.paligemma_variant,
+            "action_expert_variant": model_config.action_expert_variant,
+            "pi05": model_config.pi05,
+            "precision": precision,
+        }
+        (temporary_output_root / "config.json").write_text(
+            json.dumps(config_dict, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        manifest = build_conversion_manifest(
+            source_parameters=None,
+            source_parameter_metadata=source_parameter_metadata,
+            target_parameters=pi0_model.state_dict(),
+            source_checkpoint_checksum=source_checkpoint_checksum,
+            assets_checksum=assets_checksum,
+            model_checksum=directory_checksum(model_path),
+            config_name=config_name or ("pi05" if model_config.pi05 else "pi0"),
+            model_config=config_dict,
+            precision=precision,
+        )
+        write_conversion_manifest(temporary_output_root / "conversion_manifest.json", manifest)
+        if output_root.exists():
+            if output_root.is_dir():
+                shutil.rmtree(output_root)
+            else:
+                output_root.unlink()
+        temporary_output_root.rename(output_root)
+    finally:
+        if temporary_output_root.exists():
+            shutil.rmtree(temporary_output_root)
     print("Model conversion completed successfully!")
     print(f"Model saved to {output_path}")
 
@@ -563,24 +725,16 @@ def main(
     *,
     inspect_only: bool = False,
 ):
-    """Load JAX model and optionally convert to PyTorch.
-
-    Args:
-        checkpoint_dir: Path to the JAX checkpoint directory
-        output_path: Path to save converted PyTorch model (required for conversion)
-        precision: Precision for model conversion
-        inspect_only: Only inspect parameter keys, don't convert
-    """
+    """Load JAX model and optionally convert to PyTorch."""
     model_config = _config.get_config(config_name).model
     if not isinstance(model_config, openpi.models.pi0_config.Pi0Config):
         raise ValueError(f"Config {config_name} is not a Pi0Config")
     if inspect_only:
         load_jax_model_and_print_keys(checkpoint_dir)
+    elif not output_path:
+        print("Error: --output_path is required for conversion. Use --inspect_only to only view keys.")
     else:
-        if not output_path:
-            print("Error: --output_path is required for conversion. Use --inspect_only to only view keys.")
-            return
-        convert_pi0_checkpoint(checkpoint_dir, precision, output_path, model_config)
+        convert_pi0_checkpoint(checkpoint_dir, precision, output_path, model_config, config_name)
 
 
 if __name__ == "__main__":
