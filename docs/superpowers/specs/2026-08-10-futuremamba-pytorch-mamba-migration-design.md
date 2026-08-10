@@ -242,7 +242,7 @@ Action tokens 通过该 Progress layer 自己的 Q/K/V 投影；Memory Token 通
 
 由于冻结 prefix KV 占用较大，提供两种数值等价路径：
 
-- **主训练路径：** Stage B 使用确定性的冻结基座 conditioning cache，按 episode 分片保存最后有效 token 和 Progress Expert 需要的映射层 KV；
+- **主训练路径：** Stage B 使用确定性的冻结基座 conditioning cache，按 episode 分片保存最后有效 token、prefix mask 和 Action Expert 的全部逐层 prefix KV；Progress Expert 只从该完整 cache 读取层映射选中的 K/V，边界损失复用完整 cache 调用冻结 Action Expert；
 - **在线回退路径：** 逐 query 运行冻结 prefix，完成该 query 损失后立即释放 cache，不在 GPU 上保留整条 episode 的全部 VLM cache。
 
 缓存文件必须记录：基座权重 checksum、tokenizer/config checksum、图像预处理配置、层映射、dtype 和 episode/query ID。任一 checksum 不匹配即拒绝读取。若 Stage B 使用随机图像增强，则不能复用离线 prefix cache；主设置因此采用确定性预处理。
