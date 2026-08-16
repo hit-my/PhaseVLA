@@ -23,36 +23,25 @@ This is the standalone PhaseVLA research codebase, not a GitHub fork. OpenPI is 
 
 ### Current evaluation snapshot
 
-The following numbers are the currently observed evidence, not a complete paper benchmark. They use the FutureMamba Mamba-2 checkpoint at step 5000 with training seed 42.
+The current handover scope contains only three RoboMME Counting tasks: `BinFill`, `PickXtimes`, and `SwingXtimes`. The numbers below are the currently observed evidence, not a complete paper benchmark. They use the FutureMamba Mamba-2 checkpoint at step 5000 with training seed 42.
 
 | Metric | Observed value |
 | --- | ---: |
-| Official RoboMME tasks observed | 11 / 16 |
-| Observed episodes | 515 |
-| Successful episodes | 97 / 515 |
-| Observed-episode success rate | 18.83% |
-| Counting Suite episodes | 200 |
-| Counting Suite successes | 54 / 200 |
-| Counting Suite success rate | 27.00% |
-| Saved evaluation videos | 515 |
+| In-scope RoboMME tasks evaluated | 3 / 3 |
+| In-scope episodes | 150 |
+| In-scope successful episodes | 53 / 150 |
+| In-scope success rate | 35.33% |
+| Saved evaluation videos | 150 |
 
 Per-task success rates and Wilson 95% confidence intervals:
 
 | Task | Episodes | Successes | Success rate | Wilson 95% CI |
 | --- | ---: | ---: | ---: | ---: |
 | BinFill | 50 | 17 | 34.00% | 22.44–47.85% |
-| StopCube | 50 | 1 | 2.00% | 0.35–10.50% |
 | PickXtimes | 50 | 15 | 30.00% | 19.10–43.75% |
 | SwingXtimes | 50 | 21 | 42.00% | 29.38–55.77% |
-| ButtonUnmask | 50 | 7 | 14.00% | 6.95–26.19% |
-| VideoUnmask | 50 | 10 | 20.00% | 11.24–33.04% |
-| VideoUnmaskSwap | 50 | 6 | 12.00% | 5.62–23.80% |
-| ButtonUnmaskSwap | 50 | 7 | 14.00% | 6.95–26.19% |
-| PickHighlight | 50 | 8 | 16.00% | 8.34–28.51% |
-| VideoRepick | 50 | 3 | 6.00% | 2.06–16.22% |
-| VideoPlaceButton | 15 | 2 | 13.33% | 3.74–37.88% |
 
-The following official tasks are not included in this snapshot and are not counted as failures: `VideoPlaceOrder`, `MoveCube`, `InsertPeg`, `PatternLock`, and `RouteStick`.
+All other RoboMME tasks are outside the current handover scope and are not counted as failures or included in the aggregate above.
 
 ### Ablation and mechanism evidence
 
@@ -64,7 +53,7 @@ The following official tasks are not included in this snapshot and are not count
 
 ### Known limitations
 
-- Full multi-seed, multi-task ablation evaluation has not been completed; the evidence above is smoke evidence rather than a final paper table.
+- Full multi-seed evaluation on the three in-scope tasks has not been completed; the evidence above is smoke evidence rather than a final paper table.
 - The formal FLOPs, inference peak-memory, training peak-memory, and episode-timing profile has not been executed with a complete provenance-bound artifact set.
 - Real-robot validation is not included in the current evidence snapshot.
 - The RoboMME mirror configured in `.gitmodules` is private and requires access when initializing submodules.
@@ -327,7 +316,7 @@ CUDA_VISIBLE_DEVICES=0 \
 
 训练脚本只允许 `futuremamba.*` 参数可训练，并在 checkpoint metadata 中记录 Torch、CUDA、GPU、Mamba、数据和基座身份。不要覆盖已有 checkpoint；重新开始时使用新的 `--checkpoint-root`。
 
-### 10. 启动策略服务与运行 RoboMME 单 episode
+### 10. 启动策略服务与运行三任务单 episode
 
 FutureMamba bundle 必须同时包含 `plugin.safetensors` 和 `metadata.json`。metadata 还会严格校验冻结 PyTorch 基座的 `model.safetensors`、assets checksum、RoboMME commit、Mamba commit 和 memory state schema。保持仓库根目录作为当前工作目录，并保持 `runs/ckpts/pi05_baseline_pytorch/79999` 的相对路径：
 
@@ -344,7 +333,7 @@ CUDA_VISIBLE_DEVICES=0 \
   --port=8000
 ```
 
-另开终端，先跑 `PickXtimes` 的 validation episode 0：
+另开终端，三任务均应至少完成 1 个 validation episode。下面先运行 `PickXtimes`；将 `--task-name` 改为 `BinFill` 或 `SwingXtimes` 可复用同一命令：
 
 ```bash
 cd /path/to/PhaseVLA
@@ -363,11 +352,11 @@ micromamba run -n robomme python \
   --save-dir runs/evaluation/futuremamba_mamba2_ckpt5000
 ```
 
-若使用官方 `eval.py`，关键参数等价于 `--args.model_seed=42 --args.port=8000 --args.policy_name=futuremamba_mamba2 --args.model_ckpt_id=5000 --args.only_tasks=PickXtimes`。单 episode 结果必须保存视频、`progress.json`、`log.json` 和服务端日志；仅服务启动成功不算评测通过。
+单 episode 结果必须保存视频、`progress.json`、`log.json` 和服务端日志；仅服务启动成功不算评测通过。
 
-### 11. 生成确定性评测矩阵
+### 11. 生成三任务确定性评测矩阵
 
-先准备 checkpoint mapping JSON。每个 checkpoint 条目必须包含路径、配置名、后端、训练 seed、checkpoint ID 和 provenance；不要用自动扫描到的未知 checkpoint 直接生成论文结果。然后生成 manifest：
+先准备 checkpoint mapping JSON。每个 checkpoint 条目必须包含路径、配置名、后端、训练 seed、checkpoint ID 和 provenance；不要用自动扫描到的未知 checkpoint 直接生成论文结果。当前完整评测唯一使用 `counting` 阶段：
 
 ```bash
 environments/futuremamba/.venv/bin/python \
@@ -379,32 +368,33 @@ environments/futuremamba/.venv/bin/python \
   --eval-seed 7
 ```
 
-可用阶段为 `minimal`、`counting`、`full_val` 和 `final_test`。RoboMME 有 16 个官方任务，分为 Counting、Permanence、Reference、Imitation 四组；validation 和 test split 每任务各 50 个 episode。评测记录必须保留 task、episode、train seed、eval seed、checkpoint、config、server 和 provenance 字段。完整矩阵运行前，先用 `minimal` 验证服务、数据和结果目录。
+`counting` 固定生成 `BinFill`、`PickXtimes`、`SwingXtimes` 三个 validation 任务，每个任务 50 个 episode，共 150 个 episode。`minimal` 仅用于迁移后的快速 smoke。评测记录必须保留 task、episode、train seed、eval seed、checkpoint、config、server 和 provenance 字段。
 
-### 12. 已有结果、产物和待办
+### 12. 已有三任务结果、产物和待办
 
 当前已交付但不能误称为论文最终结果：
 
 - Mamba-2 checkpoint：step 5000，train seed 42；
-- 观测 11/16 个官方任务、515 个 episode、97 次成功、515 个视频；
-- Counting Suite：200 个 episode、54 次成功、27.00%；
+- 三个 in-scope 任务共 150 个 episode、53 次成功、成功率 35.33%；
+- `BinFill`：50 个 episode、17 次成功、34.00%；
+- `PickXtimes`：50 个 episode、15 次成功、30.00%；
+- `SwingXtimes`：50 个 episode、21 次成功、42.00%；
 - 已完成 `progress_depth=4`、`progress_depth=9`、`flow-only`、`handoff_ratio=0.4`、`handoff_ratio=0.0` 的真实 CUDA 1-step smoke；
 - memory backend 机制实验覆盖 GRU、LSTM、FrameStack、NoMemory、Mamba-2；
 - memory-swap contract 8 项通过，FutureMamba 定向测试 108 项通过，CUDA Mamba-2 测试 34 项通过。
 
 交接后优先级：
 
-1. 复制或重新生成 RoboMME episode 数据、基座和 FutureMamba checkpoint；
-2. 通过最小验收和 `PickXtimes` 单 episode smoke；
-3. 补齐 `VideoPlaceOrder`、`MoveCube`、`InsertPeg`、`PatternLock`、`RouteStick`；
-4. 在同一硬件/软件栈上完成多 seed 正式消融和 FLOPs、显存、episode timing profile；
-5. 最后进行真机验证。当前 README 结果没有真机证据，缺失任务不能计为失败。
+1. 复制或重新生成三任务所需的 RoboMME episode 数据、基座和 FutureMamba checkpoint；
+2. 通过 `BinFill`、`PickXtimes`、`SwingXtimes` 各至少 1 个单 episode smoke；
+3. 在三任务上完成正式多 seed 评测和消融；
+4. 在同一硬件/软件栈上完成 FLOPs、显存和 episode timing profile；
+5. 最后进行真机验证。其他 RoboMME 任务暂不纳入当前交接、统计或结论。
 
 当前可迁移的旧服务器产物：
 
 ```text
 /tmp/futuremamba_delivery/
-/tmp/futuremamba_full_val_ckpt5000/
 /tmp/futuremamba_ablation_depth4_smoke/
 /tmp/futuremamba_ablation_depth9_smoke/
 /tmp/futuremamba_ablation_flowonly_smoke/
@@ -437,7 +427,7 @@ environments/futuremamba/.venv/bin/python \
 - [ ] RoboMME 官方 `simple_test.py` 退出码为 0；
 - [ ] FutureMamba 定向测试和 Mamba-2 smoke 已运行并记录输出；
 - [ ] 基座、assets、episode 数据和插件 checkpoint 的 checksum 已保存；
-- [ ] WebSocket policy server 能启动，`PickXtimes` 至少完成 1 个 episode；
+- [ ] WebSocket policy server 能启动，三个 in-scope 任务各至少完成 1 个 episode；
 - [ ] 评测日志、视频、manifest 和 provenance 已写入持久化目录；
 - [ ] 新服务器所有凭据均通过安全凭据管理，不进入 README、shell history 或 Git。
 

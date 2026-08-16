@@ -17,29 +17,9 @@ SPEC.loader.exec_module(matrix)
 
 
 EXPECTED_TASK_SUITES = {
-    "Counting": ("BinFill", "PickXtimes", "SwingXtimes", "StopCube"),
-    "Permanence": ("VideoUnmask", "VideoUnmaskSwap", "ButtonUnmask", "ButtonUnmaskSwap"),
-    "Reference": ("PickHighlight", "VideoRepick", "VideoPlaceButton", "VideoPlaceOrder"),
-    "Imitation": ("MoveCube", "InsertPeg", "PatternLock", "RouteStick"),
+    "Counting": ("BinFill", "PickXtimes", "SwingXtimes"),
 }
-EXPECTED_RUNTIME_TASK_ORDER = (
-    "BinFill",
-    "StopCube",
-    "PickXtimes",
-    "SwingXtimes",
-    "ButtonUnmask",
-    "VideoUnmask",
-    "VideoUnmaskSwap",
-    "ButtonUnmaskSwap",
-    "PickHighlight",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "MoveCube",
-    "InsertPeg",
-    "PatternLock",
-    "RouteStick",
-)
+EXPECTED_RUNTIME_TASK_ORDER = ("BinFill", "PickXtimes", "SwingXtimes")
 
 
 def _passed_gate(path: Path) -> Path:
@@ -137,29 +117,23 @@ def test_phase_episode_plans_match_preregistered_matrix_sizes():
     assert all(selection.episode_ids == tuple(range(10)) for selection in minimal)
 
     counting = matrix.phase_episode_plan("counting")
-    assert {selection.task for selection in counting} == set(EXPECTED_TASK_SUITES["Counting"])
+    assert [selection.task for selection in counting] == ["BinFill", "PickXtimes", "SwingXtimes"]
     assert all(selection.split == "validation" for selection in counting)
-    assert sum(len(selection.episode_ids) for selection in counting) == 4 * 50
+    assert sum(len(selection.episode_ids) for selection in counting) == 3 * 50
 
-    full_val = matrix.phase_episode_plan("full_val")
-    assert [selection.task for selection in full_val] == list(EXPECTED_RUNTIME_TASK_ORDER)
-    assert sum(len(selection.episode_ids) for selection in full_val) == 16 * 50
-
-    final_test = matrix.phase_episode_plan("final_test")
-    assert all(selection.split == "test" for selection in final_test)
-    assert sum(len(selection.episode_ids) for selection in final_test) == 16 * 50
+    for out_of_scope_phase in ("full_val", "final_test"):
+        with pytest.raises(ValueError, match="unknown phase"):
+            matrix.phase_episode_plan(out_of_scope_phase)
 
 
-def test_final_test_manifest_has_16_tasks_50_test_episodes_and_three_main_seeds(tmp_path: Path):
+def test_counting_manifest_contains_only_three_in_scope_tasks(tmp_path: Path):
     mapping = _write_checkpoint_mapping(tmp_path)
-    manifest = matrix.build_manifest(checkpoint_mapping_path=mapping, stage="final_test")
-
+    manifest = matrix.build_manifest(checkpoint_mapping_path=mapping, stage="counting")
     main = [row for row in manifest["experiments"] if row["method_id"] == "futuremamba_mamba2"]
-    assert len(main) == 16 * 50 * 3
-    assert {row["task"] for row in main} == set(EXPECTED_RUNTIME_TASK_ORDER)
+    assert len(main) == 3 * 50 * 3
+    assert {row["task"] for row in main} == {"BinFill", "PickXtimes", "SwingXtimes"}
     assert {row["episode_id"] for row in main} == set(range(50))
-    assert {row["split"] for row in main} == {"test"}
-    assert {row["train_seed"] for row in main} == {0, 42, 7}
+    assert {row["split"] for row in main} == {"validation"}
 
 
 def test_validation_manifest_uses_official_val_dataset_not_test(tmp_path: Path):

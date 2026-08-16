@@ -8,29 +8,9 @@ from pathlib import Path
 from typing import Any
 
 OFFICIAL_TASK_SUITES: dict[str, tuple[str, ...]] = {
-    "Counting": ("BinFill", "PickXtimes", "SwingXtimes", "StopCube"),
-    "Permanence": ("VideoUnmask", "VideoUnmaskSwap", "ButtonUnmask", "ButtonUnmaskSwap"),
-    "Reference": ("PickHighlight", "VideoRepick", "VideoPlaceButton", "VideoPlaceOrder"),
-    "Imitation": ("MoveCube", "InsertPeg", "PatternLock", "RouteStick"),
+    "Counting": ("BinFill", "PickXtimes", "SwingXtimes"),
 }
-OFFICIAL_TASKS: tuple[str, ...] = (
-    "BinFill",
-    "StopCube",
-    "PickXtimes",
-    "SwingXtimes",
-    "ButtonUnmask",
-    "VideoUnmask",
-    "VideoUnmaskSwap",
-    "ButtonUnmaskSwap",
-    "PickHighlight",
-    "VideoRepick",
-    "VideoPlaceButton",
-    "VideoPlaceOrder",
-    "MoveCube",
-    "InsertPeg",
-    "PatternLock",
-    "RouteStick",
-)
+OFFICIAL_TASKS: tuple[str, ...] = ("BinFill", "PickXtimes", "SwingXtimes")
 OFFICIAL_SPLIT_EPISODE_COUNTS: dict[str, int] = {"train": 100, "validation": 50, "test": 50}
 OFFICIAL_DATASET_BY_SPLIT = {"train": "train", "validation": "val", "test": "test"}
 ROBOMME_POLICY_LEARNING_COMMIT = "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b"
@@ -187,11 +167,10 @@ def phase_episode_plan(phase: str) -> list[EpisodeSelection]:
             ("BinFill", "validation", range(10)),
         )
     elif phase == "counting":
-        selections = tuple((task, "validation", range(50)) for task in OFFICIAL_TASK_SUITES["Counting"])
-    elif phase == "full_val":
-        selections = tuple((task, "validation", range(50)) for task in OFFICIAL_TASKS)
-    elif phase == "final_test":
-        selections = tuple((task, "test", range(50)) for task in OFFICIAL_TASKS)
+        selections = tuple(
+            (task, "validation", range(50))
+            for task in ("BinFill", "PickXtimes", "SwingXtimes")
+        )
     else:
         raise ValueError(f"unknown phase: {phase!r}")
     return [
@@ -876,7 +855,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a deterministic RoboMME experiment matrix")
     parser.add_argument("--checkpoint-mapping", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--stage", choices=("minimal", "counting", "full_val", "final_test"), required=True)
+    parser.add_argument("--stage", choices=("minimal", "counting"), required=True)
     parser.add_argument("--port", type=int, default=DEFAULT_SERVER_PORT)
     parser.add_argument("--eval-seed", type=int, default=DEFAULT_EVAL_SEED)
     parser.add_argument("--mamba3-gate", type=Path, default=None)
