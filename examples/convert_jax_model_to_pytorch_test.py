@@ -8,7 +8,7 @@ import torch
 from examples import convert_jax_model_to_pytorch as converter
 
 
-LM_HEAD_KEY = "paligemma_with_expert.paligemma.language_model.lm_head.weight"
+LM_HEAD_KEY = "paligemma_with_expert.paligemma.lm_head.weight"
 
 
 def test_validate_convertible_parameter_tree_rejects_lora_paths():
@@ -70,6 +70,20 @@ def test_validate_load_result_accepts_single_tied_key_tuple():
 def test_validate_load_result_rejects_duplicate_missing_keys():
     with pytest.raises(ValueError, match="missing"):
         converter.validate_load_result([LM_HEAD_KEY, LM_HEAD_KEY], [], tied_weight_verified=True)
+
+
+def test_float32_conversion_config_prevents_bfloat16_load_truncation():
+    source = converter.openpi.models.pi0_config.Pi0Config(
+        dtype="bfloat16",
+        action_horizon=20,
+        pytorch_compile_mode="max-autotune",
+    )
+
+    conversion = converter._float32_conversion_config(source)
+
+    assert conversion.dtype == "float32"
+    assert conversion.pytorch_compile_mode is None
+    assert conversion.action_horizon == 20
 
 
 def test_copy_checkpoint_assets_copies_only_checkpoint_root_assets(tmp_path):

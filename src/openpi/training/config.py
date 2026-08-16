@@ -18,9 +18,11 @@ import openpi.models.futuremamba_config as futuremamba_config
 import openpi.models.pi0_config as pi0_config
 import openpi.models.pi0_fast as pi0_fast
 import openpi.models.tokenizer as _tokenizer
+import openpi.models_pytorch.futuremamba_config as futuremamba_pytorch_config
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
+import openpi.policies.robomme_policy as robomme_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
@@ -97,12 +99,15 @@ class DataConfig:
     action_space: droid_rlds_dataset.DroidActionSpace | None = None
     # List of datasets to sample from: name, version, weight, and optionally filter_dict_path
     datasets: Sequence[droid_rlds_dataset.RLDSDataset] = ()
+    # Directory containing official RoboMME execution-step pickle samples.
+    episode_data_dir: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
 class EpisodeDataConfig:
     query_stride: int = 5
     executed_horizon: int = 5
+    window_queries: int = 8
     suite_weights: dict[str, float] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -110,6 +115,8 @@ class EpisodeDataConfig:
             raise ValueError(f"query_stride must be positive, got {self.query_stride}")
         if self.executed_horizon <= 0:
             raise ValueError(f"executed_horizon must be positive, got {self.executed_horizon}")
+        if self.window_queries <= 0:
+            raise ValueError(f"window_queries must be positive, got {self.window_queries}")
         for suite, weight in self.suite_weights.items():
             if weight <= 0:
                 raise ValueError(f"suite weight for {suite!r} must be positive, got {weight}")
@@ -295,6 +302,48 @@ class LeRobotAlohaDataConfig(DataConfigFactory):
             data_transforms=data_transforms,
             model_transforms=model_transforms,
             action_sequence_keys=self.action_sequence_keys,
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class RoboMMEDataConfig(DataConfigFactory):
+    """Official RoboMME observation/action mapping for simulation and inference."""
+    episode_data_dir: str | None = None
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "observation/image": "image",
+                        "observation/wrist_image": "wrist_image",
+                        "observation/state": "state",
+                        "actions": "actions",
+                        "prompt": "prompt",
+                        "simple_subgoal": "simple_subgoal",
+                        "grounded_subgoal": "grounded_subgoal",
+                    }
+                )
+            ]
+        )
+        data_transforms = _transforms.Group(
+            inputs=[robomme_policy.RoboMMEInputs(model_type=model_config.model_type)],
+            outputs=[robomme_policy.RoboMMEOutputs(prediction_horizon=model_config.action_horizon)],
+        )
+        delta_action_mask = _transforms.make_bool_mask(7, -1)
+        data_transforms = data_transforms.push(
+            inputs=[_transforms.DeltaActions(delta_action_mask)],
+            outputs=[_transforms.AbsoluteActions(delta_action_mask)],
+        )
+        model_transforms = ModelTransformFactory()(model_config)
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            episode_data_dir=self.episode_data_dir,
+            action_sequence_keys=("actions",),
         )
 
 
@@ -589,6 +638,27 @@ _FUTUREMAMBA_LIBERO_MEM_MODEL = futuremamba_config.FutureMambaConfig(
     progress_depth=4,
     discrete_state_input=True,
 )
+_ROBOMME_BASE_MODEL = pi0_config.Pi0Config(
+    pi05=True,
+    action_dim=32,
+    action_horizon=20,
+    discrete_state_input=False,
+    pytorch_compile_mode=None,
+)
+_ROBOMME_FUTUREMAMBA_MODEL = futuremamba_pytorch_config.FutureMambaPytorchConfig(
+    pi05=True,
+    action_dim=32,
+    action_horizon=20,
+    discrete_state_input=False,
+    execution_horizon=16,
+    progress_depth=6,
+    memory_backend="mamba2",
+    terminal_loss_queries_per_episode=1,
+    base_checkpoint_uri="./runs/ckpts/pi05_baseline_pytorch/79999",
+    base_assets_checksum="3f15cc514b5a1941325bbeb673a776d80823cdbbff47629da8b9c7d84911f945",
+    robomme_policy_commit="ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+    robomme_benchmark_commit="856bc3a189d4172f3f47dbee4424d585f8d78db3",
+)
 
 
 # Use `get_config` if you need to get a config by name in your code.
@@ -674,6 +744,34 @@ _CONFIGS = [
                 prompt_from_task=True,
             ),
         ),
+    ),
+    # RoboMME PyTorch baseline and FutureMamba configs.
+    TrainConfig(
+        name="pi05_robomme_pytorch",
+        model=_ROBOMME_BASE_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+    ),
+    TrainConfig(
+        name="futuremamba_robomme_mamba2",
+        model=_ROBOMME_FUTUREMAMBA_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(query_stride=16, executed_horizon=16, window_queries=8),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        num_workers=0,
     ),
     #
     # Two-stage FutureMamba training configs.

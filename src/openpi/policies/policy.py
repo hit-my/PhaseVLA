@@ -105,6 +105,21 @@ class Policy(BasePolicy):
         }
         return outputs
 
+    def fork(self) -> "Policy":
+        """Create a session wrapper that shares immutable model weights."""
+        policy = object.__new__(Policy)
+        policy._model = self._model
+        policy._input_transform = self._input_transform
+        policy._output_transform = self._output_transform
+        policy._sample_kwargs = dict(self._sample_kwargs)
+        policy._metadata = dict(self._metadata)
+        policy._is_pytorch_model = self._is_pytorch_model
+        policy._pytorch_device = self._pytorch_device
+        policy._sample_actions = self._sample_actions
+        if not self._is_pytorch_model:
+            policy._rng = self._rng
+        return policy
+
     @property
     def metadata(self) -> dict[str, Any]:
         return self._metadata
@@ -137,6 +152,12 @@ class PolicyRecorder(_base_policy.BasePolicy):
     @override
     def reset(self) -> None:
         self._policy.reset()
+    def add_buffer(self, payload: dict):
+        add_buffer = getattr(self._policy, "add_buffer", None)
+        if callable(add_buffer):
+            return add_buffer(payload)
+        return None
+
 
     def snapshot_state(self):
         return self._policy.snapshot_state()

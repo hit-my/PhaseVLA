@@ -195,7 +195,7 @@ class PI0Pytorch(nn.Module):
     def embed_prefix(
         self, images, img_masks, lang_tokens, lang_masks
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Embed images with SigLIP and language tokens with embedding layer to prepare
+        """Embed images with class token and language tokens
         for PaliGemma transformer processing.
         """
         embs = []
@@ -403,6 +403,22 @@ class PI0Pytorch(nn.Module):
             pad_mask=prefix_pad_masks.detach(),
             kv_cache=detach_cache(past_key_values),
         )
+    @torch.no_grad()
+    def extract_prefix_context(self, observation, *, train: bool = False) -> FrozenPrefix:
+        """Return the detached VLM prefix context used by the action expert."""
+        return self.encode_frozen_prefix(observation, train=train)
+
+    def action_expert_velocity(
+        self,
+        state,
+        prefix_pad_masks,
+        past_key_values,
+        x_t,
+        timestep,
+    ):
+        """Evaluate one frozen π0.5 Action Expert velocity step."""
+        return self.denoise_step(state, prefix_pad_masks, past_key_values, x_t, timestep)
+
 
     def last_valid_prefix(self, frozen: FrozenPrefix) -> torch.Tensor:
         valid_counts = frozen.pad_mask.long().sum(dim=-1)
@@ -447,6 +463,7 @@ class PI0Pytorch(nn.Module):
             x_t = x_t + dt * v_t
             time += dt
         return x_t
+
 
     def denoise_step(
         self,

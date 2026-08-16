@@ -1,17 +1,21 @@
 import dataclasses
+from types import SimpleNamespace
 
 import pytest
 import torch
 from torch import nn
 from transformers.cache_utils import DynamicCache
 
+from openpi.models_pytorch import gemma_pytorch
 from openpi.models_pytorch.gemma_pytorch import (
+    PaliGemmaWithExpertModel,
     clone_cache,
     clone_selected_prefix_cache,
     detach_cache,
     iter_cache_tensors,
 )
 from openpi.models_pytorch.pi0_pytorch import FrozenPrefix, PI0Pytorch
+from openpi.models_pytorch import preprocessing_pytorch
 
 
 @dataclasses.dataclass
@@ -30,6 +34,75 @@ class _Config:
     action_horizon: int = 3
     action_dim: int = 2
 
+
+
+def test_preprocess_observation_outputs_channels_first_for_hwc_and_chw_images():
+    batch_size = 2
+    common = {
+        "image_masks": {"base_0_rgb": torch.ones(batch_size, dtype=torch.bool)},
+        "tokenized_prompt": torch.zeros(batch_size, 1, dtype=torch.long),
+        "tokenized_prompt_mask": torch.ones(batch_size, 1, dtype=torch.bool),
+        "state": torch.zeros(batch_size, 2),
+    }
+    hwc = _Observation(
+        images={"base_0_rgb": torch.zeros(batch_size, 224, 224, 3)},
+        **common,
+    )
+    chw = _Observation(
+        images={"base_0_rgb": torch.zeros(batch_size, 3, 224, 224)},
+        **common,
+    )
+
+    processed_hwc = preprocessing_pytorch.preprocess_observation_pytorch(
+        hwc, train=False, image_keys=("base_0_rgb",)
+    )
+    processed_chw = preprocessing_pytorch.preprocess_observation_pytorch(
+        chw, train=False, image_keys=("base_0_rgb",)
+    )
+
+    assert processed_hwc.images["base_0_rgb"].shape == (batch_size, 3, 224, 224)
+    assert processed_chw.images["base_0_rgb"].shape == (batch_size, 3, 224, 224)
+
+def test_paligemma_with_expert_drops_unused_action_language_head(monkeypatch):
+    class FakePaliGemma(nn.Module):
+        def __init__(self, config):
+            super().__init__()
+            self.config = config
+
+    class FakeActionDecoder(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.embed_tokens = nn.Embedding(2, 2)
+
+    class FakeGemmaForCausalLM(nn.Module):
+        def __init__(self, config):
+            super().__init__()
+            self.config = config
+            self.model = FakeActionDecoder()
+            self.lm_head = nn.Linear(2, 2, bias=False)
+
+    paligemma_config = SimpleNamespace(
+        text_config=SimpleNamespace(),
+        vision_config=SimpleNamespace(),
+    )
+    monkeypatch.setattr(
+        gemma_pytorch,
+        "CONFIG_MAPPING",
+        {
+            "paligemma": lambda: paligemma_config,
+            "gemma": lambda **kwargs: SimpleNamespace(**kwargs),
+        },
+    )
+    monkeypatch.setattr(gemma_pytorch, "PaliGemmaForConditionalGeneration", FakePaliGemma)
+    monkeypatch.setattr(gemma_pytorch, "GemmaForCausalLM", FakeGemmaForCausalLM)
+    vlm_config = SimpleNamespace(width=2, mlp_dim=4, num_heads=1, head_dim=2, depth=1, num_kv_heads=1)
+    action_config = SimpleNamespace(width=2, mlp_dim=4, num_heads=1, head_dim=2, depth=1, num_kv_heads=1)
+
+    model = PaliGemmaWithExpertModel(vlm_config, action_config, precision="float32")
+
+    assert model.gemma_expert.model.embed_tokens is None
+    assert model.gemma_expert.lm_head is None
+    assert all("gemma_expert.lm_head" not in name for name, _ in model.named_parameters())
 
 class _TinyPrefixModel(nn.Module):
     def __init__(self):
@@ -219,6 +292,15 @@ def test_frozen_prefix_is_detached_normal_tensor(tiny_pi0, observation):
     assert frozen.pad_mask.requires_grad is False
     assert all(t.requires_grad is False and not t.is_inference() for t in iter_cache_tensors(frozen.kv_cache))
 
+def test_extract_prefix_context_is_stable_public_alias(tiny_pi0, observation):
+    frozen = tiny_pi0.extract_prefix_context(observation, train=False)
+
+    assert isinstance(frozen, FrozenPrefix)
+    assert frozen.hidden.requires_grad is False
+    assert frozen.hidden.is_inference() is False
+    assert frozen.pad_mask.requires_grad is False
+    assert all(t.requires_grad is False and not t.is_inference() for t in iter_cache_tensors(frozen.kv_cache))
+
 
 def test_detach_and_clone_cache_do_not_mutate_or_share_storage():
     key0 = torch.arange(6, dtype=torch.float32).reshape(1, 1, 3, 2).requires_grad_()
@@ -297,6 +379,18 @@ def test_denoise_step_clones_dynamic_cache_before_suffix_forward(tiny_pi0, obser
         frozen_tensors = iter_cache_tensors(frozen_cache)
         for recorded_tensor, frozen_tensor in zip(recorded_tensors, frozen_tensors, strict=False):
             assert recorded_tensor.data_ptr() != frozen_tensor.data_ptr()
+
+def test_action_expert_velocity_preserves_frozen_cache(tiny_pi0, observation):
+    frozen = tiny_pi0.extract_prefix_context(observation, train=False)
+    before_tensors = [tensor.detach().clone() for tensor in iter_cache_tensors(frozen.kv_cache)]
+    x_t = torch.zeros(observation.state.shape[0], tiny_pi0.config.action_horizon, tiny_pi0.config.action_dim)
+    timestep = torch.ones(observation.state.shape[0])
+
+    velocity = tiny_pi0.action_expert_velocity(observation.state, frozen.pad_mask, frozen.kv_cache, x_t, timestep)
+
+    torch.testing.assert_close(velocity, tiny_pi0.denoise_step(observation.state, frozen.pad_mask, frozen.kv_cache, x_t, timestep))
+    for actual, expected in zip(iter_cache_tensors(frozen.kv_cache), before_tensors, strict=True):
+        torch.testing.assert_close(actual, expected)
 
 
 def test_refactored_sampling_matches_original_fixed_noise_and_runs_prefix_once(tiny_pi0, observation):

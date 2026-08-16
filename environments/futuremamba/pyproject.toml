@@ -9,6 +9,7 @@ dependencies = [
     "triton==3.5.1",
     "mamba-ssm",
     "pytest>=8.3.4",
+    "nvidia-ml-py>=12.0.0",
 ]
 
 [tool.uv.sources]
@@ -18,13 +19,14 @@ lerobot = { git = "https://github.com/huggingface/lerobot", rev = "0cf864870cf29
 mamba-ssm = { git = "https://github.com/state-spaces/mamba", rev = "77069de5cdb55cbe98b670889c80df211e031039" }
 
 [tool.uv.extra-build-dependencies]
-mamba-ssm = [{ requirement = "torch==2.9.1", match-runtime = true }]
+mamba-ssm = [{ requirement = "torch", match-runtime = true }]
 
 [tool.uv]
 package = false
 override-dependencies = [
+    "torchvision==0.24.1",
     "torch==2.9.1",
     "triton==3.5.1",
-    "ml-dtypes==0.4.1",
+    "ml-dtypes==0.5.3",
     "tensorstore==0.1.74",
 ]

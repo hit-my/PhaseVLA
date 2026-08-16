@@ -37,12 +37,9 @@ def preprocess_observation_pytorch(
     for key in image_keys:
         image = observation.images[key]
 
-        # TODO: This is a hack to handle both [B, C, H, W] and [B, H, W, C] formats
-        # Handle both [B, C, H, W] and [B, H, W, C] formats
-        is_channels_first = image.shape[1] == 3  # Check if channels are in dimension 1
-
+        # Normalize to channels-last for resize/augmentation, then always return channels-first for SigLIP.
+        is_channels_first = image.shape[1] == 3
         if is_channels_first:
-            # Convert [B, C, H, W] to [B, H, W, C] for processing
             image = image.permute(0, 2, 3, 1)
 
         if image.shape[1:3] != image_resolution:
@@ -141,11 +138,7 @@ def preprocess_observation_pytorch(
             # Back to [-1, 1]
             image = image * 2.0 - 1.0
 
-        # Convert back to [B, C, H, W] format if it was originally channels-first
-        if is_channels_first:
-            image = image.permute(0, 3, 1, 2)  # [B, H, W, C] -> [B, C, H, W]
-
-        out_images[key] = image
+        out_images[key] = image.permute(0, 3, 1, 2).contiguous()
 
     # obtain mask
     out_masks = {}

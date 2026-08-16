@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 from typing import Literal
 
 import torch
@@ -66,6 +67,12 @@ def detach_cache(cache: object):
     return _map_cache_tensors(cache, torch.Tensor.detach)
 
 
+def slice_cache_batch(cache: object, index: int):
+    if index < 0:
+        raise ValueError("cache batch index must be non-negative")
+    return _map_cache_tensors(cache, lambda tensor: tensor[index : index + 1])
+
+
 def _clone_detached_tensor(tensor: torch.Tensor) -> torch.Tensor:
     return tensor.detach().clone()
 
@@ -96,6 +103,110 @@ def clone_selected_prefix_cache(cache: object, layer_indices):
             return cloned_cache
         raise TypeError(f"Unsupported Transformers cache structure: {type(cache).__name__}")
     raise TypeError(f"Unsupported cache structure: {type(cache).__name__}")
+
+
+@dataclasses.dataclass(frozen=True)
+class PrefixKVView:
+    """Read-only detached prefix K/V layers selected for suffix-only attention."""
+
+    layers: tuple[tuple[torch.Tensor, torch.Tensor], ...]
+    valid_lengths: torch.Tensor
+
+    @classmethod
+    def from_cache(
+        cls,
+        cache: object,
+        layer_indices,
+        prefix_mask: torch.BoolTensor,
+    ) -> "PrefixKVView":
+        if prefix_mask.ndim != 2:
+            raise ValueError(f"prefix_mask must have shape [batch, prefix], got {tuple(prefix_mask.shape)}")
+        layer_indices = tuple(layer_indices)
+        selected = clone_selected_prefix_cache(cache, layer_indices)
+        raw_layers = tuple(_cache_layers_as_key_values(selected))
+        if len(raw_layers) != len(layer_indices):
+            raise ValueError(f"selected {len(raw_layers)} cache layers for {len(layer_indices)} layer indices")
+        batch_size, source_prefix_len = prefix_mask.shape
+        valid_lengths = prefix_mask.long().sum(dim=-1)
+        max_valid_length = int(valid_lengths.max().item()) if valid_lengths.numel() else 0
+        layers = []
+        for layer_idx, (key, value) in enumerate(raw_layers):
+            _validate_kv_tensor(key, "key", layer_idx, batch_size, source_prefix_len)
+            _validate_kv_tensor(value, "value", layer_idx, batch_size, source_prefix_len)
+            if key.shape != value.shape:
+                raise ValueError(
+                    f"prefix cache layer {layer_idx} key/value shapes must match, got {tuple(key.shape)} and {tuple(value.shape)}"
+                )
+            layers.append(
+                (
+                    _pack_valid_prefix_tensor(key, prefix_mask, max_valid_length),
+                    _pack_valid_prefix_tensor(value, prefix_mask, max_valid_length),
+                )
+            )
+        return cls(layers=tuple(layers), valid_lengths=valid_lengths.detach().clone())
+
+    def layer(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        key, value = self.layers[index]
+        return key.detach(), value.detach()
+
+    def batch_slice(self, index: int) -> "PrefixKVView":
+        if index < 0 or index >= self.valid_lengths.shape[0]:
+            raise IndexError(f"prefix cache batch index {index} is out of range")
+        return PrefixKVView(
+            layers=tuple((key[index : index + 1], value[index : index + 1]) for key, value in self.layers),
+            valid_lengths=self.valid_lengths[index : index + 1],
+        )
+
+
+def _pack_valid_prefix_tensor(
+    tensor: torch.Tensor,
+    prefix_mask: torch.BoolTensor,
+    max_valid_length: int,
+) -> torch.Tensor:
+    packed = tensor.new_zeros(tensor.shape[0], tensor.shape[1], max_valid_length, tensor.shape[3])
+    for batch_idx in range(tensor.shape[0]):
+        valid_positions = torch.nonzero(prefix_mask[batch_idx], as_tuple=False).flatten()
+        if valid_positions.numel() > 0:
+            packed[batch_idx, :, : valid_positions.numel(), :] = tensor[batch_idx, :, valid_positions, :]
+    return packed.contiguous()
+
+
+def _cache_layers_as_key_values(cache: object) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    if _is_transformers_cache(cache):
+        if hasattr(cache, "key_cache") and hasattr(cache, "value_cache"):
+            return list(zip(cache.key_cache, cache.value_cache, strict=True))
+        if hasattr(cache, "to_legacy_cache") and callable(cache.to_legacy_cache):
+            return _cache_layers_as_key_values(cache.to_legacy_cache())
+    if _is_legacy_cache_sequence(cache):
+        layers = []
+        for layer in cache:
+            if not _is_legacy_cache_sequence(layer) or len(layer) < 2:
+                raise TypeError(f"Unsupported cache layer structure: {type(layer).__name__}")
+            key, value = layer[0], layer[1]
+            if not torch.is_tensor(key) or not torch.is_tensor(value):
+                raise TypeError("prefix cache layers must contain tensor key/value pairs")
+            layers.append((key, value))
+        return layers
+    raise TypeError(f"Unsupported cache structure: {type(cache).__name__}")
+
+
+def _validate_kv_tensor(
+    tensor: torch.Tensor,
+    name: str,
+    layer_idx: int,
+    batch_size: int,
+    prefix_len: int,
+) -> None:
+    if tensor.ndim != 4:
+        raise ValueError(f"prefix cache layer {layer_idx} {name} must have shape [batch, heads, prefix, dim]")
+    if tensor.shape[0] != batch_size:
+        raise ValueError(
+            f"prefix cache layer {layer_idx} {name} batch {tensor.shape[0]} does not match prefix_mask batch {batch_size}"
+        )
+    if tensor.shape[2] != prefix_len:
+        raise ValueError(
+            f"prefix cache layer {layer_idx} {name} length {tensor.shape[2]} does not match prefix_mask length {prefix_len}"
+        )
 
 
 class PaliGemmaWithExpertModel(nn.Module):
@@ -146,6 +257,7 @@ class PaliGemmaWithExpertModel(nn.Module):
         self.paligemma = PaliGemmaForConditionalGeneration(config=vlm_config_hf)
         self.gemma_expert = GemmaForCausalLM(config=action_expert_config_hf)
         self.gemma_expert.model.embed_tokens = None
+        self.gemma_expert.lm_head = None
 
         self.to_bfloat16_for_selected_params(precision)
 

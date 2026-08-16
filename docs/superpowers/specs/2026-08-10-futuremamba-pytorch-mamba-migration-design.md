@@ -1,56 +1,64 @@
-# FutureMamba 纯 PyTorch 与官方 Mamba-2/3 迁移设计规格
+# FutureMamba 纯 PyTorch 与 RoboMME 仿真设计规格
 
-- **日期：** 2026-08-10
-- **状态：** 设计已确认，待书面审查；尚未开始迁移实现。
-- **目标：** 将现有 FutureMamba 从自研 JAX/Flax Mamba-1 实现迁移到统一的 PyTorch 训练与推理图；先用官方 Mamba-2 打通端到端闭环，再在同一上层接口下门控切换官方 Mamba-3 SISO。
-- **冻结基座：** 任务适配后的 OpenPI $\pi_{0.5}$。
-- **主硬件：** NVIDIA GeForce RTX 5090，Compute Capability 12.0，32 GB 显存。
-- **方法边界：** 保留已确认的查询级进程记忆、Progress Expert 和高噪声硬交接；本次迁移不改变论文研究问题、训练标签或 LIBERO-Mem 评测协议。
+- **日期：** 2026-08-11
+- **状态：** RoboMME 方案已确认；此前 LIBERO 仿真设计废止，纯 PyTorch 核心迁移成果继续复用。
+- **目标：** 在 RoboMME 官方任务适配版 $\pi_{0.5}$ 上训练查询级 Mamba 进程记忆与轻量 Progress Expert，并以 RoboMME 官方 ManiSkill/SAPIEN 闭环完成全部仿真训练、评测和论文证据。
+- **冻结基座：** RoboMME 官方微调 `pi05_baseline`，严格转换为 PyTorch 后冻结 VLM 与 Action Expert。
+- **主后端：** 官方 Mamba-2；官方 Mamba-3 SISO 只有通过 RTX 5090 硬门后才进入独立消融。
+- **唯一仿真平台：** RoboMME。LIBERO-Mem、LIBERO-Long 和普通 LIBERO 不再承担训练、验证、测试或论文结论。
 
 ## 1. 决策摘要
 
 采用以下路线：
 
-1. **训练图统一为 PyTorch。** $\pi_{0.5}$、记忆模块、Progress Expert、损失和 episode 训练循环全部位于同一 PyTorch autograd 图中。禁止用 JAX 训练基座、再通过跨框架桥接训练 Mamba。
-2. **先接入官方 Mamba-2。** 使用 `state-spaces/mamba` 官方模块和官方 `Block` 语义，完成完整 episode 训练、在线单步状态、reset、snapshot/restore、checkpoint 和闭环 rollout。
-3. **再接入官方 Mamba-3 SISO。** 保持 FutureMamba 的 `MemoryBackend` 上层合同不变，但 Mamba-2 与 Mamba-3 使用各自原生参数和状态结构，分别从同一冻结基座独立训练。
-4. **Progress Expert 继续硬交接。** 它直接负责前 $K$ 个高噪声 flow step，冻结 Action Expert 从 $x_K$ 接管；默认不将两个速度场相加，也不把 $v_P$ 作为残差输入 Action Expert。
-5. **Mamba-3 受硬件门控。** 官方 `Mamba3.step` 源码明确标注只在 H100 上测试。RTX 5090 上未通过依赖、kernel、前向/反向和 scan/step parity 之前，不把 Mamba-3 用于正式训练、论文主表或部署。
-6. **干净切换，不维护双实现。** PyTorch 版本完成验收后，删除 FutureMamba 专用的自研 JAX Mamba/Progress Expert 路径并迁移全部调用方；OpenPI 上游自身的通用 JAX 支持不在删除范围内。
-
+1. **保留 RoboMME 官方仿真闭环。** 数据、任务定义、ManiSkill/SAPIEN 环境、`examples/robomme/eval.py`、成功判定、视频与结果聚合均来自 RoboMME；只替换 WebSocket 后的策略服务。
+2. **策略与仿真使用两个软件环境。** PyTorch 策略环境运行冻结 $\pi_{0.5}$、Mamba 和 Progress Expert；RoboMME 环境运行模拟器。两者只通过 msgpack/WebSocket 交换 reset、history buffer、当前观测和 action chunk。
+3. **训练图统一为 PyTorch。** $\pi_{0.5}$、Mamba、Progress Expert 和损失位于同一 PyTorch autograd 图；VLM 与 Action Expert 参数冻结。
+4. **Mamba 只在策略查询时更新一次。** 主路径输入为当前查询的 VLM 最后有效 token 与上一记忆状态；执行 action chunk 的 16 个底层控制步期间不更新 Mamba，也不把整段 buffer 当作 16 次递推。
+5. **Progress Expert 负责高噪声阶段。** 默认从微调 Action Expert 的 Uniform-6 对应层初始化，读取相同层的只读 VLM K/V 与投影后的 Memory Token，完成前 $K$ 个去噪步；冻结 Action Expert 从同一 scheduler 位置接管。
+6. **主损失为 Progress flow loss 加终端动作损失。** Action Expert 参数冻结，但终端去噪不得放入 `no_grad()`，以便梯度从最终动作穿过冻结 Action Expert 回传至 $x_K$、Progress Expert 与 Mamba。
+7. **先接入官方 Mamba-2，再门控 Mamba-3 SISO。** 两者共享上层 `MemoryBackend` 合同，不共享参数或状态；Mamba-3 未通过 RTX 5090 硬门时不进入主表或部署结论。
+8. **干净切换。** RoboMME 路径验收后删除 FutureMamba 专用 JAX 实现与 LIBERO 专用 FutureMamba runner；OpenPI 上游通用 JAX/LIBERO 示例不在删除范围内。
 ## 2. 已观察到的仓库与环境事实
 
-### 2.1 现有代码
+### 2.1 本仓库状态
 
-当前仓库已经包含完整的 JAX/Flax FutureMamba 原型：
+本工作区已实现或正在迁移纯 PyTorch FutureMamba 核心：
 
-- `src/openpi/models/mamba.py`：自研 Mamba-1 风格 selective SSM；
-- `src/openpi/models/futuremamba.py`：JAX FutureMamba 与记忆后端；
-- `src/openpi/models/progress_expert.py`：JAX Progress Expert；
-- `scripts/train_futuremamba.py`：JAX episode 训练入口；
-- `src/openpi/policies/futuremamba_policy.py`：有状态策略生命周期；
-- LIBERO-Mem 转换、runner、历史因果评测与实验矩阵。
+- `src/openpi/models_pytorch/pi0_pytorch.py`：PyTorch $\pi_{0.5}$、prefix KV、单步速度与 Euler 采样；
+- `src/openpi/models_pytorch/mamba_memory.py`：Mamba-2 及消融后端；
+- `src/openpi/models_pytorch/progress_expert.py`：只读 prefix 的轻量专家；
+- `src/openpi/models_pytorch/futuremamba.py`：冻结基座、查询级记忆与硬交接；
+- `src/openpi/policies/futuremamba_policy.py`：显式 PyTorch 状态生命周期；
+- `src/openpi/training/futuremamba_checkpoint.py`：仅插件 checkpoint。
 
-OpenPI 同时已有可训练的 PyTorch $\pi_{0.5}$：
+旧 `examples/libero_mem/` 只代表此前实验方向，不能再作为 RoboMME 仿真完成证据。后续应扩展现有 PyTorch 路径并新增 RoboMME 适配，不创建第三套模型框架。
 
-- `src/openpi/models_pytorch/pi0_pytorch.py` 已实现 PyTorch flow-matching 训练、prefix KV cache、`denoise_step` 与 Euler 采样；
-- `src/openpi/models_pytorch/gemma_pytorch.py` 已实现 PaliGemma 与 Action Expert 的联合训练路径，以及基于 prefix cache 的 Action Expert 推理路径；
-- `scripts/train_pytorch.py` 已提供单机、多卡 DDP/FSDP、保存和恢复训练的基础设施；
-- `examples/convert_jax_model_to_pytorch.py` 已提供官方 JAX → PyTorch 基座权重转换入口。
+### 2.2 RoboMME 固定来源与协议
 
-因此迁移应扩展现有 PyTorch 路径，不应新建第三套模型框架。
+正式实验固定以下来源：
 
-### 2.2 基座 checkpoint
+- 策略仓库：`RoboMME/robomme_policy_learning@ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`；
+- 仿真子模块：`RoboMME/robomme_benchmark@856bc3a189d4172f3f47dbee4424d585f8d78db3`；
+- 原始数据：`Yinpei/robomme_data_h5`；
+- 官方微调基座：`Yinpei/pi05_baseline`；
+- 官方对比 checkpoint：`Yinpei/mme_vla_suite`。
 
-当前可见的任务适配 checkpoint：
+官方事实：16 个任务分为 Counting、Permanence、Reference、Imitation 四组，每组 4 个任务；训练集每任务 100 条示范，验证集和测试集每任务各 50 个 episode。官方 $\pi_{0.5}$ 配置预测 20 步 action chunk，评测客户端默认实际执行前 16 步，最大底层控制步为 1300。
+
+官方 WebSocket 客户端发送三类消息：`{"reset": true}`、带 `add_buffer=true` 的历史帧 buffer、当前观测 infer。原服务响应分别为 `reset_finished`、`add_buffer_finished` 和 `actions`。FutureMamba 服务必须与该客户端兼容，同时允许结构化扩展元数据；不得要求修改 ManiSkill/SAPIEN 环境语义。
+
+### 2.3 RoboMME 基座 checkpoint
+
+唯一正式基座是下载后的 RoboMME `pi05_baseline` 后期 checkpoint，例如：
 
 ```text
-/home/ubuntu/lgd/CoRL2026/checkpoints/pi05_libero_libero_pi05_2000
+runs/ckpts/pi05_baseline/pi05_baseline/79999
 ```
 
-它是 Orbax/JAX checkpoint，包含 `params/` 与 `assets/`，不是可由 PyTorch 直接加载的 `safetensors`。迁移前必须完成一次严格转换和数值验收。
+它是 Orbax/JAX checkpoint，包含 `params/` 与 RoboMME `assets/robomme/norm_stats.json`。转换必须同时迁移 `RoboMMEInputs`、`RoboMMEOutputs`、224 × 224 图像变换、8 维 joint-angle/state 语义和归一化统计。原 LIBERO checkpoint 不得作为 RoboMME 正式基座。
 
-### 2.3 依赖风险
+### 2.4 依赖风险
 
 当前项目声明：
 
@@ -80,7 +88,7 @@ $$
 H_q,\mathcal C_q=\operatorname{VLM}_{\mathrm{frozen}}(o_q,r_q,\ell),
 $$
 
-其中 $H_q$ 是最后一层 prefix hidden states，$\mathcal C_q$ 是逐层 prefix KV cache。记忆输入使用最后一个有效 prefix token 和上一周期实际执行动作：
+其中 $H_q$ 是最后一层 prefix hidden states，$\mathcal C_q$ 是逐层 prefix KV cache。主方法只使用最后一个有效 prefix token：
 
 $$
 z_q=H_q[p_q],
@@ -89,12 +97,8 @@ p_q=\max\{j:\operatorname{prefix\_mask}_{q,j}=1\},
 $$
 
 $$
-e_q=W_e\left[W_z z_q\Vert E_a(A_{q-1}^{\mathrm{exec}})\right].
-$$
-
-记忆后端更新固定大小状态：
-
-$$
+e_q=W_z z_q,
+\qquad
 (h_q,S_q)=\operatorname{MemoryStep}(e_q,S_{q-1}),
 \qquad
 m_q=W_m h_q.
@@ -102,11 +106,14 @@ $$
 
 约束：
 
-- 只输入真正下发执行的 action prefix，不输入上一动作块未执行的 tail；
-- episode 开始、环境 reset 或显式远程 reset 时清零状态；
+- 第 $q$ 次 `infer` 恰好触发一次 Mamba 更新；首个查询以前状态为零；
+- RoboMME `add_buffer` 只声明从上次查询到当前查询的观测历史与 `exec_start_idx`，不得直接推进 Mamba；
+- 官方模型预测 20 步，但环境默认执行前 16 步；未执行的 4 步不得进入任何历史动作基线；
+- 主 FutureMamba 不把 past actions 送入 Mamba；`pi0.5 + past actions` 是独立对比基线；
+- episode 开始、环境 reset 或远程 `{"reset": true}` 时清零 memory、query count 与临时 buffer；
 - padding query 不更新状态、不产生损失；
 - Memory Token 只进入 Progress Expert，不写回冻结 VLM，也不进入冻结 Action Expert；
-- 状态大小不随 episode 长度增长。
+- 状态大小不随 episode 长度增长，不跨 episode 传播。
 
 ### 3.2 高噪声硬交接
 
@@ -141,14 +148,15 @@ Progress Expert 的作用是产生交接状态 $x_K$。主路径禁止：
 
 软融合、残差融合和 `action_memory_full` 只能保留为显式消融配置。
 
-### 3.3 不在本次迁移范围内
+### 3.3 不在本次实现范围内
 
-- 改变 LIBERO-Mem / LIBERO-Long 数据定义或指标；
-- 新增未来图像、未来状态或阶段标签监督；
+- 修改 RoboMME 任务定义、ManiSkill/SAPIEN 动力学、成功判定或 train/val/test split；
+- 使用 LIBERO 结果替代任何 RoboMME 验收或论文结果；
+- 新增未来图像、未来状态或额外人工阶段标签监督；
 - 引入跨 episode 终身记忆；
-- 修改 $\pi_{0.5}$ Action Expert 架构；
+- 修改冻结 $\pi_{0.5}$ Action Expert 架构；
 - 首版接入 Mamba-3 MIMO；
-- 为迁移方便而保留 JAX/PyTorch 混合训练或永久兼容 shim。
+- 为迁移方便保留 JAX/PyTorch 混合训练或永久兼容 shim。
 
 ## 4. 纯 PyTorch 系统架构
 
@@ -163,8 +171,6 @@ FutureMambaPytorch
 │   └── Gemma Action Expert                 # 冻结
 └── futuremamba: FutureMambaPluginPytorch    # 可训练
     ├── vlm_memory_in_proj
-    ├── executed_action_encoder
-    ├── memory_input_fusion
     ├── memory: MemoryBackend
     ├── memory_token_proj
     └── progress_expert: ProgressExpertPytorch
@@ -174,7 +180,7 @@ FutureMambaPytorch
 
 1. 基座所有参数 `requires_grad=False`；
 2. 基座保持 `eval()`，避免 dropout 或训练态行为；
-3. 基座 forward 使用 `torch.no_grad()`；所有交给可训练插件的 hidden/KV tensor 都在退出 `no_grad` 后显式 `detach`，并保持为普通 tensor；禁止用 `torch.inference_mode()` 产生随后需要被 autograd 保存用于插件反向的 inference tensor；
+3. VLM prefix forward 使用 `torch.no_grad()`；所有交给插件的 hidden/KV 在退出 `no_grad` 后显式 `detach`，保持为普通 tensor；终端损失中的冻结 Action Expert 去噪只冻结参数，不能用 `no_grad()` 或 `inference_mode()`，因为梯度必须传回 $x_K$；
 4. optimizer 参数列表只包含 `futuremamba.*`；
 5. 每次训练启动时断言没有非插件参数可训练；
 6. 保存前断言冻结参数 checksum 与加载时一致。
@@ -213,12 +219,13 @@ def encode_frozen_prefix(observation) -> FrozenPrefix: ...
 
 ### 4.3 PyTorch Progress Expert
 
-`ProgressExpertPytorch` 使用 Hugging Face Gemma 的 Action Expert 同类 decoder block，但深度更小：
+`ProgressExpertPytorch` 使用 Action Expert 相同的 decoder block 类型，但只保留 Uniform-6 层：
 
 - hidden width、head 数、KV head 数、head dim、MLP dim、激活函数和 AdaRMS 时间条件与 Action Expert 相同；
-- 主设置 `progress_depth=4`，即约为 `gemma_300m` Action Expert 深度的 $1/4$；
-- 层映射覆盖 Action Expert 首尾层，并在中间等距取样；
-- Progress Expert 参数独立、可训练；默认保持现有方法的随机初始化，不在迁移时静默改成 Action Expert 权重复制。
+- 主设置 `progress_depth=6`，层索引由 Action Expert 深度上均匀覆盖首尾得到；
+- 每个 Progress layer 读取同索引 VLM 层的只读 K/V；
+- Progress Expert 的可对应参数从 RoboMME 微调 Action Expert 对应层初始化；输入/输出投影、Memory Token 投影等无对应参数使用项目标准初始化；
+- 随机初始化整个 Progress Expert 只作为显式消融，不作为主设置。
 
 对第 $j$ 个 Progress layer，从冻结 prefix cache 读取第 $r(j)$ 层的 K/V，并构造该 Progress layer 自己的 cache 索引。输入 token 顺序为：
 
@@ -230,24 +237,24 @@ Action tokens 通过该 Progress layer 自己的 Q/K/V 投影；Memory Token 通
 
 实现必须使用独立的 cache view 或 detached clone。若 Hugging Face cache API 会原地追加 token，则不得把 Action Expert 的原始 cache 对象直接传入 Progress Expert。
 
-### 4.4 Episode 训练的数据流
+### 4.4 RoboMME 连续窗口训练
 
-完整 episode 训练保留因果顺序和跨 query 梯度：
+RoboMME 官方预处理样本含 `epis_idx`、`step_idx`、`exec_start_idx`，动作目标为 20 步 chunk。FutureMamba 数据加载器必须先按 `(epis_idx, step_idx)` 重建 episode 内顺序，再抽取连续 query 窗口：
 
-1. 每个 batch 元素是一条 episode，`query_mask` 只允许形如 `[True, ..., True, False, ..., False]` 的右侧 padding；
-2. 基座 prefix 特征与被选中的 prefix KV 均为普通 detached tensor，无基座梯度；
-3. 每条 episode 只把前 $Q_b=\sum_q\operatorname{query\_mask}_{b,q}$ 个有效 $e_q$ 送入 Mamba；padding query 不能通过零输入或占位输入推进 convolution/SSM state；
-4. `forward_sequence` 按有效长度分桶，或逐 episode 对 `x[b,:Q_b]` 调用官方 causal sequence forward；每条 episode 从零状态开始并保持完整跨 query BPTT；
-5. 不同长度的输出只在 Mamba forward 之后 padding 回 `[B,Q,D]`，最终 state 来自各自最后一个有效 query；
-6. 按有效 query 计算 Progress Expert 的 flow-matching、交接和边界损失；
-7. 先按 episode 的有效 query 数取均值，再对 batch 取均值；$Q_b=0$ 的样本在 data loader 阶段拒绝。
+1. 每个窗口只来自一个 `epis_idx`，`step_idx` 严格递增；乱序、重复或跨 episode 拼接立即报错；
+2. 每个 episode 的初始 Mamba 状态为零；窗口若从 episode 中间开始，必须先无梯度 burn-in 到窗口起点，或加载由同一 checkpoint 生成且通过 checksum 校验的起始状态；不得假装中间窗口从零开始；
+3. 窗口内按 query 顺序运行 Mamba，长度 $W$ 为可配置 truncated BPTT 窗口；窗口结束后 detach state，禁止把梯度跨窗口或跨 episode 传播；
+4. `query_mask` 只允许右侧 padding，padding query 不推进状态、不产生损失；
+5. 冻结 prefix hidden 与选定层 K/V 为普通 detached tensor；
+6. 每个有效 query 以 20 步 action target 训练，但在线闭环只执行前 16 步；
+7. 先按每个窗口的有效 query 取均值，再对 batch 取均值。
 
-由于冻结 prefix KV 占用较大，提供两种数值等价路径：
+冻结 prefix KV 可采用两条数值等价路径：
 
-- **主训练路径：** Stage B 使用确定性的冻结基座 conditioning cache，按 episode 分片保存最后有效 token、prefix mask 和 Action Expert 的全部逐层 prefix KV；Progress Expert 只从该完整 cache 读取层映射选中的 K/V，边界损失复用完整 cache 调用冻结 Action Expert；
-- **在线回退路径：** 逐 query 运行冻结 prefix，完成该 query 损失后立即释放 cache，不在 GPU 上保留整条 episode 的全部 VLM cache。
+- **主训练路径：** 以 RoboMME 官方确定性预处理为输入，按 episode/query 预计算最后有效 token、prefix mask 与完整逐层 KV；
+- **在线回退路径：** 逐 query 运行冻结 prefix，完成该 query 损失后立即释放 cache。
 
-缓存文件必须记录：基座权重 checksum、tokenizer/config checksum、图像预处理配置、层映射、dtype 和 episode/query ID。任一 checksum 不匹配即拒绝读取。若 Stage B 使用随机图像增强，则不能复用离线 prefix cache；主设置因此采用确定性预处理。
+缓存 manifest 必须记录 RoboMME 策略仓库 commit、仿真子模块 commit、原始数据 checksum、基座权重与 assets checksum、tokenizer、图像预处理、层映射、dtype、episode/query ID。任一身份不匹配即拒绝读取。
 
 ## 5. 统一 MemoryBackend 合同
 
@@ -415,7 +422,7 @@ Mamba-3 实验从同一冻结 $\pi_{0.5}$ 基座和相同随机种子协议重�
 7. **reset 门：** 部分 batch reset 只影响被 reset 的行；完全 reset 后输出与新建零状态一致。
 8. **固定大小门：** 长度 2 与长度 2048 的最终 state tree、shape 和总字节数完全相同。
 9. **OpenPI 集成门：** 完成 2-step fake episode 训练、保存、恢复到第 4 step，并证明只更新 `futuremamba.*`。
-10. **部署门：** 完成至少一个 LIBERO-Mem 闭环 episode 的 reset → infer → executed-action feedback 循环；无状态串线或超时。
+10. **部署门：** 使用固定 RoboMME 客户端完成至少一个真实 episode 的 `reset → add_buffer → infer → 执行 16 步 → add_buffer → infer`；无状态串线、协议错误或超时。
 
 任何一门失败时：
 
@@ -452,45 +459,48 @@ mean absolute error <= 1e-4
 max absolute error  <= 5e-4
 ```
 
-若某层因框架 kernel 差异无法满足，必须定位首个分歧层并给出有证据的新门限；不能只因 LIBERO rollout “看起来能跑”就接受转换。数值门通过后，再以相同 seed 运行基座 LIBERO 闭环，确认 PyTorch 基座能力不低于 JAX 基座置信区间下界。
-
-FutureMamba Stage B 只能建立在通过该门的 PyTorch 基座上。
+同时报告速度场 cosine similarity 与 action chunk MAE。数值门通过后，使用相同 RoboMME test episode 和 seed 比较 JAX/PyTorch 成功率；PyTorch 版不得低于 JAX 版 95% 置信区间下界。未通过时不得开始 FutureMamba 正式训练。
 
 ## 9. 训练目标与精度
 
-训练目标保持现有设计：
+对每个有效查询，在高噪声区间采样 $\tau$：
+
+$$
+x_\tau=(1-\tau)A_{\mathrm{gt}}+\tau\epsilon,
+\qquad
+v^*=\epsilon-A_{\mathrm{gt}}.
+$$
+
+Progress Expert 的主监督为：
+
+$$
+\mathcal L_{\mathrm{flow}}^P
+=\left\|v_P(x_\tau,h_q,\tau)-v^*\right\|_2^2.
+$$
+
+从同一初始噪声运行前 $K$ 个 Progress step 得到 $x_K$，再让冻结 Action Expert 完成剩余 $N-K$ 步得到 $\hat A$。总损失为：
 
 $$
 \mathcal L
-=\frac1Q\sum_q
-\left(
-\mathcal L_{\mathrm{FM}}^{(q)}
-+\lambda_h\mathcal L_{\mathrm{handoff}}^{(q)}
-+\lambda_b\mathcal L_{\mathrm{boundary}}^{(q)}
-\right).
+=\mathcal L_{\mathrm{flow}}^P
++\lambda_{\mathrm{term}}\left\|\hat A-A_{\mathrm{gt}}\right\|_2^2.
 $$
 
-其中：
+约束：
 
-- `FM` 只监督高噪声区间；
-- `handoff` 监督实际前 $K$ 步 rollout 后的 $x_K$；
-- `boundary` 用冻结 Action Expert 的切换点速度作为 stop-gradient 目标；
-- 冻结基座不接收任何梯度；
-- padding query 和 padding action 均不参与归一化分母。
+- Action Expert 参数 `requires_grad=False`，但从 $x_K$ 到 $\hat A$ 的计算图必须保留；
+- `terminal_loss_weight=0` 是 flow-only 消融，主设置必须显式记录非零权重；
+- padding query 和 padding action 不参与分母；
+- 若显存不足，可对 Action Expert 剩余步使用 gradient checkpointing，或在预注册的 batch 子集计算 terminal loss；不得用 `no_grad()` 静默切断主实验梯度；
+- 旧 handoff/boundary velocity imitation 可保留为额外消融，但不替代上述主目标。
 
-精度策略：
-
-1. 基座转换 parity 与 MemoryBackend scan/step parity 使用 float32；
-2. 首个 Mamba-2 训练 smoke 使用 float32；
-3. bfloat16 只有在 loss、梯度和固定输入输出均无异常后启用；
-4. Mamba state 中官方规定为 float32 的部分保持 float32，不做全局强制转换；
-5. checkpoint metadata 必须记录训练 dtype、state dtype、kernel 路径和 fallback 状态。
+精度策略：基座转换与 scan/step parity 使用 float32；Mamba-2 首个训练 smoke 使用 float32；bfloat16 只有在 loss、梯度和固定输入输出稳定后启用；官方要求 float32 的 state 保持 float32；checkpoint metadata 记录训练 dtype、state dtype、kernel 和 fallback。
 
 ## 10. Checkpoint 与 Policy 状态
 
 ### 10.1 训练 checkpoint
 
-Stage B checkpoint 至少包含：
+FutureMamba 训练 checkpoint 至少包含：
 
 ```text
 plugin.safetensors
@@ -507,15 +517,20 @@ schema_version
 base_checkpoint_uri
 base_checkpoint_checksum
 base_assets_checksum
+robomme_policy_commit
+robomme_benchmark_commit
+robomme_dataset_checksum
+robomme_task_suite
 mamba_repo_commit
 memory_backend              # mamba2 / mamba3_siso / gru / ...
 memory_state_schema_version
 memory_config
-progress_depth
-progress_layer_mapping
+progress_depth              # 主设置 6
+progress_layer_mapping     # Uniform-6
 handoff_ratio
 num_denoise_steps
-executed_horizon
+prediction_horizon          # RoboMME 主设置 20
+execution_horizon           # RoboMME 官方评测主设置 16
 loss_weights
 training_dtype
 state_dtypes
@@ -527,9 +542,9 @@ gpu_name
 compute_capability
 ```
 
-加载时严格拒绝 backend、schema、shape 或 base checksum 不匹配。禁止用 `strict=False` 吞掉 memory 参数差异。
+加载时严格拒绝 backend、schema、shape、RoboMME 身份或 base checksum 不匹配。禁止用 `strict=False` 吞掉 memory 参数差异。
 
-训练 checkpoint 默认只存插件与基座引用，避免重复保存冻结大模型。部署 bundle 可以打包基座与插件，但仍保留独立 checksum。
+训练 checkpoint 默认只存插件与基座引用，避免重复保存冻结大模型。部署 bundle 可以打包基座与插件，但仍保留独立 checksum。RoboMME `assets/robomme/norm_stats.json` 的 checksum 必须与转换 manifest 和服务 metadata 一致。
 
 ### 10.2 在线 Policy state
 
@@ -537,11 +552,11 @@ Policy snapshot 独立于训练 checkpoint，包含：
 
 - backend ID 与 state schema；
 - 每层 memory state 的 detached clone；
-- 上一周期实际执行动作及其 mask；
 - 当前 episode/query 计数；
-- batch/client 标识。
+- 当前连接的 `client_id`；
+- 最近一次观测、history buffer 和 action chunk 的 checksum 及执行边界，仅用于诊断，不作为主 Mamba 输入。
 
-WebSocket server 必须按连接 fork 独立 Policy 实例。reset ack 只有在 memory state 与 executed-action history 均已清零后返回。
+RoboMME 的 `add_buffer` 只维护协议所需历史帧；它不能隐式推进 Mamba。每个 WebSocket 连接必须 fork 独立 Policy 实例。收到 `{"reset": true}` 后，只有在 memory、query count 和临时 history buffer 均清零时才返回 `{"reset_finished": true}`。
 
 ## 11. 配置与命名
 
@@ -580,13 +595,14 @@ scripts/train_futuremamba_pytorch.py
 
 ### 12.2 修改现有路径
 
-需要修改：
-
-- `src/openpi/models_pytorch/pi0_pytorch.py`：提取 prefix 与单步 Action Expert helper；原 PI0 数值路径保持等价；
-- `src/openpi/models_pytorch/gemma_pytorch.py`：提供只读 cache view 与轻量 Gemma expert 所需的稳定接口；
-- `src/openpi/training/config.py`：注册纯 PyTorch FutureMamba config；
-- `src/openpi/policies/policy_config.py`：加载 PyTorch FutureMamba；
-- Policy、WebSocket、LIBERO runner 和实验矩阵：迁移 backend 名称与 state schema；
+- `src/openpi/models_pytorch/pi0_pytorch.py`：提取 prefix 与单步 Action Expert helper；RoboMME $\pi_{0.5}$ 数值路径保持等价；
+- `src/openpi/models_pytorch/gemma_pytorch.py`：提供只读 cache view 与 Uniform-6 Progress Expert 所需的稳定接口；
+- `src/openpi/training/config.py`：注册 RoboMME FutureMamba PyTorch config、20 步 prediction horizon 与 16 步 execution horizon；
+- `src/openpi/training/episode_data_loader.py`：读取 RoboMME `epis_idx`、`step_idx`、`exec_start_idx` 并构造连续窗口；
+- `src/openpi/policies/policy_config.py`：加载 PyTorch FutureMamba bundle 和 RoboMME assets；
+- `src/openpi/policies/futuremamba_policy.py`、`src/openpi/serving/websocket_policy_server.py`：兼容 RoboMME `reset`、`add_buffer`、infer 协议并保持连接级 state 隔离；
+- 创建 `examples/robomme/` 适配与测试：只负责策略服务器启动、RoboMME payload 转换、metadata 与 rollout 诊断，不复制环境或成功判定；
+- 创建 `scripts/run_robomme_experiment_matrix.py`、`scripts/profile_futuremamba.py` 的 RoboMME 入口；
 - `pyproject.toml` / `uv.lock`：只在隔离依赖门通过后更新。
 
 ### 12.3 删除旧路径
@@ -606,8 +622,8 @@ PyTorch 功能、回归、闭环和 checkpoint 迁移全部通过后：
 
 必须覆盖：
 
-- 最后有效 token 抽取与空 mask；
-- 实际执行 action 的 masked mean + last-valid 摘要；
+- 最后有效 token 抽取、空 mask 与查询级单次更新；
+- `add_buffer` 不更新 Mamba，连续 16 个底层动作不更新 Mamba；
 - Progress layer mapping、prefix padding、Memory Token 隔离；
 - 原始 prefix cache 不被 Progress Expert 修改；
 - Mamba-2 sequence/step parity、reset、因果性、固定 state bytes；
@@ -619,17 +635,19 @@ PyTorch 功能、回归、闭环和 checkpoint 迁移全部通过后：
 - 2-step 训练、保存、恢复到第 4 step；
 - snapshot/restore 与多连接 state 隔离。
 
-### 13.2 端到端 smoke
+### 13.2 RoboMME 端到端 smoke
 
 Mamba-2 必须先完成：
 
-1. fake episode 两步更新；
-2. 小型真实 episode batch 前向、反向和恢复；
-3. 单个 LIBERO-Mem episode 的本地 Policy 闭环；
-4. WebSocket 客户端 reset → infer → feedback → infer；
-5. 固定历史对的正确 state / reset state / swapped state 因果检查。
+1. RoboMME 官方 `scripts/dataset_replay.py` 数据回放；
+2. 官方 `pi05_baseline` JAX 策略服务与一个 test episode；
+3. 同一 checkpoint 转换后的 PyTorch $\pi_{0.5}$ 单回合，成功率、动作和日志与 JAX 基线对齐；
+4. FutureMamba PyTorch 服务启动，metadata 包含 RoboMME 两个 commit、`memory_backend=mamba2`、`prediction_horizon=20`、`execution_horizon=16`；
+5. RoboMME 客户端 `reset → add_buffer → infer → 执行 16 步 → add_buffer → infer`；
+6. Counting Suite 中 `PickXtimes` 与 `BinFill` 各 10 个 validation episode；
+7. 结果保存视频、动作 chunk、policy query、memory bytes、handoff step、成功状态和异常日志。
 
-Mamba-3 通过硬门后重复同一矩阵。不能因 Mamba-2 已通过而跳过 Mamba-3 的集成验证。
+Mamba-3 通过硬门后，使用同一 RoboMME 协议和 seed 独立训练、独立 checkpoint、独立 smoke；不能把 Mamba-2 checkpoint 伪装成 Mamba-3。
 
 ### 13.3 性能报告
 
@@ -647,51 +665,61 @@ Mamba-3 通过硬门后重复同一矩阵。不能因 Mamba-2 已通过而跳过
 
 ## 14. 论文实验解释边界
 
-迁移完成后，论文应区分：
+迁移完成后，论文结果按 RoboMME 官方四类任务报告：
 
-1. **FutureMamba 架构收益：** Mamba-2 FutureMamba 对冻结无记忆 $\pi_{0.5}$、GRU/LSTM/frame-stack 等基线；
-2. **后端代际差异：** 在相同数据、Progress Expert、交接和训练预算下，Mamba-2 对 Mamba-3 SISO；
-3. **硬交接收益：** 中间 $0<K<N$ 对 $K=0$、$K=N$、全程记忆条件和软融合；
-4. **记忆因果性：** 正确 state 对 reset、truncated、shuffled 和 swapped state。
+1. **FutureMamba 架构收益：** `mamba2` FutureMamba 对冻结无记忆 RoboMME `pi05_baseline`、`pi0.5 + past actions`、GRU/LSTM/frame-stack 等基线；
+2. **官方 memory baseline 对比：** 与 MemER、FrameSamp + Modul、FrameSamp + Expert，以及可获得的 RMT/TTT 变体比较；
+3. **任务类别结果：** Counting（BinFill、PickXtimes、SwingXtimes、StopCube）、Permanence、Reference、Imitation 四组及 Overall；
+4. **硬交接收益：** 中间 $0<K<N$ 对 $K=0$、$K=N$、无 memory、memory shuffle 和软融合；
+5. **记忆因果性：** 保持当前 RoboMME observation 与 noise 不变，交换不同 query 的 memory snapshot，报告早期 velocity、动作误差和最终成功率；
+6. **工程代价：** 训练参数、总参数、query/action-chunk 延迟、峰值显存和额外 FLOPs。
 
-不能把 Mamba-3 的参数或 kernel 差异当成 FutureMamba 架构贡献，也不能在 Mamba-3 未通过 RTX 5090 门控时宣称已完成官方 Mamba-3 部署。
+不能把 Mamba-3 参数或 kernel 差异当成 FutureMamba 架构贡献，也不能在 Mamba-3 未通过 RTX 5090 门控时宣称已完成官方 Mamba-3 部署。
 
 ## 15. 已知风险与处理
 
 | 风险 | 证据 | 处理 |
 |---|---|---|
-| OpenPI Torch/Triton 与官方 Mamba 依赖冲突 | 主项目 Torch 2.7.1 / Triton 3.3.1；Mamba v2.3.2 要求 Triton $\ge3.5.0$；默认 `nvcc` 11.5 不能构建 `sm_120` | 先用显式 CUDA 12.8 工具链验证隔离的 Torch 2.9.1 / Triton 3.5.1 / Mamba v2.3.2；通过后一次性更新主锁文件 |
-| Mamba-3 step 未验证 RTX 5090 | 官方源码写明仅在 H100 测试 | 10 项硬门；失败则保留 Mamba-2 |
-| JAX checkpoint 转换漂移 | 基座为 Orbax；官方 issue 曾报告精度和 LoRA 丢失问题 | float32 逐层 parity、LoRA 扫描、闭环基座回归 |
-| Prefix cache 被两个专家共享时被原地修改 | HF cache 可能在 forward 中 update | 独立只读 cache view / detached clone；mutation 测试 |
-| 完整 episode 的 prefix KV 占用过大 | 每个 query 含多图像 token 和逐层 KV | 确定性离线 conditioning cache，或逐 query 即用即释放 |
+| RoboMME 官方客户端协议与当前 OpenPI 控制消息不同 | 官方使用 `reset` / `add_buffer`，当前服务使用 `__openpi_control__` | 服务端显式兼容两套消息并做协议测试；RoboMME 评测只走官方消息 |
+| 20 步预测与 16 步执行被混淆 | 官方数据构建 horizon 为 20，评测 `obs_horizon` 为 16 | 配置分离 `prediction_horizon` / `execution_horizon`；日志同时记录 |
+| 随机单帧采样破坏 Mamba 因果性 | 官方 pickle 样本含 episode/step 标识，但默认 Dataset 按样本随机取值 | 新建 episode 索引与连续窗口 sampler；跨 episode 立即拒绝 |
+| terminal loss 被 `no_grad()` 静默切断 | Action Expert 参数冻结与输入梯度是两个不同合同 | 冻结参数但保留从 $x_K$ 开始的 autograd；测试 $x_K$ 与插件梯度 |
+| OpenPI Torch/Triton 与官方 Mamba 依赖冲突 | 主项目与 Mamba v2.3.2 的 Triton 要求不同 | 使用显式 CUDA 12.8 的隔离 PyTorch 环境；版本写入 metadata |
+| Mamba-3 step 未验证 RTX 5090 | 官方源码写明仅在 H100 测试 | 十项硬门；失败则正式实验只用 Mamba-2 |
+| JAX checkpoint 转换漂移 | RoboMME 基座是 Orbax，转换还涉及专用 transforms/assets | float32 逐层 parity、速度场 cosine、action MAE、同批 episode 回归 |
+| Prefix cache 被两个专家共享时原地修改 | HF cache 可能在 forward 中 update | 独立只读 cache view / detached clone 与 mutation 测试 |
+| 训练窗口从 episode 中间错误置零 | truncated BPTT 需要正确起始 state | episode 起点 burn-in 或严格身份的状态缓存；禁止无依据置零 |
 | Mamba-2/3 checkpoint 被误混用 | state 与参数结构不同 | backend/schema/checksum 严格加载，禁止 `strict=False` |
-| 迁移同时改变方法导致实验不可比 | PyTorch 重写可能顺手改变初始化、交接或损失 | 保持方法不变量；新选择只能作为显式消融 |
 
 ## 16. 完成定义
 
 本迁移只有在以下条件全部成立时才算完成：
 
-- 任务适配 $\pi_{0.5}$ 已严格转换为 PyTorch，数值与闭环基座验收通过；
-- 官方 Mamba-2 完整支持 sequence 训练、在线 step、reset、snapshot/restore 和 checkpoint；
-- Progress Expert 复用同一次冻结 prefix 的只读逐层 KV，并保持 Memory Token 隔离；
-- 高噪声硬交接与现有损失在 PyTorch 中端到端可训练；
-- Policy、WebSocket、LIBERO runner、实验矩阵与 profile 全部使用新 backend/schema；
+- RoboMME `pi05_baseline` 已严格转换为 PyTorch，速度场、action chunk、同批 test episode 成功率和延迟均有对照证据；
+- 官方 Mamba-2 完整支持 sequence 训练、在线 query step、reset、snapshot/restore 和 plugin checkpoint；
+- Progress Expert 使用 RoboMME 基座同一次冻结 prefix 的只读逐层 KV，主设置为 Uniform-6，并保持 Memory Token 隔离；
+- 高噪声硬交接、Progress flow loss 与 terminal action loss 在 PyTorch 中端到端可训练；
+- RoboMME 官方 WebSocket `reset`、`add_buffer`、infer、16 步执行闭环通过，两个软件环境可独立启动；
+- Counting Suite 10-episode validation smoke 通过，并完成 RoboMME 全部 16 任务的 val/test 评测协议；
+- 所有结果按 Counting、Permanence、Reference、Imitation 和 Overall 聚合，报告均值、标准差与 95% 置信区间；
 - Mamba-3 只有在 RTX 5090 十项硬门全部通过后才标记可用；
-- 旧 FutureMamba JAX 专用实现与含糊 backend 名称已删除；
-- 定向测试、训练 smoke、真实闭环 smoke 与历史因果 smoke 均有可复现证据；
-- checkpoint metadata 足以区分基座、Mamba 版本、kernel、dtype 与状态 schema。
+- FutureMamba 专用 JAX 实现、LIBERO 专用 FutureMamba runner 与含糊 backend 名称已删除；
+- 定向测试、训练 smoke、真实 RoboMME 闭环 smoke、基座 parity、profile 和论文证据均有可复现日志；
+- checkpoint metadata 足以区分基座、RoboMME 版本、Mamba 版本、kernel、dtype 和状态 schema。
 
-若 Mamba-3 门控失败，但上述 Mamba-2 路径和干净切换均完成，则 FutureMamba 的纯 PyTorch 迁移已完成；Mamba-3 状态必须明确记录为当前硬件栈不支持，而不是伪装为已接入。
+若 Mamba-3 门控失败，但上述 Mamba-2 RoboMME 路径和干净切换完成，则纯 PyTorch FutureMamba 迁移仍完成；Mamba-3 必须明确记录为当前硬件栈不支持。
 
 ## 17. 参考来源
 
+- RoboMME 策略与评测仓库（固定提交）：https://github.com/RoboMME/robomme_policy_learning/tree/ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b
+- RoboMME 仿真基准（固定提交）：https://github.com/RoboMME/robomme_benchmark/tree/856bc3a189d4172f3f47dbee4424d585f8d78db3
+- RoboMME 论文：https://arxiv.org/abs/2603.04639
+- RoboMME 原始数据：https://huggingface.co/datasets/Yinpei/robomme_data_h5
+- RoboMME `pi05_baseline`：https://huggingface.co/Yinpei/pi05_baseline
+- RoboMME 官方 memory checkpoints：https://huggingface.co/Yinpei/mme_vla_suite
 - OpenPI PyTorch 模型与训练：仓库内 `src/openpi/models_pytorch/`、`scripts/train_pytorch.py`。
-- 官方 Mamba 仓库：https://github.com/state-spaces/mamba
-- Mamba-2/3 统一固定版本：https://github.com/state-spaces/mamba/tree/v2.3.2
-- Mamba-3 固定版本：https://github.com/state-spaces/mamba/tree/v2.3.2
+- 官方 Mamba v2.3.2：https://github.com/state-spaces/mamba/tree/v2.3.2
 - 官方 Mamba-3 模块：https://github.com/state-spaces/mamba/blob/v2.3.2/mamba_ssm/modules/mamba3.py
-- 官方安装说明：https://github.com/state-spaces/mamba#installation
 - OpenPI JAX → PyTorch 转换问题 #810：https://github.com/Physical-Intelligence/openpi/issues/810
 - OpenPI LoRA 转换问题 #958：https://github.com/Physical-Intelligence/openpi/issues/958
 - FutureMamba 方法设计：`docs/superpowers/specs/2026-08-08-futuremamba-design.md`。

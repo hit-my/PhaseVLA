@@ -1,0 +1,132 @@
+{
+  "gates": [
+    {
+      "evidence": {
+        "cuda": "12.8",
+        "cute_step_kernel": true,
+        "mamba": "2.3.1",
+        "mamba3_class": "mamba_ssm.modules.mamba3.Mamba3",
+        "rotary_step_kernel": true,
+        "siso_kernel": true,
+        "torch": "2.9.1+cu128",
+        "triton": "3.5.1"
+      },
+      "name": "dependencies",
+      "status": "passed"
+    },
+    {
+      "error": {
+        "message": "make_kwargs_wrapper() got an unexpected keyword argument 'map_dataclass_to_tuple'",
+        "type": "TypeError"
+      },
+      "evidence": {
+        "compute_capability": [
+          12,
+          0
+        ],
+        "gpu": "NVIDIA GeForce RTX 5090"
+      },
+      "name": "device_256_steps",
+      "status": "failed"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "forward_10_seeds",
+      "status": "not_run"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "backward_10_seeds",
+      "status": "not_run"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "sequence_step_parity",
+      "status": "not_run"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "causality",
+      "status": "not_run"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "reset",
+      "status": "not_run"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "fixed_state_bytes",
+      "status": "not_run"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "openpi_checkpoint_2_to_4",
+      "status": "not_run"
+    },
+    {
+      "error": {
+        "message": "previous gate failed",
+        "type": "NotRun"
+      },
+      "evidence": {},
+      "name": "robomme_deployment",
+      "status": "not_run"
+    }
+  ],
+  "generated_at": "2026-08-12T08:48:47Z",
+  "official_mamba_commit": "77069de5cdb55cbe98b670889c80df211e031039",
+  "runtime": {
+    "compute_capability": [
+      12,
+      0
+    ],
+    "cuda": "12.8",
+    "expected": {
+      "compute_capability": [
+        12,
+        0
+      ],
+      "cuda": "12.8",
+      "gpu_contains": "RTX 5090",
+      "mamba": "2.3.1",
+      "torch": "2.9.1",
+      "triton": "3.5.1"
+    },
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "mamba": "2.3.1",
+    "official_mamba_commit": "77069de5cdb55cbe98b670889c80df211e031039",
+    "torch": "2.9.1+cu128",
+    "triton": "3.5.1"
+  },
+  "schema_version": 1,
+  "status": "unsupported_on_current_stack"
+}

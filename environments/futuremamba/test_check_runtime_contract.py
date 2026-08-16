@@ -33,6 +33,9 @@ REQUIRED_KEYS = {
     "mamba_force_build_required",
     "torch_cuda_arch_list",
     "torch_cuda_arch_list_required",
+    "triton_libcuda_path",
+    "triton_libcuda_path_ok",
+    "triton_libcuda_path_required",
     "nvcc",
     "nvcc_ok",
     "hard_failures",
@@ -67,6 +70,65 @@ class FakeTorch:
 
 class FakeMamba2:
     pass
+
+
+def test_mamba2_forward_probe_disables_optional_fused_path():
+    constructor_kwargs = {}
+
+    class ProbeTensor:
+        shape = (1, 8, 64)
+
+        def all(self):
+            return self
+
+        def item(self):
+            return True
+
+    class ProbeMamba2:
+        def __init__(self, **kwargs):
+            constructor_kwargs.update(kwargs)
+
+        def eval(self):
+            return self
+
+        def __call__(self, inputs):
+            del inputs
+            return ProbeTensor()
+
+    class InferenceMode:
+        def __enter__(self):
+            return None
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+    class ProbeTorch:
+        float16 = object()
+        cuda = FakeCuda()
+
+        @staticmethod
+        def manual_seed(seed):
+            assert seed == 0
+
+        @staticmethod
+        def device(name):
+            return name
+
+        @staticmethod
+        def randn(*shape, **kwargs):
+            del shape, kwargs
+            return ProbeTensor()
+
+        @staticmethod
+        def inference_mode():
+            return InferenceMode()
+
+        @staticmethod
+        def isfinite(output):
+            return output
+
+    assert check_runtime._run_mamba2_forward(ProbeMamba2, ProbeTorch) is True
+    assert constructor_kwargs["use_mem_eff_path"] is False
 
 
 def _fake_importer(
@@ -105,6 +167,7 @@ def _environment(**overrides):
         "CUDA_HOME": "/usr/local/cuda-12.8",
         "MAMBA_FORCE_BUILD": "TRUE",
         "TORCH_CUDA_ARCH_LIST": "12.0",
+        "TRITON_LIBCUDA_PATH": "/usr/local/cuda-12.8/targets/x86_64-linux/lib/stubs",
     }
     values.update(overrides)
     return values
@@ -152,6 +215,10 @@ def test_complete_mamba2_runtime_passes_without_mamba3():
         (lambda: {"environment": _environment(CUDA_HOME="/usr/local/cuda-11.5")}, "cuda_home"),
         (lambda: {"environment": _environment(MAMBA_FORCE_BUILD="FALSE")}, "mamba_force_build"),
         (lambda: {"environment": _environment(TORCH_CUDA_ARCH_LIST="8.0")}, "torch_cuda_arch_list"),
+        (
+            lambda: {"environment": _environment(TRITON_LIBCUDA_PATH="/usr/lib/x86_64-linux-gnu")},
+            "triton_libcuda_path",
+        ),
         (lambda: {"torch": SimpleNamespace(**FakeTorch().__dict__, __version__="2.8.0")}, "torch_version"),
         (lambda: {"torch": FakeTorch(cuda="11.8")}, "cuda_version"),
         (lambda: {"torch": FakeTorch(capability=(8, 0))}, "compute_capability"),
@@ -203,6 +270,7 @@ def test_probe_contract_contains_actual_diagnostics():
     assert payload["cuda_home_required"] == "/usr/local/cuda-12.8"
     assert payload["mamba_force_build_required"] == "TRUE"
     assert payload["torch_cuda_arch_list_required"] == "12.0"
+    assert payload["triton_libcuda_path_required"] == "/usr/local/cuda-12.8/targets/x86_64-linux/lib/stubs"
     assert isinstance(payload["hard_failures"], list)
     assert isinstance(payload["errors"], dict)
 

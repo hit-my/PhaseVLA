@@ -4,6 +4,10 @@ checkpoints/
 data/
 wandb/
 
+# Local experiment outputs.
+runs/
+policy_records/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

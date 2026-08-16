@@ -39,17 +39,28 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
     discrete_state_input: bool = True
     memory: MambaMemoryConfig = dataclasses.field(default_factory=MambaMemoryConfig)
     memory_backend: MemoryBackend = "mamba2"
-    progress_depth: int = 4
+    progress_depth: int = 6
     handoff_ratio: float = 0.2
     num_denoise_steps: int = 10
-    executed_horizon: int = 5
+    execution_horizon: int = 16
+    terminal_loss_weight: float = 1.0
+    handoff_loss_weight: float = 0.0
+    boundary_loss_weight: float = 0.0
+    action_expert_gradient_checkpointing: bool = False
+    terminal_loss_batch_fraction: float = 1.0
+    terminal_loss_queries_per_episode: int | None = None
+    frozen_prefix_microbatch_size: int = 2
 
     # Training checkpoint identity and runtime provenance. These remain explicit so
-    # metadata is stable even before a checkpoint is attached to the config.
-    schema_version: int = 1
+    schema_version: int = 3
     base_checkpoint_uri: str | None = None
     base_checkpoint_checksum: str | None = None
     base_assets_checksum: str | None = None
+    robomme_policy_commit: str | None = None
+    robomme_benchmark_commit: str | None = None
+    robomme_dataset_checksum: str | None = None
+    robomme_task_suite: str | None = None
+    train_seed: int | None = None
     mamba_repo_commit: str = MAMBA_REPO_COMMIT
     memory_state_schema_version: int = 1
     state_dtypes: dict[str, str] = dataclasses.field(default_factory=dict)
@@ -64,8 +75,8 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
         super().__post_init__()
         if self.pi05 is not True:
             raise ValueError("FutureMambaPytorchConfig requires pi05=True")
-        if self.discrete_state_input is not True:
-            raise ValueError("FutureMambaPytorchConfig requires discrete_state_input=True")
+        if not isinstance(self.discrete_state_input, bool):
+            raise ValueError("discrete_state_input must be bool")
         if self.memory_backend not in _MEMORY_BACKENDS:
             raise ValueError(
                 f"memory_backend must be one of {sorted(_MEMORY_BACKENDS)}, got {self.memory_backend!r}"
@@ -76,10 +87,33 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
             raise ValueError(f"handoff_ratio must be in [0, 1], got {self.handoff_ratio}")
         if self.num_denoise_steps <= 0:
             raise ValueError(f"num_denoise_steps must be positive, got {self.num_denoise_steps}")
-        if self.executed_horizon <= 0 or self.executed_horizon > self.action_horizon:
+        if self.execution_horizon <= 0 or self.execution_horizon > self.action_horizon:
             raise ValueError(
-                f"executed_horizon must be positive and <= action_horizon ({self.action_horizon}), "
-                f"got {self.executed_horizon}"
+                f"execution_horizon must be positive and <= action_horizon ({self.action_horizon}), "
+                f"got {self.execution_horizon}"
+            )
+        if self.terminal_loss_weight < 0:
+            raise ValueError(f"terminal_loss_weight must be non-negative, got {self.terminal_loss_weight}")
+        if self.handoff_loss_weight < 0:
+            raise ValueError(f"handoff_loss_weight must be non-negative, got {self.handoff_loss_weight}")
+        if self.boundary_loss_weight < 0:
+            raise ValueError(f"boundary_loss_weight must be non-negative, got {self.boundary_loss_weight}")
+        if not isinstance(self.action_expert_gradient_checkpointing, bool):
+            raise ValueError("action_expert_gradient_checkpointing must be bool")
+        if not 0 < self.terminal_loss_batch_fraction <= 1:
+            raise ValueError(
+                "terminal_loss_batch_fraction must be in (0, 1], "
+                f"got {self.terminal_loss_batch_fraction}"
+            )
+        if self.terminal_loss_queries_per_episode is not None and self.terminal_loss_queries_per_episode <= 0:
+            raise ValueError(
+                "terminal_loss_queries_per_episode must be positive or None, "
+                f"got {self.terminal_loss_queries_per_episode}"
+            )
+        if self.frozen_prefix_microbatch_size <= 0:
+            raise ValueError(
+                "frozen_prefix_microbatch_size must be positive, "
+                f"got {self.frozen_prefix_microbatch_size}"
             )
         action_expert_config = _gemma.get_config(self.action_expert_variant)
         if self.progress_depth <= 0 or self.progress_depth > action_expert_config.depth:
@@ -122,6 +156,11 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
             "base_checkpoint_uri": self.base_checkpoint_uri,
             "base_checkpoint_checksum": self.base_checkpoint_checksum,
             "base_assets_checksum": self.base_assets_checksum,
+            "robomme_policy_commit": self.robomme_policy_commit,
+            "robomme_benchmark_commit": self.robomme_benchmark_commit,
+            "robomme_dataset_checksum": self.robomme_dataset_checksum,
+            "robomme_task_suite": self.robomme_task_suite,
+            "train_seed": self.train_seed,
             "mamba_repo_commit": self.mamba_repo_commit,
             "memory_backend": self.memory_backend,
             "memory_state_schema_version": self.memory_state_schema_version,
@@ -130,8 +169,17 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
             "progress_layer_mapping": list(self.resolved_progress_layer_indices),
             "handoff_ratio": self.handoff_ratio,
             "num_denoise_steps": self.num_denoise_steps,
-            "executed_horizon": self.executed_horizon,
-            "loss_weights": {},
+            "prediction_horizon": self.action_horizon,
+            "execution_horizon": self.execution_horizon,
+            "loss_weights": {
+                "terminal": self.terminal_loss_weight,
+                "handoff": self.handoff_loss_weight,
+                "boundary": self.boundary_loss_weight,
+            },
+            "action_expert_gradient_checkpointing": self.action_expert_gradient_checkpointing,
+            "terminal_loss_batch_fraction": self.terminal_loss_batch_fraction,
+            "terminal_loss_queries_per_episode": self.terminal_loss_queries_per_episode,
+            "frozen_prefix_microbatch_size": self.frozen_prefix_microbatch_size,
             "training_dtype": self.dtype,
             "state_dtypes": dict(self.state_dtypes),
             "kernel_mode": self.kernel_mode,

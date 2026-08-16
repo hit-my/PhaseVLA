@@ -1,0 +1,414 @@
+from __future__ import annotations
+
+import copy
+import dataclasses
+import pathlib
+import pickle
+from typing import Any
+from typing import SupportsIndex
+
+import numpy as np
+
+from openpi import transforms as _transforms
+from openpi.models import model as _model
+from openpi.training import episode_data_loader as _episode_loader
+
+
+_DEFAULT_ACTION_HORIZON = 20
+_REQUIRED_FIELDS = (
+    "epis_idx",
+    "step_idx",
+    "exec_start_idx",
+    "is_demo",
+    "actions",
+    "image",
+    "wrist_image",
+    "state",
+    "prompt",
+    "simple_subgoal",
+    "grounded_subgoal",
+    "simple_subgoal_online",
+    "grounded_subgoal_online",
+)
+
+
+@dataclasses.dataclass(frozen=True)
+class RoboMMESampleRef:
+    path: pathlib.Path
+    sorted_index: int
+    epis_idx: int
+    step_idx: int
+    exec_start_idx: int
+    episode_start_step_idx: int
+
+
+@dataclasses.dataclass(frozen=True)
+class RoboMMEEpisodeWindow:
+    epis_idx: int
+    start_step_idx: int
+    sample_refs: tuple[RoboMMESampleRef, ...]
+    samples: tuple[dict[str, Any], ...]
+    burn_in_refs: tuple[RoboMMESampleRef, ...]
+    burn_in_step_indices: tuple[int, ...]
+    burn_in_reset_mask: tuple[bool, ...]
+    train_step_indices: tuple[int | None, ...]
+    train_query_slice: slice
+    padding_query_indices: tuple[int, ...]
+    reset_before_burn_in: bool
+    detach_after: bool
+    actions: np.ndarray
+    action_mask: np.ndarray
+    query_mask: np.ndarray
+    reset_mask: np.ndarray
+
+
+@dataclasses.dataclass(frozen=True)
+class _IndexedSample:
+    ref: RoboMMESampleRef
+    payload: dict[str, Any]
+    action_width: int
+    action_length: int
+
+
+@dataclasses.dataclass(frozen=True)
+class _EpisodeIndex:
+    epis_idx: int
+    samples: tuple[_IndexedSample, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class _WindowIndex:
+    episode_index: int
+    start_offset: int
+
+
+class RoboMMEEpisodeDataset:
+    """Pickle-backed RoboMME execution-step windows.
+
+    The official RoboMME builder writes one pickle per execution query under
+    ``data/*.pkl``. This dataset keeps those payloads available for downstream
+    transforms and materializes fixed-size query windows without crossing an
+    episode boundary.
+    """
+
+    def __init__(
+        self,
+        data_dir: str | pathlib.Path,
+        *,
+        window_queries: int = 1,
+        action_horizon: int = _DEFAULT_ACTION_HORIZON,
+        query_stride: int = 1,
+    ) -> None:
+        if window_queries <= 0:
+            raise ValueError(f"window_queries must be positive, got {window_queries}")
+        if action_horizon != _DEFAULT_ACTION_HORIZON:
+            raise ValueError(f"action_horizon must be {_DEFAULT_ACTION_HORIZON}, got {action_horizon}")
+        if query_stride <= 0:
+            raise ValueError(f"query_stride must be positive, got {query_stride}")
+
+        self._data_dir = pathlib.Path(data_dir)
+        self._window_queries = int(window_queries)
+        self._action_horizon = int(action_horizon)
+        self._query_stride = int(query_stride)
+        indexed_episodes = self._build_index(self._data_dir)
+        self._episodes = tuple(
+            _EpisodeIndex(epis_idx=episode.epis_idx, samples=episode.samples[:: self._query_stride])
+            for episode in indexed_episodes
+        )
+        self._windows = tuple(
+            _WindowIndex(episode_index=episode_index, start_offset=start_offset)
+            for episode_index, episode in enumerate(self._episodes)
+            for start_offset in range(len(episode.samples))
+        )
+        self._sample_by_ref = {
+            sample.ref: _readonly_copy(sample.payload) for episode in self._episodes for sample in episode.samples
+        }
+        self.sample_refs = tuple(sample.ref for episode in self._episodes for sample in episode.samples)
+
+    def __len__(self) -> int:
+        return len(self._windows)
+
+    def __getitem__(self, index: SupportsIndex) -> RoboMMEEpisodeWindow:
+        return self.window_at(index.__index__())
+
+    @property
+    def data_dir(self) -> pathlib.Path:
+        return self._data_dir
+
+    @property
+    def window_queries(self) -> int:
+        return self._window_queries
+
+    @property
+    def action_horizon(self) -> int:
+        return self._action_horizon
+
+    @property
+    def query_stride(self) -> int:
+        return self._query_stride
+
+    @property
+    def episodes(self) -> tuple[tuple[RoboMMESampleRef, ...], ...]:
+        return tuple(tuple(sample.ref for sample in episode.samples) for episode in self._episodes)
+
+    def sample_payload(self, ref: RoboMMESampleRef) -> dict[str, Any]:
+        return _readonly_copy(self._sample_by_ref[ref])
+
+    def window_at(self, index: int) -> RoboMMEEpisodeWindow:
+        window_index = self._windows[int(index)]
+        episode = self._episodes[window_index.episode_index]
+        start_offset = window_index.start_offset
+        window_samples = episode.samples[start_offset : start_offset + self._window_queries]
+        first_sample = episode.samples[0]
+        action_width = first_sample.action_width
+
+        actions = np.zeros((self._window_queries, self._action_horizon, action_width), dtype=np.float32)
+        action_mask = np.zeros((self._window_queries, self._action_horizon), dtype=np.bool_)
+        query_mask = np.zeros((self._window_queries,), dtype=np.bool_)
+        reset_mask = np.zeros((self._window_queries,), dtype=np.bool_)
+
+        for query_index, sample in enumerate(window_samples):
+            action_array = _actions_as_2d(sample.payload["actions"], sample.ref.path)
+            actions[query_index] = action_array
+            action_mask[query_index] = True
+            query_mask[query_index] = True
+            reset_mask[query_index] = start_offset + query_index == 0
+
+        burn_in_samples = episode.samples[:start_offset]
+        valid_queries = len(window_samples)
+        burn_in_reset_mask = tuple(index == 0 for index in range(len(burn_in_samples)))
+        train_step_indices = tuple(sample.ref.step_idx for sample in window_samples) + (None,) * (
+            self._window_queries - valid_queries
+        )
+        padding_query_indices = tuple(range(valid_queries, self._window_queries))
+        return RoboMMEEpisodeWindow(
+            epis_idx=episode.epis_idx,
+            start_step_idx=episode.samples[start_offset].ref.step_idx,
+            sample_refs=tuple(sample.ref for sample in window_samples),
+            samples=tuple(_readonly_copy(sample.payload) for sample in window_samples),
+            burn_in_refs=tuple(sample.ref for sample in burn_in_samples),
+            burn_in_step_indices=tuple(sample.ref.step_idx for sample in burn_in_samples),
+            burn_in_reset_mask=burn_in_reset_mask,
+            train_step_indices=train_step_indices,
+            train_query_slice=slice(0, valid_queries),
+            padding_query_indices=padding_query_indices,
+            reset_before_burn_in=True,
+            detach_after=True,
+            actions=actions,
+            action_mask=action_mask,
+            query_mask=query_mask,
+            reset_mask=reset_mask,
+        )
+
+    @classmethod
+    def _build_index(cls, data_dir: pathlib.Path) -> tuple[_EpisodeIndex, ...]:
+        paths = sorted(data_dir.glob("*.pkl"))
+        if not paths:
+            raise ValueError(f"No RoboMME pickle samples found in {data_dir}")
+
+        loaded: list[tuple[pathlib.Path, dict[str, Any], int, int, int, int, int]] = []
+        for path in paths:
+            payload = _load_sample(path)
+            for field in _REQUIRED_FIELDS:
+                if field not in payload:
+                    raise ValueError(f"RoboMME sample {path} is missing required field {field!r}")
+            epis_idx = _scalar_int(payload["epis_idx"], "epis_idx", path)
+            step_idx = _scalar_int(payload["step_idx"], "step_idx", path)
+            exec_start_idx = _scalar_int(payload["exec_start_idx"], "exec_start_idx", path)
+            if _scalar_bool(payload["is_demo"], "is_demo", path):
+                raise ValueError(f"RoboMME sample {path} is_demo must be False for execution samples")
+            actions = _actions_as_2d(payload["actions"], path)
+            action_length, action_width = actions.shape
+            if action_length != _DEFAULT_ACTION_HORIZON:
+                raise ValueError(
+                    f"RoboMME sample {path} actions length must be exactly {_DEFAULT_ACTION_HORIZON}, got {action_length}"
+                )
+            loaded.append((path, payload, epis_idx, step_idx, exec_start_idx, action_width, action_length))
+        loaded.sort(key=lambda item: (item[2], item[3], str(item[0])))
+        episodes: list[_EpisodeIndex] = []
+        cursor = 0
+        sorted_index = 0
+        while cursor < len(loaded):
+            epis_idx = loaded[cursor][2]
+            episode_items = []
+            while cursor < len(loaded) and loaded[cursor][2] == epis_idx:
+                episode_items.append(loaded[cursor])
+                cursor += 1
+            episodes.append(cls._build_episode(epis_idx, episode_items, sorted_index))
+            sorted_index += len(episode_items)
+        widths = {episode.samples[0].action_width for episode in episodes}
+        if len(widths) != 1:
+            raise ValueError(f"RoboMME dataset has inconsistent action width across episodes: {sorted(widths)}")
+        return tuple(episodes)
+
+    @staticmethod
+    def _build_episode(
+        epis_idx: int,
+        items: list[tuple[pathlib.Path, dict[str, Any], int, int, int, int, int]],
+        first_sorted_index: int,
+    ) -> _EpisodeIndex:
+        first_step = items[0][3]
+        first_exec_start = items[0][4]
+        if first_step != first_exec_start:
+            raise ValueError(
+                f"Episode {epis_idx} first step_idx must equal exec_start_idx, got step_idx={first_step}, "
+                f"exec_start_idx={first_exec_start}"
+            )
+
+        action_width = items[0][5]
+        samples: list[_IndexedSample] = []
+        seen_steps: set[int] = set()
+        for offset, (path, payload, _, step_idx, exec_start_idx, width, action_length) in enumerate(items):
+            expected_step = first_step + offset
+            if step_idx in seen_steps:
+                raise ValueError(f"Episode {epis_idx} has duplicate step_idx {step_idx}")
+            seen_steps.add(step_idx)
+            if step_idx != expected_step:
+                raise ValueError(
+                    f"Episode {epis_idx} steps must be continuous from exec_start_idx {first_step}; "
+                    f"expected {expected_step}, got {step_idx}"
+                )
+            if exec_start_idx != first_exec_start:
+                raise ValueError(
+                    f"Episode {epis_idx} has inconsistent exec_start_idx: expected {first_exec_start}, got {exec_start_idx}"
+                )
+            if width != action_width:
+                raise ValueError(f"Episode {epis_idx} has inconsistent action width: expected {action_width}, got {width}")
+            ref = RoboMMESampleRef(
+                path=path,
+                sorted_index=first_sorted_index + offset,
+                epis_idx=epis_idx,
+                step_idx=step_idx,
+                exec_start_idx=exec_start_idx,
+                episode_start_step_idx=first_step,
+            )
+            samples.append(_IndexedSample(ref=ref, payload=payload, action_width=width, action_length=action_length))
+        return _EpisodeIndex(epis_idx=epis_idx, samples=tuple(samples))
+
+
+def _load_sample(path: pathlib.Path) -> dict[str, Any]:
+    with path.open("rb") as f:
+        payload = pickle.load(f)
+    if not isinstance(payload, dict):
+        raise ValueError(f"RoboMME sample {path} must be a dict, got {type(payload).__name__}")
+    return payload
+
+
+def _scalar_int(value: Any, field: str, path: pathlib.Path) -> int:
+    array = np.asarray(value)
+    if array.size != 1 or array.dtype.kind not in "iu":
+        raise ValueError(f"RoboMME sample {path} field {field!r} must be an integer scalar")
+    return int(array.reshape(()).item())
+
+def _scalar_bool(value: Any, field: str, path: pathlib.Path) -> bool:
+    array = np.asarray(value)
+    if array.size != 1 or array.dtype.kind != "b":
+        raise ValueError(f"RoboMME sample {path} field {field!r} must be a boolean scalar")
+    return bool(array.reshape(()).item())
+
+
+def _readonly_copy(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _readonly_copy(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_readonly_copy(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_readonly_copy(item) for item in value)
+    if isinstance(value, np.ndarray):
+        result = np.array(value, copy=True)
+        result.setflags(write=False)
+        return result
+    return copy.deepcopy(value)
+
+def _mutable_copy(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _mutable_copy(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_mutable_copy(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_mutable_copy(item) for item in value)
+    if isinstance(value, np.ndarray):
+        return np.array(value, copy=True)
+    return copy.deepcopy(value)
+
+
+def _actions_as_2d(value: Any, path: pathlib.Path) -> np.ndarray:
+    actions = np.asarray(value, dtype=np.float32)
+    if actions.ndim != 2:
+        raise ValueError(f"RoboMME sample {path} actions must have rank 2, got shape {actions.shape}")
+    if actions.shape[0] != _DEFAULT_ACTION_HORIZON:
+        raise ValueError(
+            f"RoboMME sample {path} actions length must be exactly {_DEFAULT_ACTION_HORIZON}, got {actions.shape[0]}"
+        )
+    if actions.shape[1] <= 0:
+        raise ValueError(f"RoboMME sample {path} actions must have positive action width, got {actions.shape}")
+    return actions
+
+class RoboMMETransformedEpisodeDataset:
+    """Convert indexed RoboMME windows into the episode training contract."""
+
+    def __init__(self, windows: RoboMMEEpisodeDataset, data_config: Any, model_config: Any) -> None:
+        self._windows = windows
+        self._model_config = model_config
+        self._transform = _transforms.compose(
+            _episode_loader.make_transform_pipeline(data_config, skip_norm_stats=False)
+        )
+        self._executed_horizon = int(
+            getattr(model_config, "execution_horizon", getattr(model_config, "executed_horizon", 0))
+        )
+        if self._executed_horizon <= 0:
+            raise ValueError("RoboMME model config must define a positive execution horizon")
+
+    def __len__(self) -> int:
+        return len(self._windows)
+
+    def __getitem__(self, index: SupportsIndex) -> _episode_loader.EpisodeExample:
+        window = self._windows[index.__index__()]
+        all_samples = tuple(self._windows.sample_payload(ref) for ref in window.burn_in_refs) + window.samples
+        burn_in_queries = len(window.burn_in_refs)
+        observations = []
+        actions = []
+        for sample in all_samples:
+            transformed = self._transform(_mutable_copy(sample))
+            observation_data = _episode_loader._copy_observation_fields(transformed)
+            observation_data["image_mask"] = {
+                key: np.asarray(value, dtype=np.bool_) for key, value in observation_data["image_mask"].items()
+            }
+            observations.append(_model.Observation.from_dict(observation_data))
+            action = np.asarray(transformed["actions"], dtype=np.float32)
+            expected = (self._windows.action_horizon, int(self._model_config.action_dim))
+            if action.shape != expected:
+                raise ValueError(f"RoboMME transformed action target must have shape {expected}, got {action.shape}")
+            actions.append(action)
+        if not observations or burn_in_queries == len(observations):
+            raise ValueError(f"RoboMME episode window {index.__index__()} has no training queries")
+        stacked_actions = np.stack(actions, axis=0)
+        num_queries = len(observations)
+        train_query_mask = np.arange(num_queries) >= burn_in_queries
+        action_mask = np.broadcast_to(train_query_mask[:, None], (num_queries, self._windows.action_horizon)).copy()
+        return _episode_loader.EpisodeExample(
+            observation=_episode_loader._stack_observations(observations),
+            actions=stacked_actions,
+            action_mask=action_mask,
+            executed_actions=np.zeros(
+                (num_queries, self._executed_horizon, int(self._model_config.action_dim)), dtype=np.float32
+            ),
+            executed_action_mask=np.zeros((num_queries, self._executed_horizon), dtype=np.bool_),
+            episode_index=window.epis_idx,
+            train_query_mask=train_query_mask,
+        )
+
+
+def create_robomme_episode_dataset(data_config: Any, model_config: Any, episode_config: Any):
+    data_dir = getattr(data_config, "episode_data_dir", None)
+    if not data_dir:
+        raise ValueError(
+            "RoboMME FutureMamba training requires data.episode_data_dir pointing to official preprocessed pickles"
+        )
+    windows = RoboMMEEpisodeDataset(
+        data_dir,
+        window_queries=int(getattr(episode_config, "window_queries", 1)),
+        action_horizon=int(model_config.action_horizon),
+        query_stride=int(getattr(episode_config, "query_stride", 1)),
+    )
+    return RoboMMETransformedEpisodeDataset(windows, data_config, model_config)

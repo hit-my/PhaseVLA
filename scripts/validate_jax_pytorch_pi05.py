@@ -23,6 +23,7 @@ from openpi.training import config as training_config
 
 DEFAULT_MEAN_TOLERANCE = 1e-4
 DEFAULT_MAX_TOLERANCE = 5e-4
+DEFAULT_MINIMUM_VELOCITY_COSINE = 0.9999
 
 
 def _to_numpy(value: Any) -> np.ndarray:
@@ -41,22 +42,44 @@ def error_metrics(reference: Any, candidate: Any) -> dict[str, Any]:
             "candidate_shape": list(candidate_np.shape),
             "mean_absolute_error": None,
             "max_absolute_error": None,
+            "cosine_similarity": None,
         }
-    absolute_error = np.abs(reference_np.astype(np.float64) - candidate_np.astype(np.float64))
+    reference_flat = reference_np.astype(np.float64, copy=False).reshape(-1)
+    candidate_flat = candidate_np.astype(np.float64, copy=False).reshape(-1)
+    absolute_error = np.abs(reference_flat - candidate_flat)
+    reference_norm = np.linalg.norm(reference_flat)
+    candidate_norm = np.linalg.norm(candidate_flat)
+    cosine_similarity = (
+        float(np.dot(reference_flat, candidate_flat) / (reference_norm * candidate_norm))
+        if reference_norm > 0.0 and candidate_norm > 0.0
+        else None
+    )
     return {
         "shape_match": True,
         "reference_shape": list(reference_np.shape),
         "candidate_shape": list(candidate_np.shape),
         "mean_absolute_error": float(absolute_error.mean()) if absolute_error.size else 0.0,
         "max_absolute_error": float(absolute_error.max()) if absolute_error.size else 0.0,
+        "cosine_similarity": cosine_similarity,
     }
 
 
-def _passes(metric: dict[str, Any], mean_tolerance: float, max_tolerance: float) -> bool:
-    return bool(
+def _passes(
+    metric: dict[str, Any],
+    mean_tolerance: float,
+    max_tolerance: float,
+    *,
+    minimum_cosine: float | None = None,
+) -> bool:
+    if not (
         metric["shape_match"]
         and metric["mean_absolute_error"] <= mean_tolerance
         and metric["max_absolute_error"] <= max_tolerance
+    ):
+        return False
+    return minimum_cosine is None or (
+        metric["cosine_similarity"] is not None
+        and metric["cosine_similarity"] >= minimum_cosine
     )
 
 
@@ -149,7 +172,7 @@ def _torch_prefix(model, observation):
     )
     if suffix_hidden is not None:
         raise AssertionError("prefix-only PyTorch forward unexpectedly returned suffix hidden states")
-    return prefix_hidden, prefix_mask, cache, state
+    return prefix_embeddings, prefix_hidden, prefix_mask, cache, state
 
 
 def run_parity(
@@ -180,13 +203,23 @@ def run_parity(
 
     jax_observation, torch_observation = _fixed_observations(config, seed, device)
     jax_processed = model_api.preprocess_observation(None, jax_observation, train=False)
-    jax_prefix_hidden, jax_prefix_mask, _, jax_cache = jax_model.encode_prefix(jax_processed)
+    jax_prefix_tokens, jax_prefix_mask, _ = jax_model.embed_prefix(jax_processed)
+    jax_prefix_hidden, _, _, jax_cache = jax_model.encode_prefix(jax_processed)
     with torch.inference_mode():
-        torch_prefix_hidden, torch_prefix_mask, torch_cache, torch_state = _torch_prefix(
+        torch_prefix_tokens, torch_prefix_hidden, torch_prefix_mask, torch_cache, torch_state = _torch_prefix(
             torch_model, torch_observation
         )
 
     comparisons: dict[str, dict[str, Any]] = {}
+    comparisons["prefix_embeddings.all"] = error_metrics(jax_prefix_tokens, torch_prefix_tokens)
+    comparisons["prefix_embeddings.images"] = error_metrics(jax_prefix_tokens[:, :768], torch_prefix_tokens[:, :768])
+    comparisons["prefix_embeddings.language"] = error_metrics(jax_prefix_tokens[:, 768:], torch_prefix_tokens[:, 768:])
+    comparisons["prefix_embeddings.language_valid"] = error_metrics(
+        jax_prefix_tokens[:, 768:776], torch_prefix_tokens[:, 768:776]
+    )
+    comparisons["prefix_embeddings.language_padding"] = error_metrics(
+        jax_prefix_tokens[:, 776:], torch_prefix_tokens[:, 776:]
+    )
     comparisons["last_valid_prefix_token"] = error_metrics(
         _last_valid_token(jax_prefix_hidden, jax_prefix_mask),
         _last_valid_token(torch_prefix_hidden, _to_numpy(torch_prefix_mask)),
@@ -256,7 +289,16 @@ def run_parity(
         (
             name
             for name, metric in comparisons.items()
-            if not _passes(metric, mean_tolerance, max_tolerance)
+            if not _passes(
+                metric,
+                mean_tolerance,
+                max_tolerance,
+                minimum_cosine=(
+                    DEFAULT_MINIMUM_VELOCITY_COSINE
+                    if name == "action_expert_velocity"
+                    else None
+                ),
+            )
         ),
         None,
     )
@@ -267,6 +309,7 @@ def run_parity(
         "device": str(device),
         "mean_tolerance": mean_tolerance,
         "max_tolerance": max_tolerance,
+        "minimum_velocity_cosine": DEFAULT_MINIMUM_VELOCITY_COSINE,
         "passed": first_failure is None,
         "first_divergence": first_failure,
         "comparisons": comparisons,

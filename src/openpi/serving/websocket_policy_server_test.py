@@ -14,6 +14,10 @@ class _SessionPolicy:
         self.value = 0
         self.reset_count = 0
 
+        self.buffer_boundaries = []
+
+    def add_buffer(self, payload):
+        self.buffer_boundaries.append(payload)
     def infer(self, obs):
         self.value += int(obs.get("delta", 1))
         return {"session": self.name, "value": self.value}
@@ -21,6 +25,8 @@ class _SessionPolicy:
     def reset(self):
         self.reset_count += 1
         self.value = 0
+    def snapshot_state(self):
+        return {"memory": self.value, "executed_action_mask": [False]}
 
 
 class _ForkingPolicy:
@@ -88,6 +94,7 @@ def test_each_connection_uses_independent_forked_policy_and_reset_is_local(polic
     assert _request(a, {"delta": 2})["value"] == 2
     assert _request(b, {"delta": 5})["value"] == 5
     assert _request(a, {"__openpi_control__": "reset"}) == {"reset": True}
+    assert policy.sessions[0].snapshot_state() == {"memory": 0, "executed_action_mask": [False]}
     assert _request(a, {"delta": 1})["value"] == 1
     assert _request(b, {"delta": 1})["value"] == 6
     assert len(policy.sessions) == 2
@@ -97,6 +104,32 @@ def test_each_connection_uses_independent_forked_policy_and_reset_is_local(polic
     a.close()
     b.close()
 
+
+
+def test_legacy_robomme_reset_payload_returns_expected_ack(policy_server):
+    policy, port = policy_server
+    ws = _connect(port)
+
+    response = _request(ws, {"reset": True})
+
+    assert response["reset_finished"] is True
+    assert response["reset_time_ms"] >= 0.0
+    assert policy.sessions[0].reset_count == 1
+    ws.close()
+
+
+def test_legacy_robomme_add_buffer_acknowledges_without_advancing_policy(policy_server):
+    policy, port = policy_server
+    ws = _connect(port)
+    before = policy.sessions[0].snapshot_state()
+
+    response = _request(ws, {"add_buffer": True, "buffer": {"query_index": 3}})
+
+    assert response["add_buffer_finished"] is True
+    assert response["add_buffer_time_ms"] >= 0.0
+    assert policy.sessions[0].snapshot_state() == before
+    assert policy.sessions[0].buffer_boundaries == [{"add_buffer": True, "buffer": {"query_index": 3}}]
+    ws.close()
 
 def test_unknown_control_message_returns_structured_error(policy_server):
     _, port = policy_server

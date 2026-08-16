@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 import dataclasses
 import math
 from typing import Any, Protocol, SupportsIndex
 
 import jax
 import numpy as np
+import torch
 
 import openpi.models.model as _model
 import openpi.transforms as _transforms
@@ -22,6 +23,127 @@ class EpisodeBatch:
     query_mask: np.ndarray
     reset_mask: np.ndarray
     episode_index: np.ndarray
+    train_query_mask: np.ndarray | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class TorchEpisodeBatch:
+    observation: _model.Observation
+    actions: torch.Tensor
+    action_mask: torch.BoolTensor
+    executed_actions: torch.Tensor
+    executed_action_mask: torch.BoolTensor
+    query_mask: torch.BoolTensor
+    reset_mask: torch.BoolTensor
+    episode_index: torch.Tensor
+    train_query_mask: torch.BoolTensor | None = None
+
+
+def episode_batch_to_torch(batch: EpisodeBatch | TorchEpisodeBatch, device: torch.device | str) -> TorchEpisodeBatch:
+    device = torch.device(device)
+    train_query_mask = batch.query_mask if batch.train_query_mask is None else batch.train_query_mask
+    if isinstance(batch, TorchEpisodeBatch):
+        converted = TorchEpisodeBatch(
+            observation=_observation_to_torch(batch.observation, device),
+            actions=_tensor_to_torch(batch.actions, device, dtype=torch.float32),
+            action_mask=_tensor_to_torch(batch.action_mask, device, dtype=torch.bool),
+            executed_actions=_tensor_to_torch(batch.executed_actions, device, dtype=torch.float32),
+            executed_action_mask=_tensor_to_torch(batch.executed_action_mask, device, dtype=torch.bool),
+            query_mask=_tensor_to_torch(batch.query_mask, device, dtype=torch.bool),
+            reset_mask=_tensor_to_torch(batch.reset_mask, device, dtype=torch.bool),
+            episode_index=_tensor_to_torch(batch.episode_index, device, dtype=torch.int64),
+            train_query_mask=_tensor_to_torch(train_query_mask, device, dtype=torch.bool),
+        )
+    else:
+        converted = TorchEpisodeBatch(
+            observation=_observation_to_torch(batch.observation, device),
+            actions=_tensor_to_torch(batch.actions, device, dtype=torch.float32),
+            action_mask=_tensor_to_torch(batch.action_mask, device, dtype=torch.bool),
+            executed_actions=_tensor_to_torch(batch.executed_actions, device, dtype=torch.float32),
+            executed_action_mask=_tensor_to_torch(batch.executed_action_mask, device, dtype=torch.bool),
+            query_mask=_tensor_to_torch(batch.query_mask, device, dtype=torch.bool),
+            reset_mask=_tensor_to_torch(batch.reset_mask, device, dtype=torch.bool),
+            episode_index=_tensor_to_torch(batch.episode_index, device, dtype=torch.int64),
+            train_query_mask=_tensor_to_torch(train_query_mask, device, dtype=torch.bool),
+        )
+    _validate_torch_episode_batch(converted)
+    return converted
+
+
+def _tensor_to_torch(value: Any, device: torch.device, *, dtype: torch.dtype | None = None) -> torch.Tensor:
+    if torch.is_tensor(value):
+        tensor = value.to(device=device)
+        return tensor.to(dtype=dtype) if dtype is not None else tensor
+    return torch.as_tensor(value, device=device, dtype=dtype)
+
+
+def _tree_to_torch(value: Any, device: torch.device) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        return {key: _tree_to_torch(item, device) for key, item in value.items()}
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        return dataclasses.replace(
+            value,
+            **{field.name: _tree_to_torch(getattr(value, field.name), device) for field in dataclasses.fields(value)},
+        )
+    if torch.is_tensor(value):
+        tensor = value.to(device=device)
+    else:
+        tensor = torch.as_tensor(value, device=device)
+    if tensor.dtype is torch.bool:
+        return tensor
+    if tensor.is_floating_point():
+        return tensor.to(dtype=torch.float32)
+    return tensor
+
+
+def _observation_to_torch(observation: _model.Observation, device: torch.device) -> _model.Observation:
+    return _tree_to_torch(observation, device)
+
+
+def _validate_torch_episode_batch(batch: TorchEpisodeBatch) -> None:
+    if batch.actions.ndim != 4:
+        raise ValueError(f"actions must have shape [batch, query, action_horizon, action_dim], got {tuple(batch.actions.shape)}")
+    batch_size, num_queries = batch.actions.shape[:2]
+    if batch_size == 0:
+        raise ValueError("empty episode batch")
+    if num_queries == 0:
+        raise ValueError("episode batch has zero queries")
+    if batch.query_mask.shape != (batch_size, num_queries):
+        raise ValueError(f"query_mask must have shape {(batch_size, num_queries)}, got {tuple(batch.query_mask.shape)}")
+    valid_counts = batch.query_mask.long().sum(dim=1)
+    expected_query_mask = torch.arange(num_queries, device=batch.query_mask.device)[None, :] < valid_counts[:, None]
+    if not torch.equal(batch.query_mask, expected_query_mask):
+        raise ValueError("query_mask must be a right-side padded prefix")
+    if torch.any(valid_counts == 0):
+        raise ValueError("episode batch contains zero-query episode")
+    if batch.action_mask.shape != batch.actions.shape[:3]:
+        raise ValueError(f"action_mask must have shape {tuple(batch.actions.shape[:3])}, got {tuple(batch.action_mask.shape)}")
+    if batch.executed_actions.ndim != 4 or batch.executed_actions.shape[:2] != (batch_size, num_queries):
+        raise ValueError("executed_actions must have shape [batch, query, executed_horizon, action_dim]")
+    if batch.executed_action_mask.shape != batch.executed_actions.shape[:3]:
+        raise ValueError(
+            f"executed_action_mask must have shape {tuple(batch.executed_actions.shape[:3])}, got {tuple(batch.executed_action_mask.shape)}"
+        )
+    if batch.reset_mask.shape != (batch_size, num_queries):
+        raise ValueError(f"reset_mask must have shape {(batch_size, num_queries)}, got {tuple(batch.reset_mask.shape)}")
+    if batch.episode_index.shape != (batch_size,):
+        raise ValueError(f"episode_index must have shape {(batch_size,)}, got {tuple(batch.episode_index.shape)}")
+    if batch.train_query_mask is None or batch.train_query_mask.shape != (batch_size, num_queries):
+        raise ValueError(f"train_query_mask must have shape {(batch_size, num_queries)}")
+    if torch.any(batch.train_query_mask & ~batch.query_mask):
+        raise ValueError("train_query_mask must be a subset of query_mask")
+    train_started = torch.cumsum(batch.train_query_mask.long(), dim=1) > 0
+    if torch.any(train_started & batch.query_mask & ~batch.train_query_mask):
+        raise ValueError("train_query_mask must be a contiguous suffix of valid queries")
+    if torch.any(batch.train_query_mask.long().sum(dim=1) == 0):
+        raise ValueError("episode batch contains no training queries")
+    if tuple(batch.observation.state.shape[:2]) != (batch_size, num_queries):
+        raise ValueError(
+            "observation.state first dimensions must match [batch, query], "
+            f"got {tuple(batch.observation.state.shape[:2])} for {(batch_size, num_queries)}"
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -50,6 +172,7 @@ class EpisodeExample:
     executed_actions: np.ndarray
     executed_action_mask: np.ndarray
     episode_index: int
+    train_query_mask: np.ndarray | None = None
 
 
 class _RandomAccessDataset(Protocol):
@@ -279,6 +402,7 @@ class EpisodeCollator:
         query_mask = np.zeros((len(episodes), max_queries), dtype=np.bool_)
         reset_mask = np.zeros((len(episodes), max_queries), dtype=np.bool_)
         episode_index = np.asarray([episode.episode_index for episode in episodes], dtype=np.int32)
+        train_query_mask = np.zeros((len(episodes), max_queries), dtype=np.bool_)
 
         padded_observations = []
         for batch_index, episode in enumerate(episodes):
@@ -289,6 +413,13 @@ class EpisodeCollator:
             executed_action_mask[batch_index, :num_queries] = episode.executed_action_mask
             query_mask[batch_index, :num_queries] = True
             reset_mask[batch_index, 0] = True
+            episode_train_mask = episode.train_query_mask
+            if episode_train_mask is None:
+                episode_train_mask = np.ones((num_queries,), dtype=np.bool_)
+            episode_train_mask = np.asarray(episode_train_mask, dtype=np.bool_)
+            if episode_train_mask.shape != (num_queries,):
+                raise ValueError(f"episode train_query_mask must have shape {(num_queries,)}")
+            train_query_mask[batch_index, :num_queries] = episode_train_mask
             padded_observations.append(_pad_observation_queries(episode.observation, max_queries))
 
         return EpisodeBatch(
@@ -300,6 +431,7 @@ class EpisodeCollator:
             query_mask=query_mask,
             reset_mask=reset_mask,
             episode_index=episode_index,
+            train_query_mask=train_query_mask,
         )
 
 

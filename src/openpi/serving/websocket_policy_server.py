@@ -58,6 +58,28 @@ class WebsocketPolicyServer:
                 start_time = time.monotonic()
                 obs = msgpack_numpy.unpackb(await websocket.recv())
 
+                if isinstance(obs, dict) and obs.get("reset") is True:
+                    reset_time = time.monotonic()
+                    policy.reset()
+                    reset_time = time.monotonic() - reset_time
+                    await websocket.send(
+                        packer.pack({"reset_finished": True, "reset_time_ms": reset_time * 1000})
+                    )
+                    prev_total_time = time.monotonic() - start_time
+                    continue
+                if isinstance(obs, dict) and obs.get("add_buffer") is True:
+                    buffer_time = time.monotonic()
+                    add_buffer = getattr(policy, "add_buffer", None)
+                    if callable(add_buffer):
+                        add_buffer(obs)
+                    buffer_time = time.monotonic() - buffer_time
+                    await websocket.send(
+                        packer.pack({"add_buffer_finished": True, "add_buffer_time_ms": buffer_time * 1000})
+                    )
+                    prev_total_time = time.monotonic() - start_time
+                    continue
+
+
                 if isinstance(obs, dict) and "__openpi_control__" in obs:
                     response = _handle_control(policy, obs["__openpi_control__"])
                     await websocket.send(packer.pack(response))

@@ -26,6 +26,7 @@ OFFICIAL_MAMBA_COMMIT = "77069de5cdb55cbe98b670889c80df211e031039"
 REQUIRED_CUDA_HOME = "/usr/local/cuda-12.8"
 REQUIRED_MAMBA_FORCE_BUILD = "TRUE"
 REQUIRED_TORCH_CUDA_ARCH_LIST = "12.0"
+REQUIRED_TRITON_LIBCUDA_PATH = "/usr/local/cuda-12.8/targets/x86_64-linux/lib/stubs"
 
 
 def _error_text(exc: BaseException) -> str:
@@ -120,6 +121,7 @@ def _run_mamba2_forward(Mamba2: Any, torch: Any) -> bool:  # noqa: N803 - import
         expand=2,
         headdim=32,
         chunk_size=16,
+        use_mem_eff_path=False,
         device=device,
         dtype=dtype,
     ).eval()
@@ -143,6 +145,7 @@ def probe_runtime(
     cuda_home = environ.get("CUDA_HOME")
     mamba_force_build = environ.get("MAMBA_FORCE_BUILD")
     torch_cuda_arch_list = environ.get("TORCH_CUDA_ARCH_LIST")
+    triton_libcuda_path = environ.get("TRITON_LIBCUDA_PATH")
     nvcc = nvcc_version(cuda_home or REQUIRED_CUDA_HOME)
 
     payload: dict[str, Any] = {
@@ -156,6 +159,9 @@ def probe_runtime(
         "torch_cuda_arch_list_required": REQUIRED_TORCH_CUDA_ARCH_LIST,
         "torch_cuda_arch_list": torch_cuda_arch_list,
         "torch_cuda_arch_list_ok": torch_cuda_arch_list == REQUIRED_TORCH_CUDA_ARCH_LIST,
+        "triton_libcuda_path_required": REQUIRED_TRITON_LIBCUDA_PATH,
+        "triton_libcuda_path": triton_libcuda_path,
+        "triton_libcuda_path_ok": triton_libcuda_path == REQUIRED_TRITON_LIBCUDA_PATH,
         "nvcc": nvcc,
         "nvcc_ok": _nvcc_matches(nvcc),
         "torch": None,
@@ -175,6 +181,7 @@ def probe_runtime(
         ("cuda_home", payload["cuda_home_ok"]),
         ("mamba_force_build", payload["mamba_force_build_ok"]),
         ("torch_cuda_arch_list", payload["torch_cuda_arch_list_ok"]),
+        ("triton_libcuda_path", payload["triton_libcuda_path_ok"]),
         ("nvcc", payload["nvcc_ok"]),
     ):
         if not ok:

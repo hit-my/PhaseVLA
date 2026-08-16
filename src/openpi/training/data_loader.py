@@ -427,6 +427,7 @@ class TorchDataLoader:
                 jax.sharding.Mesh(jax.devices(), ("B",)),
                 jax.sharding.PartitionSpec("B"),
             )
+        self._framework = framework
         self._num_batches = num_batches
 
         mp_context = None
@@ -467,9 +468,12 @@ class TorchDataLoader:
                 except StopIteration:
                     break  # We've exhausted the dataset. Create a new iterator and start over.
                 num_items += 1
-                # For JAX, convert to sharded arrays; for PyTorch, return torch tensors
                 if self._sharding is not None:
                     yield jax.tree.map(lambda x: jax.make_array_from_process_local_data(self._sharding, x), batch)
+                elif self._framework == "pytorch" and isinstance(
+                    batch, (_episode_data_loader.EpisodeBatch, _episode_data_loader.TorchEpisodeBatch)
+                ):
+                    yield _episode_data_loader.episode_batch_to_torch(batch, torch.device("cpu"))
                 else:
                     yield jax.tree.map(torch.as_tensor, batch)
 

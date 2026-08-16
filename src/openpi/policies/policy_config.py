@@ -1,17 +1,22 @@
+import hashlib
+import json
 import logging
-import os
 import pathlib
 from typing import Any
 
 import jax.numpy as jnp
+import safetensors.torch
+import torch
 
 import openpi.models.model as _model
 import openpi.models.futuremamba_config as _futuremamba_config
+from openpi.models_pytorch.futuremamba_config import FutureMambaPytorchConfig
 import openpi.policies.policy as _policy
 import openpi.policies.futuremamba_policy as _futuremamba_policy
 import openpi.shared.download as download
 from openpi.training import checkpoints as _checkpoints
 from openpi.training import config as _config
+from openpi.training import futuremamba_checkpoint as _futuremamba_checkpoint
 import openpi.transforms as transforms
 
 
@@ -45,51 +50,53 @@ def create_trained_policy(
         presence of "model.safensors" in the checkpoint directory.
     """
     repack_transforms = repack_transforms or transforms.Group()
-    checkpoint_dir = download.maybe_download(str(checkpoint_dir))
+    checkpoint_dir = pathlib.Path(download.maybe_download(str(checkpoint_dir)))
+    plugin_path = checkpoint_dir / "plugin.safetensors"
+    metadata_path = checkpoint_dir / "metadata.json"
+    has_plugin = plugin_path.is_file()
+    has_metadata = metadata_path.is_file()
+    if has_plugin != has_metadata:
+        missing = "metadata.json" if has_plugin else "plugin.safetensors"
+        raise ValueError(f"incomplete FutureMamba bundle: missing {missing}")
 
-    # Check if this is a PyTorch model by looking for model.safetensors
-    weight_path = os.path.join(checkpoint_dir, "model.safetensors")
-    is_pytorch = os.path.exists(weight_path)
-
+    is_bundle = has_plugin and has_metadata
+    is_pytorch = (checkpoint_dir / "model.safetensors").is_file()
+    assets_checkpoint_dir = checkpoint_dir
+    policy_metadata = train_config.policy_metadata
     logging.info("Loading model...")
-    if is_pytorch:
-        model = train_config.model.load_pytorch(train_config, weight_path)
-        model.paligemma_with_expert.to_bfloat16_for_selected_params("bfloat16")
+    if is_bundle:
+        if not isinstance(train_config.model, FutureMambaPytorchConfig):
+            raise TypeError("FutureMamba plugin bundle requires FutureMambaPytorchConfig")
+        device = torch.device(pytorch_device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        model, bundle_metadata, assets_checkpoint_dir = _load_futuremamba_bundle(train_config.model, checkpoint_dir, device)
+        is_pytorch = True
+        pytorch_device = str(device)
+        policy_metadata = bundle_metadata
+    elif is_pytorch:
+        weight_path = checkpoint_dir / "model.safetensors"
+        model = train_config.model.load_pytorch(train_config, str(weight_path))
+        if hasattr(model, "paligemma_with_expert"):
+            model.paligemma_with_expert.to_bfloat16_for_selected_params("bfloat16")
     else:
         model = train_config.model.load(_model.restore_params(checkpoint_dir / "params", dtype=jnp.bfloat16))
     data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
     if norm_stats is None:
-        # We are loading the norm stats from the checkpoint instead of the config assets dir to make sure
-        # that the policy is using the same normalization stats as the original training process.
         if data_config.asset_id is None:
             raise ValueError("Asset id is required to load norm stats.")
-        norm_stats = _checkpoints.load_norm_stats(checkpoint_dir / "assets", data_config.asset_id)
+        norm_stats = _checkpoints.load_norm_stats(assets_checkpoint_dir / "assets", data_config.asset_id)
 
-    # Determine the device to use for PyTorch models
     if is_pytorch and pytorch_device is None:
-        try:
-            import torch
+        pytorch_device = "cuda" if torch.cuda.is_available() else "cpu"
 
-            pytorch_device = "cuda" if torch.cuda.is_available() else "cpu"
-        except ImportError:
-            pytorch_device = "cpu"
-
-    is_futuremamba = isinstance(train_config.model, _futuremamba_config.FutureMambaConfig)
+    is_futuremamba = isinstance(
+        train_config.model, (_futuremamba_config.FutureMambaConfig, FutureMambaPytorchConfig)
+    )
     input_transforms = [
         *repack_transforms.inputs,
         transforms.InjectDefaultPrompt(default_prompt),
         *data_config.data_transforms.inputs,
         transforms.Normalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
     ]
-    if is_futuremamba:
-        action_stats = None if norm_stats is None else norm_stats.get("actions")
-        input_transforms.append(transforms.NormalizeExecutedActions(action_stats, use_quantiles=data_config.use_quantile_norm))
-        input_transforms.append(
-            transforms.PadExecutedActions(
-                executed_horizon=train_config.model.executed_horizon,
-                action_dim=train_config.model.action_dim,
-            )
-        )
     input_transforms.extend(data_config.model_transforms.inputs)
 
     output_transforms = [
@@ -107,7 +114,8 @@ def create_trained_policy(
             transforms=input_transforms,
             output_transforms=output_transforms,
             sample_kwargs=futuremamba_sample_kwargs,
-            metadata=train_config.policy_metadata,
+            pytorch_device=pytorch_device,
+            metadata=policy_metadata,
         )
 
     return _policy.Policy(
@@ -119,3 +127,79 @@ def create_trained_policy(
         is_pytorch=is_pytorch,
         pytorch_device=pytorch_device if is_pytorch else None,
     )
+
+
+def _load_futuremamba_bundle(
+    model_config: FutureMambaPytorchConfig,
+    bundle_dir: pathlib.Path | str,
+    device: torch.device,
+) -> tuple[torch.nn.Module, dict[str, Any], pathlib.Path]:
+    bundle_dir = pathlib.Path(bundle_dir)
+    metadata_path = bundle_dir / "metadata.json"
+    plugin_path = bundle_dir / "plugin.safetensors"
+    if not metadata_path.is_file() or not plugin_path.is_file():
+        raise ValueError("incomplete FutureMamba bundle: plugin.safetensors and metadata.json are required")
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"invalid FutureMamba metadata.json: {error}") from error
+    identity = _futuremamba_checkpoint._validate_metadata(metadata)
+    expected = model_config.checkpoint_metadata()
+    for field, expected_value in expected.items():
+        if expected_value is not None and identity[field] != expected_value:
+            raise ValueError(
+                f"FutureMamba bundle identity mismatch for {field}: "
+                f"expected {expected_value!r}, got {identity[field]!r}"
+            )
+
+    base_uri = identity["base_checkpoint_uri"]
+    if not isinstance(base_uri, str) or not base_uri:
+        raise ValueError("FutureMamba bundle base_checkpoint_uri must be a non-empty string")
+    base_path = pathlib.Path(download.maybe_download(base_uri.removeprefix("file://"))).expanduser()
+    base_root = base_path.parent if base_path.name == "model.safetensors" else base_path
+    weight_path = base_path if base_path.name == "model.safetensors" else base_path / "model.safetensors"
+    if not weight_path.is_file():
+        raise FileNotFoundError(f"converted base model.safetensors not found: {weight_path}")
+
+    model = model_config.create_pytorch().to(device)
+    try:
+        safetensors.torch.load_model(model.base, weight_path, strict=True, device=str(device))
+    except Exception as error:
+        raise ValueError(f"strict base checkpoint load failed for {weight_path}: {error}") from error
+    model.freeze_base()
+    actual_base_checksum = model.base_checksum()
+    if identity["base_checkpoint_checksum"] != actual_base_checksum:
+        raise ValueError(
+            "base_checkpoint_checksum mismatch: "
+            f"expected {identity['base_checkpoint_checksum']!r}, got {actual_base_checksum!r}"
+        )
+    expected_assets_checksum = identity["base_assets_checksum"]
+    if expected_assets_checksum is not None:
+        assets_path = base_root / "assets"
+        if not assets_path.is_dir():
+            raise ValueError(f"base assets directory not found: {assets_path}")
+        actual_assets_checksum = _directory_checksum(assets_path)
+        if expected_assets_checksum != actual_assets_checksum:
+            raise ValueError(
+                "base_assets_checksum mismatch: "
+                f"expected {expected_assets_checksum!r}, got {actual_assets_checksum!r}"
+            )
+
+    try:
+        plugin_state = safetensors.torch.load_file(plugin_path, device=str(device))
+        _futuremamba_checkpoint._strict_load_plugin(model, plugin_state)
+    except Exception as error:
+        raise ValueError(f"strict plugin load failed for {plugin_path}: {error}") from error
+    model.eval()
+    return model, metadata, base_root
+
+
+def _directory_checksum(root: pathlib.Path) -> str:
+    files = sorted(path for path in root.rglob("*") if path.is_file())
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()

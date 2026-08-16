@@ -39,6 +39,28 @@ def test_base_policy_fork_defaults_to_self_for_stateless_compatibility():
     assert policy.fork() is policy
 
 
+
+def test_policy_fork_creates_independent_wrapper_for_pytorch_policy():
+    class Model:
+        def sample_actions(self, device, observation, **kwargs):
+            del device, observation, kwargs
+            return np.zeros((1, 1, 1), dtype=np.float32)
+
+        def to(self, device):
+            del device
+            return self
+
+        def eval(self):
+            return self
+    policy = _policy.Policy(Model(), is_pytorch=True, pytorch_device="cpu")
+
+    fork = policy.fork()
+
+    assert fork is not policy
+    assert fork._model is policy._model
+    assert fork._is_pytorch_model
+    assert fork._pytorch_device == "cpu"
+
 def test_policy_recorder_forwards_lifecycle_calls(tmp_path):
     wrapped = _StatefulPolicy()
     recorder = _policy.PolicyRecorder(wrapped, tmp_path)

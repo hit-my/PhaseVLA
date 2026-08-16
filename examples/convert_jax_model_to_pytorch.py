@@ -26,6 +26,7 @@ Example:
     python examples/convert_jax_model_to_pytorch.py --checkpoint_dir /home/$USER/.cache/openpi/openpi-assets/checkpoints/pi05_droid --output_path /home/$USER/.cache/openpi/openpi-assets/checkpoints/pi05_droid_pytorch
 """
 
+import dataclasses
 import hashlib
 import json
 import os
@@ -50,9 +51,16 @@ from openpi.training import utils
 import openpi.training.config as _config
 
 
-LM_HEAD_KEY = "paligemma_with_expert.paligemma.language_model.lm_head.weight"
+LM_HEAD_KEY = "paligemma_with_expert.paligemma.lm_head.weight"
 CONVERTER_NAME = "openpi.convert_jax_model_to_pytorch"
 MANIFEST_FORMAT_VERSION = 1
+
+
+def _float32_conversion_config(
+    model_config: openpi.models.pi0_config.Pi0Config,
+) -> openpi.models.pi0_config.Pi0Config:
+    """Construct the target in float32 so state loading cannot truncate source weights."""
+    return dataclasses.replace(model_config, dtype="float32", pytorch_compile_mode=None)
 
 
 def _normalize_parameter_path(path: object) -> str:
@@ -644,11 +652,14 @@ def convert_pi0_checkpoint(
     )
     all_params = {**paligemma_params, **gemma_params, **projection_params}
 
-    pi0_model = openpi.models_pytorch.pi0_pytorch.PI0Pytorch(model_config)
+    pi0_model = openpi.models_pytorch.pi0_pytorch.PI0Pytorch(
+        _float32_conversion_config(model_config)
+    )
     incompatible = pi0_model.load_state_dict(all_params, strict=False)
-    language_model = pi0_model.paligemma_with_expert.paligemma.language_model
+    paligemma = pi0_model.paligemma_with_expert.paligemma
+    language_model = paligemma.language_model
     input_embedding = getattr(language_model, "embed_tokens", None)
-    lm_head = getattr(language_model, "lm_head", None)
+    lm_head = getattr(paligemma, "lm_head", None)
     tied_weight_verified = (
         input_embedding is not None
         and lm_head is not None
