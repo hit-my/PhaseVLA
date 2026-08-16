@@ -6,4 +6,4 @@
 	url = https://github.com/libero-mem/libero-mem.git
 [submodule "third_party/robomme_policy_learning"]
 	path = third_party/robomme_policy_learning
-	url = https://github.com/RoboMME/robomme_policy_learning.git
+	url = https://github.com/hit-my/PhaseVLA-robomme-policy-learning.git
