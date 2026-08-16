@@ -220,13 +220,20 @@ def _future_axes(**overrides: Any) -> dict[str, Any]:
     return axes
 
 
-def _future_spec(method_id: str, variant: str, axes: dict[str, Any], *, seeds: Sequence[int] = (7,)) -> MethodSpec:
+def _future_spec(
+    method_id: str,
+    variant: str,
+    axes: dict[str, Any],
+    *,
+    config_name: str = "futuremamba_robomme_mamba2",
+    seeds: Sequence[int] = (7,),
+) -> MethodSpec:
     return MethodSpec(
         method="futuremamba",
         variant=variant,
         method_id=method_id,
         policy_name="futuremamba_mamba2",
-        config_name="futuremamba_robomme_mamba2",
+        config_name=config_name,
         backend="mamba2",
         checkpoint_key=method_id,
         train_seeds=_seed_tuple(seeds),
@@ -318,19 +325,41 @@ def method_specs(*, include_mamba3: bool = False) -> list[MethodSpec]:
             _future_axes(layer_selection="Sensitivity"),
         ),
         _future_spec("futuremamba_layer_random", "layer_selection=Random", _future_axes(layer_selection="Random")),
-        _future_spec("futuremamba_depth_4", "progress_depth=4", _future_axes(progress_depth=4)),
-        _future_spec("futuremamba_depth_9", "progress_depth=9", _future_axes(progress_depth=9)),
-        _future_spec("futuremamba_handoff_0p4", "handoff_ratio=0.4", _future_axes(handoff_ratio=0.4)),
-        _future_spec("futuremamba_handoff_0p6", "handoff_ratio=0.6", _future_axes(handoff_ratio=0.6)),
+        _future_spec(
+            "futuremamba_depth_4",
+            "progress_depth=4",
+            _future_axes(progress_depth=4),
+            config_name="futuremamba_robomme_mamba2_depth4",
+        ),
+        _future_spec(
+            "futuremamba_depth_9",
+            "progress_depth=9",
+            _future_axes(progress_depth=9),
+            config_name="futuremamba_robomme_mamba2_depth9",
+        ),
+        _future_spec(
+            "futuremamba_handoff_0p4",
+            "handoff_ratio=0.4",
+            _future_axes(handoff_ratio=0.4),
+            config_name="futuremamba_robomme_mamba2_handoff_0p4",
+        ),
+        _future_spec(
+            "futuremamba_handoff_0p6",
+            "handoff_ratio=0.6",
+            _future_axes(handoff_ratio=0.6),
+            config_name="futuremamba_robomme_mamba2_handoff_0p6",
+        ),
         _future_spec(
             "futuremamba_handoff_k0",
             "handoff_ratio=0.0;K=0",
             _future_axes(handoff_ratio=0.0, handoff_steps="K=0"),
+            config_name="futuremamba_robomme_mamba2_handoff_k0",
         ),
         _future_spec(
             "futuremamba_handoff_kn",
             "handoff_ratio=1.0;K=N",
             _future_axes(handoff_ratio=1.0, handoff_steps="K=N"),
+            config_name="futuremamba_robomme_mamba2_handoff_kn",
         ),
         _future_spec("futuremamba_memory_none", "memory=none", _future_axes(memory="none")),
         _future_spec("futuremamba_memory_shuffled", "memory=shuffled", _future_axes(memory="shuffled")),
@@ -339,7 +368,12 @@ def method_specs(*, include_mamba3: bool = False) -> list[MethodSpec]:
             "initialization=random",
             _future_axes(initialization="random"),
         ),
-        _future_spec("futuremamba_loss_flow_only", "loss=flow-only", _future_axes(loss="flow-only")),
+        _future_spec(
+            "futuremamba_loss_flow_only",
+            "loss=flow-only",
+            _future_axes(loss="flow-only"),
+            config_name="futuremamba_robomme_mamba2_flow_only",
+        ),
         _future_spec(
             "futuremamba_progress_no_memory",
             "Progress Expert=no-memory",

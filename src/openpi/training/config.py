@@ -659,6 +659,38 @@ _ROBOMME_FUTUREMAMBA_MODEL = futuremamba_pytorch_config.FutureMambaPytorchConfig
     robomme_policy_commit="ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
     robomme_benchmark_commit="856bc3a189d4172f3f47dbee4424d585f8d78db3",
 )
+def _robomme_futuremamba_ablation_config(
+    name: str, model: futuremamba_pytorch_config.FutureMambaPytorchConfig
+) -> TrainConfig:
+    return TrainConfig(
+        name=name,
+        model=model,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(query_stride=16, executed_horizon=16, window_queries=8),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=model.get_freeze_filter(),
+        ema_decay=None,
+        num_workers=0,
+    )
+
+
+_ROBOMME_FUTUREMAMBA_DEPTH4_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, progress_depth=4)
+_ROBOMME_FUTUREMAMBA_DEPTH9_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, progress_depth=9)
+_ROBOMME_FUTUREMAMBA_HANDOFF_0P4_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, handoff_ratio=0.4)
+_ROBOMME_FUTUREMAMBA_HANDOFF_0P6_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, handoff_ratio=0.6)
+_ROBOMME_FUTUREMAMBA_HANDOFF_K0_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, handoff_ratio=0.0)
+_ROBOMME_FUTUREMAMBA_HANDOFF_KN_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, handoff_ratio=1.0)
+_ROBOMME_FUTUREMAMBA_FLOW_ONLY_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_MODEL, terminal_loss_weight=0.0
+)
 
 
 # Use `get_config` if you need to get a config by name in your code.
@@ -772,6 +804,27 @@ _CONFIGS = [
         freeze_filter=_ROBOMME_FUTUREMAMBA_MODEL.get_freeze_filter(),
         ema_decay=None,
         num_workers=0,
+    ),
+    _robomme_futuremamba_ablation_config(
+        "futuremamba_robomme_mamba2_depth4", _ROBOMME_FUTUREMAMBA_DEPTH4_MODEL
+    ),
+    _robomme_futuremamba_ablation_config(
+        "futuremamba_robomme_mamba2_depth9", _ROBOMME_FUTUREMAMBA_DEPTH9_MODEL
+    ),
+    _robomme_futuremamba_ablation_config(
+        "futuremamba_robomme_mamba2_handoff_0p4", _ROBOMME_FUTUREMAMBA_HANDOFF_0P4_MODEL
+    ),
+    _robomme_futuremamba_ablation_config(
+        "futuremamba_robomme_mamba2_handoff_0p6", _ROBOMME_FUTUREMAMBA_HANDOFF_0P6_MODEL
+    ),
+    _robomme_futuremamba_ablation_config(
+        "futuremamba_robomme_mamba2_handoff_k0", _ROBOMME_FUTUREMAMBA_HANDOFF_K0_MODEL
+    ),
+    _robomme_futuremamba_ablation_config(
+        "futuremamba_robomme_mamba2_handoff_kn", _ROBOMME_FUTUREMAMBA_HANDOFF_KN_MODEL
+    ),
+    _robomme_futuremamba_ablation_config(
+        "futuremamba_robomme_mamba2_flow_only", _ROBOMME_FUTUREMAMBA_FLOW_ONLY_MODEL
     ),
     #
     # Two-stage FutureMamba training configs.

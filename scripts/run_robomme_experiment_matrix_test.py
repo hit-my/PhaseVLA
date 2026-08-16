@@ -209,6 +209,23 @@ def test_method_specs_cover_required_baselines_and_ablation_axes_without_mamba3_
     assert next(spec for spec in specs if spec.method_id == "futuremamba_mamba2").train_seeds == (0, 42, 7)
 
 
+def test_structural_and_loss_ablations_reference_distinct_registered_configs():
+    expected_configs = {
+        "futuremamba_depth_4": "futuremamba_robomme_mamba2_depth4",
+        "futuremamba_depth_9": "futuremamba_robomme_mamba2_depth9",
+        "futuremamba_handoff_0p4": "futuremamba_robomme_mamba2_handoff_0p4",
+        "futuremamba_handoff_0p6": "futuremamba_robomme_mamba2_handoff_0p6",
+        "futuremamba_handoff_k0": "futuremamba_robomme_mamba2_handoff_k0",
+        "futuremamba_handoff_kn": "futuremamba_robomme_mamba2_handoff_kn",
+        "futuremamba_loss_flow_only": "futuremamba_robomme_mamba2_flow_only",
+    }
+    specs = {spec.method_id: spec for spec in matrix.method_specs(include_mamba3=False)}
+
+    for method_id, config_name in expected_configs.items():
+        assert specs[method_id].config_name == config_name
+        assert config_name != specs["futuremamba_mamba2"].config_name
+
+
 def test_mamba3_gate_must_be_explicitly_passed_and_keeps_backend_identity(tmp_path: Path):
     assert matrix.gate_allows_mamba3(None) is False
     assert matrix.gate_allows_mamba3(_failed_gate(tmp_path / "failed_gate.json")) is False

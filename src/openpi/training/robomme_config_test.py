@@ -50,6 +50,28 @@ def test_robomme_futuremamba_mamba2_config_is_registered():
     assert set(data.norm_stats) == {"state", "actions"}
 
 
+def test_robomme_futuremamba_structural_and_loss_ablations_are_registered():
+    expected = {
+        "futuremamba_robomme_mamba2_depth4": {"progress_depth": 4},
+        "futuremamba_robomme_mamba2_depth9": {"progress_depth": 9},
+        "futuremamba_robomme_mamba2_handoff_0p4": {"handoff_ratio": 0.4},
+        "futuremamba_robomme_mamba2_handoff_0p6": {"handoff_ratio": 0.6},
+        "futuremamba_robomme_mamba2_handoff_k0": {"handoff_ratio": 0.0},
+        "futuremamba_robomme_mamba2_handoff_kn": {"handoff_ratio": 1.0},
+        "futuremamba_robomme_mamba2_flow_only": {"terminal_loss_weight": 0.0},
+    }
+
+    for config_name, model_fields in expected.items():
+        train_config = _config.get_config(config_name)
+        assert isinstance(train_config.model, FutureMambaPytorchConfig)
+        for field, value in model_fields.items():
+            assert getattr(train_config.model, field) == value
+        assert train_config.model.checkpoint_metadata() != _config.get_config(
+            "futuremamba_robomme_mamba2"
+        ).model.checkpoint_metadata()
+
+
+
 def test_robomme_data_config_builds_quantile_and_official_transforms(tmp_path: pathlib.Path):
     model = FutureMambaPytorchConfig(
         action_horizon=20,
