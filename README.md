@@ -1,23 +1,93 @@
-# openpi
+# PhaseVLA
 
-openpi holds open-source models and packages for robotics, published by the [Physical Intelligence team](https://www.physicalintelligence.company/).
+PhaseVLA is an independent research repository built on top of [OpenPI](https://github.com/Physical-Intelligence/openpi) and the $\pi_{0.5}$ vision-language-action (VLA) model. It studies whether explicit recurrent memory can help a frozen VLA infer task progress from prior observations and avoid repeating completed actions.
 
-Currently, this repo contains three types of models:
-- the [π₀ model](https://www.physicalintelligence.company/blog/pi0), a flow-based vision-language-action model (VLA).
-- the [π₀-FAST model](https://www.physicalintelligence.company/research/fast), an autoregressive VLA, based on the FAST action tokenizer.
-- the [π₀.₅ model](https://www.physicalintelligence.company/blog/pi05), an upgraded version of π₀ with better open-world generalization trained with [knowledge insulation](https://www.physicalintelligence.company/research/knowledge_insulation). Note that, in this repository, we currently only support the flow matching head for both $\pi_{0.5}$ training and inference.
+The current implementation adds a FutureMamba memory plugin to the PyTorch $\pi_{0.5}$ pipeline:
 
-For all models, we provide _base model_ checkpoints, pre-trained on 10k+ hours of robot data, and examples for using them out of the box or fine-tuning them to your own datasets.
+- **Recurrent memory:** a Mamba-2 backend receives the final VLM representation and previous memory state, then produces the next state.
+- **Progress Expert:** a lightweight expert reads the memory token and predicts an early denoising direction.
+- **Early-step intervention:** the plugin intervenes in the first handoff steps, while the frozen Action Expert retains responsibility for later action refinement.
+- **Frozen base model:** the $\pi_{0.5}$ VLM and Action Expert remain frozen; only the FutureMamba plugin is trained.
 
-This is an experiment: $\pi_0$ was developed for our own robots, which differ from the widely used platforms such as [ALOHA](https://tonyzhaozh.github.io/aloha/) and [DROID](https://droid-dataset.github.io/), and though we are optimistic that researchers and practitioners will be able to run creative new experiments adapting $\pi_0$ to their own platforms, we do not expect every such attempt to be successful. All this is to say: $\pi_0$ may or may not work for you, but you are welcome to try it and see!
+This is the standalone PhaseVLA research codebase, not a GitHub fork. OpenPI is retained as the upstream implementation and attribution base.
+
+## PhaseVLA Progress
+
+### Implemented
+
+- Pure PyTorch FutureMamba model, Mamba-2 memory state contract, and Progress Expert.
+- RoboMME execution-sample dataset indexing with episode-boundary protection and burn-in handling.
+- Training, checkpoint save/restore, frozen-base verification, and policy-server inference paths.
+- Deterministic RoboMME experiment matrix, strict result aggregation, memory-swap intervention evaluation, and profiling contracts.
+- Independent structural and loss configurations for `progress_depth`, handoff ratio, and `flow-only` training.
+
+### Current evaluation snapshot
+
+The following numbers are the currently observed evidence, not a complete paper benchmark. They use the FutureMamba Mamba-2 checkpoint at step 5000 with training seed 42.
+
+| Metric | Observed value |
+| --- | ---: |
+| Official RoboMME tasks observed | 11 / 16 |
+| Observed episodes | 515 |
+| Successful episodes | 97 / 515 |
+| Observed-episode success rate | 18.83% |
+| Counting Suite episodes | 200 |
+| Counting Suite successes | 54 / 200 |
+| Counting Suite success rate | 27.00% |
+| Saved evaluation videos | 515 |
+
+Per-task success rates and Wilson 95% confidence intervals:
+
+| Task | Episodes | Successes | Success rate | Wilson 95% CI |
+| --- | ---: | ---: | ---: | ---: |
+| BinFill | 50 | 17 | 34.00% | 22.44–47.85% |
+| StopCube | 50 | 1 | 2.00% | 0.35–10.50% |
+| PickXtimes | 50 | 15 | 30.00% | 19.10–43.75% |
+| SwingXtimes | 50 | 21 | 42.00% | 29.38–55.77% |
+| ButtonUnmask | 50 | 7 | 14.00% | 6.95–26.19% |
+| VideoUnmask | 50 | 10 | 20.00% | 11.24–33.04% |
+| VideoUnmaskSwap | 50 | 6 | 12.00% | 5.62–23.80% |
+| ButtonUnmaskSwap | 50 | 7 | 14.00% | 6.95–26.19% |
+| PickHighlight | 50 | 8 | 16.00% | 8.34–28.51% |
+| VideoRepick | 50 | 3 | 6.00% | 2.06–16.22% |
+| VideoPlaceButton | 15 | 2 | 13.33% | 3.74–37.88% |
+
+The following official tasks are not included in this snapshot and are not counted as failures: `VideoPlaceOrder`, `MoveCube`, `InsertPeg`, `PatternLock`, and `RouteStick`.
+
+### Ablation and mechanism evidence
+
+- Real CUDA one-step training smoke tests completed for `progress_depth=4`, `progress_depth=9`, `flow-only`, `handoff_ratio=0.4`, and `handoff_ratio=0.0`.
+- CUDA metadata confirms RTX 5090, PyTorch 2.9.1+cu128, CUDA 12.8, Mamba-2, and the locked RoboMME dataset checksum.
+- A memory-backend mechanism experiment ran on RTX 5090 for GRU, LSTM, FrameStack, NoMemory, and Mamba-2; sequence outputs were finite and reset/snapshot/restore behavior was checked.
+- Memory-swap contract tests: 8 passed.
+- FutureMamba targeted tests: 108 passed; CUDA Mamba-2 tests: 34 passed.
+
+### Known limitations
+
+- Full multi-seed, multi-task ablation evaluation has not been completed; the evidence above is smoke evidence rather than a final paper table.
+- The formal FLOPs, inference peak-memory, training peak-memory, and episode-timing profile has not been executed with a complete provenance-bound artifact set.
+- Real-robot validation is not included in the current evidence snapshot.
+- The RoboMME mirror configured in `.gitmodules` is private and requires access when initializing submodules.
+
+Local delivery artifacts are generated under `/tmp/futuremamba_delivery/`, including `evaluation_summary.json`, `evaluation_summary.csv`, `figure_success_rates.png`, `video_index.json`, `representative_montage.mp4`, and `final_acceptance.json`. These runtime artifacts are not committed to Git.
+
+## Upstream OpenPI models
+
+PhaseVLA retains the upstream OpenPI model support and documentation below. OpenPI currently contains three model types:
+
+- the [π₀ model](https://www.physicalintelligence.company/blog/pi0), a flow-based VLA;
+- the [π₀-FAST model](https://www.physicalintelligence.company/research/fast), an autoregressive VLA based on the FAST action tokenizer;
+- the [π₀.₅ model](https://www.physicalintelligence.company/blog/pi05), an upgraded version of π₀ with better open-world generalization.
+
+For upstream installation, conversion, inference, and fine-tuning instructions, see the corresponding sections below.
 
 ## Updates
 
-- [Sept 2025] We released PyTorch support in openpi.
-- [Sept 2025] We released pi05, an upgraded version of pi0 with better open-world generalization.
-- [Sept 2025]: We have added an [improved idle filter](examples/droid/README_train.md#data-filtering) for DROID training.
-- [Jun 2025]: We have added [instructions](examples/droid/README_train.md) for using `openpi` to train VLAs on the full [DROID dataset](https://droid-dataset.github.io/). This is an approximate open-source implementation of the training pipeline used to train pi0-FAST-DROID. 
-
+- [Aug 2026] PhaseVLA: added the PyTorch FutureMamba memory plugin, RoboMME evaluation pipeline, ablation contracts, and current evaluation snapshot.
+- [Sept 2025] OpenPI released PyTorch support.
+- [Sept 2025] OpenPI released π₀.₅, an upgraded version of π₀ with better open-world generalization.
+- [Sept 2025] OpenPI added an [improved idle filter](examples/droid/README_train.md#data-filtering) for DROID training.
+- [Jun 2025] OpenPI added [instructions](examples/droid/README_train.md) for training VLAs on the full [DROID dataset](https://droid-dataset.github.io/).
 
 ## Requirements
 
@@ -33,12 +103,12 @@ The repo has been tested with Ubuntu 22.04, we do not currently support other op
 
 ## Installation
 
-When cloning this repo, make sure to update submodules:
+When cloning PhaseVLA, initialize its submodules. The main repository and RoboMME mirror are private, so collaborators need access to both repositories:
 
 ```bash
-git clone --recurse-submodules git@github.com:Physical-Intelligence/openpi.git
+git clone --recurse-submodules git@github.com:hit-my/PhaseVLA.git
 
-# Or if you already cloned the repo:
+# Or if you already cloned the repository:
 git submodule update --init --recursive
 ```
 
