@@ -71,6 +71,376 @@ The following official tasks are not included in this snapshot and are not count
 
 Local delivery artifacts are generated under `/tmp/futuremamba_delivery/`, including `evaluation_summary.json`, `evaluation_summary.csv`, `figure_success_rates.png`, `video_index.json`, `representative_montage.mp4`, and `final_acceptance.json`. These runtime artifacts are not committed to Git.
 
+## 服务器迁移交接手册
+
+本节用于将 PhaseVLA / FutureMamba 迁移到另一台远程服务器。请按顺序执行。命令中的 `/path/to/PhaseVLA`、`/path/to/data`、`/path/to/runs` 和 `<HF_TOKEN>` 需要替换为新服务器上的实际路径，或通过交互式登录提供。不要把 Token、SSH 私钥或 W&B API Key 写入 Git。
+
+### 1. 当前项目身份与迁移边界
+
+| 项目 | 当前值 |
+| --- | --- |
+| 主仓库 | `git@github.com:hit-my/PhaseVLA.git`（私有） |
+| 交接前 README 基线提交 | `648ee738b273697acd8c4bce77596e7b3a9c6de4` |
+| 已发布迁移代码分支 | `main` |
+| 本地开发分支 | `docs/futuremamba-pytorch-migration-plan` |
+| 主仓库主线 | `main` |
+| RoboMME 策略子模块 | `third_party/robomme_policy_learning`，commit `9e627481745a7cf8a5725a140a00e8befedff7b6` |
+| RoboMME benchmark 子模块 | `third_party/robomme_policy_learning/third_party/robomme_benchmark`，commit `856bc3a189d4172f3f47dbee4424d585f8d78db3` |
+| RoboMME 策略来源 commit | `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b` |
+| Mamba 来源 commit | `77069de5cdb55cbe98b670889c80df211e031039` |
+| 主评测平台 | RoboMME 官方 ManiSkill/SAPIEN 闭环 |
+| 当前主后端 | Mamba-2 |
+
+当前旧工作区曾出现 `third_party/robomme_policy_learning` 子模块工作树有未跟踪内层 benchmark 的状态。新服务器不要复制这个脏状态；以主仓库提交、`.gitmodules` 和递归子模块固定 commit 为准重新初始化。
+
+### 2. 新服务器硬件与软件基线
+
+当前已验证基线：Ubuntu 22.04、Python 3.11.15、`uv 0.10.12`、NVIDIA RTX 5090（32,607 MiB）、驱动 `580.173.02`、PyTorch `2.9.1+cu128`、CUDA runtime `12.8`、Triton `3.5.1`，以及官方 `mamba-ssm` commit `77069de5cdb55cbe98b670889c80df211e031039`。
+
+当前 shell 默认 `nvcc` 曾为 CUDA 11.5，不能用于 RTX 5090 / Mamba 构建。新服务器构建时必须显式使用 CUDA 12.8：
+
+```bash
+export CUDA_HOME=/usr/local/cuda-12.8
+export PATH="$CUDA_HOME/bin:$PATH"
+export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
+python3.11 --version
+nvcc --version
+nvidia-smi
+uv --version
+```
+
+新服务器 GPU 可以不同，但正式对比前必须记录 GPU、驱动、CUDA、PyTorch、Triton 和 Mamba commit。不同软件栈的结果不要直接与当前 RTX 5090 结果合并。
+
+### 3. 克隆私有仓库与固定子模块
+
+先确认新服务器上的 SSH key 或 GitHub CLI 凭据同时有权访问 `hit-my/PhaseVLA` 和私有仓库 `hit-my/PhaseVLA-robomme-policy-learning`：
+
+```bash
+mkdir -p /path/to
+cd /path/to
+git clone --branch main \
+  --recurse-submodules git@github.com:hit-my/PhaseVLA.git PhaseVLA
+cd PhaseVLA
+
+git remote -v
+git rev-parse HEAD
+git submodule sync --recursive
+git submodule update --init --recursive
+git submodule status --recursive
+```
+
+预期递归子模块包含以下 commit：
+
+```text
+third_party/robomme_policy_learning              @ 9e627481745a7cf8a5725a140a00e8befedff7b6
+third_party/robomme_policy_learning/third_party/robomme_benchmark
+                                                   @ 856bc3a189d4172f3f47dbee4424d585f8d78db3
+```
+
+当前 FutureMamba 迁移代码和本交接手册已发布在 `main`。本地开发分支名为 `docs/futuremamba-pytorch-migration-plan`，不需要从远程单独检出。不要用 `git pull` 覆盖包含实验产物的目录。
+
+### 4. 创建两个隔离环境
+
+策略环境使用仓库内 `environments/futuremamba`；RoboMME 仿真环境与策略环境隔离。策略环境固定 Python `<3.12`、Torch `2.9.1`、Triton `3.5.1` 和 Mamba commit：
+
+```bash
+cd /path/to/PhaseVLA
+export CUDA_HOME=/usr/local/cuda-12.8
+uv venv --python 3.11 environments/futuremamba/.venv
+uv sync --project environments/futuremamba
+```
+
+如需重新构建 Mamba：
+
+```bash
+CUDA_HOME=/usr/local/cuda-12.8 \
+  uv sync --project environments/futuremamba --reinstall-package mamba-ssm
+```
+
+验证策略环境：
+
+```bash
+environments/futuremamba/.venv/bin/python - <<'PY'
+import torch
+import triton
+import mamba_ssm
+
+print("torch", torch.__version__, "cuda", torch.version.cuda)
+print("cuda_available", torch.cuda.is_available())
+print("triton", triton.__version__)
+print("mamba_ssm", mamba_ssm.__file__)
+if torch.cuda.is_available():
+    print("gpu", torch.cuda.get_device_name(0))
+PY
+```
+
+创建 RoboMME 仿真环境：
+
+```bash
+micromamba create -n robomme python=3.11 -y
+micromamba run -n robomme pip install -r \
+  third_party/robomme_policy_learning/examples/robomme/requirements.txt
+micromamba run -n robomme pip install -e \
+  third_party/robomme_policy_learning/third_party/robomme_benchmark
+micromamba run -n robomme pip install -e packages/openpi-client
+micromamba run -n robomme python \
+  third_party/robomme_policy_learning/examples/robomme/simple_test.py
+```
+
+`simple_test.py` 应以退出码 0 完成至少一个仿真 step。若服务器没有显示器，按 RoboMME 文档配置 EGL/Vulkan headless runtime，不要修改任务定义、评测器或成功判定。
+
+### 5. 迁移数据、checkpoint 与结果
+
+推荐在新服务器保持以下目录布局：
+
+```text
+/path/to/PhaseVLA/
+├── data/robomme_data_h5/
+├── runs/ckpts/pi05_baseline/
+├── runs/ckpts/pi05_baseline_pytorch/79999/
+├── checkpoints/futuremamba_robomme_mamba2/
+└── runs/evaluation/
+```
+
+需要从旧服务器或受控对象存储传输：RoboMME 原始数据及 checksum、JAX `pi05_baseline` checkpoint、PyTorch 基座、FutureMamba 插件 checkpoint，以及 `progress.json`、`log.json`、视频和结果 JSON。插件 checkpoint 至少保留 `metadata.json`、`plugin.safetensors`、`optimizer.pt`、`scheduler.pt` 和 `rng_state.pt`。
+
+当前旧服务器产物大小约为：`/tmp/futuremamba_delivery` 9.1 MB、完整验证 checkpoint 712 MB、各 CUDA smoke checkpoint 约 665 MB–1.4 GB。建议使用 `rsync` 断点传输：
+
+```bash
+rsync -avP --partial /source/data/robomme_data_h5/ \
+  /path/to/PhaseVLA/data/robomme_data_h5/
+rsync -avP --partial /source/runs/ckpts/ \
+  /path/to/PhaseVLA/runs/ckpts/
+rsync -avP --partial /source/checkpoints/ \
+  /path/to/PhaseVLA/checkpoints/
+```
+
+迁移后核对：
+
+```bash
+du -sh data/robomme_data_h5 runs/ckpts checkpoints
+find runs/ckpts/pi05_baseline_pytorch/79999 -maxdepth 2 -type f -print
+find checkpoints -name metadata.json -o -name plugin.safetensors
+```
+
+不要把 `/tmp` 路径写入长期配置；新服务器应使用持久化磁盘。
+
+### 6. 下载缺失的官方数据与 checkpoint
+
+如果没有从旧服务器传输大文件，可在新服务器重新下载。需要 Hugging Face 权限时，使用交互式 `huggingface-cli login`，不要把 Token 写入 shell 历史：
+
+```bash
+mkdir -p data runs/ckpts
+git clone https://huggingface.co/datasets/Yinpei/robomme_data_h5 data/robomme_data_h5
+uv run third_party/robomme_policy_learning/scripts/tarxz_h5.py decompress \
+  --input_dir data/robomme_data_h5 --jobs 16 --remove_archive
+
+git clone https://huggingface.co/Yinpei/pi05_baseline runs/ckpts/pi05_baseline
+uv run third_party/robomme_policy_learning/scripts/unzip_ckpt.py \
+  runs/ckpts/pi05_baseline
+```
+
+确认后期 checkpoint 至少包含 `params/` 和 `assets/robomme/norm_stats.json`：
+
+```bash
+find runs/ckpts/pi05_baseline -maxdepth 5 \
+  \( -type d -name params -o -type f -name norm_stats.json \) -print
+```
+
+RoboMME 正式基座不是 LIBERO checkpoint。若实际后期 checkpoint 不是 `79999`，同步更新配置、checkpoint metadata 和评测 mapping。
+
+### 7. 将 JAX 基座转换为 PyTorch
+
+只有在 `params/`、RoboMME assets 和 checksum 齐全后执行：
+
+```bash
+PYTHONPATH=src environments/futuremamba/.venv/bin/python \
+  examples/convert_jax_model_to_pytorch.py \
+  --checkpoint_dir runs/ckpts/pi05_baseline/pi05_baseline/79999 \
+  --config_name pi05_robomme_pytorch \
+  --output_path runs/ckpts/pi05_baseline_pytorch/79999 \
+  --precision float32
+```
+
+转换结果应包含 `model.safetensors`、`config.json`、`conversion_manifest.json` 和复制后的 `assets/`。如果转换报告 `params` 或 RoboMME norm stats 缺失，停止，不要用不完整目录训练。
+
+### 8. 新服务器最小验收
+
+先不启动长时间训练，执行代码、依赖、Mamba 和 checkpoint smoke：
+
+```bash
+cd /path/to/PhaseVLA
+export CUDA_HOME=/usr/local/cuda-12.8
+export PYTHONPATH="$PWD/src"
+export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+
+environments/futuremamba/.venv/bin/pytest -q \
+  src/openpi/models_pytorch/futuremamba_config_test.py \
+  src/openpi/models_pytorch/futuremamba_test.py \
+  src/openpi/policies/futuremamba_policy_test.py \
+  src/openpi/training/futuremamba_checkpoint_test.py \
+  scripts/train_futuremamba_pytorch_test.py
+
+environments/futuremamba/.venv/bin/python -m compileall -q \
+  src/openpi/models_pytorch src/openpi/policies src/openpi/training scripts
+```
+
+然后运行 Mamba-2 相关测试；若新 GPU 不支持当前 kernel，记录失败原因，不要伪造通过：
+
+```bash
+environments/futuremamba/.venv/bin/pytest -q \
+  src/openpi/models_pytorch/mamba_memory_test.py
+```
+
+RoboMME `simple_test.py`、策略测试和 CUDA smoke 均有记录后，才启动 WebSocket 服务和 episode 评测。
+
+### 9. 训练 FutureMamba 与断点续训
+
+默认 RoboMME 配置为 `futuremamba_robomme_mamba2`，主设置包括 `progress_depth=6`、`handoff_ratio=0.2`、`num_denoise_steps=10`、`action_horizon=20`、在线执行 horizon 16 和 `memory_backend="mamba2"`。训练脚本参数如下：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+  environments/futuremamba/.venv/bin/python \
+  scripts/train_futuremamba_pytorch.py futuremamba_robomme_mamba2 \
+  --seed 42 \
+  --episode-data-dir /path/to/robomme_episode_samples \
+  --num-train-steps 5000 \
+  --save-interval 5000 \
+  --log-interval 100 \
+  --pytorch-training-precision bfloat16 \
+  --wandb-enabled false \
+  --checkpoint-root checkpoints/futuremamba_robomme_mamba2/seed42
+```
+
+断点续训必须保持同一配置、基座 checksum、RoboMME dataset checksum 和 memory state schema：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+  environments/futuremamba/.venv/bin/python \
+  scripts/train_futuremamba_pytorch.py futuremamba_robomme_mamba2 \
+  --seed 42 \
+  --episode-data-dir /path/to/robomme_episode_samples \
+  --num-train-steps 10000 \
+  --checkpoint-root checkpoints/futuremamba_robomme_mamba2/seed42 \
+  --resume
+```
+
+训练脚本只允许 `futuremamba.*` 参数可训练，并在 checkpoint metadata 中记录 Torch、CUDA、GPU、Mamba、数据和基座身份。不要覆盖已有 checkpoint；重新开始时使用新的 `--checkpoint-root`。
+
+### 10. 启动策略服务与运行 RoboMME 单 episode
+
+FutureMamba bundle 必须同时包含 `plugin.safetensors` 和 `metadata.json`。metadata 还会严格校验冻结 PyTorch 基座的 `model.safetensors`、assets checksum、RoboMME commit、Mamba commit 和 memory state schema。保持仓库根目录作为当前工作目录，并保持 `runs/ckpts/pi05_baseline_pytorch/79999` 的相对路径：
+
+```bash
+cd /path/to/PhaseVLA
+export CUDA_HOME=/usr/local/cuda-12.8
+export PYTHONPATH="$PWD/src"
+
+CUDA_VISIBLE_DEVICES=0 \
+  environments/futuremamba/.venv/bin/python \
+  scripts/serve_policy.py policy:checkpoint \
+  --policy.config=futuremamba_robomme_mamba2 \
+  --policy.dir=runs/ckpts/futuremamba_robomme_mamba2/pickxtimes_seed42/5000 \
+  --port=8000
+```
+
+另开终端，先跑 `PickXtimes` 的 validation episode 0：
+
+```bash
+cd /path/to/PhaseVLA
+micromamba run -n robomme python \
+  scripts/run_robomme_single_episode.py \
+  --task-name PickXtimes \
+  --episode-id 0 \
+  --split validation \
+  --dataset val \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --use-history true \
+  --policy-name futuremamba_mamba2 \
+  --model-seed 42 \
+  --model-ckpt-id 5000 \
+  --save-dir runs/evaluation/futuremamba_mamba2_ckpt5000
+```
+
+若使用官方 `eval.py`，关键参数等价于 `--args.model_seed=42 --args.port=8000 --args.policy_name=futuremamba_mamba2 --args.model_ckpt_id=5000 --args.only_tasks=PickXtimes`。单 episode 结果必须保存视频、`progress.json`、`log.json` 和服务端日志；仅服务启动成功不算评测通过。
+
+### 11. 生成确定性评测矩阵
+
+先准备 checkpoint mapping JSON。每个 checkpoint 条目必须包含路径、配置名、后端、训练 seed、checkpoint ID 和 provenance；不要用自动扫描到的未知 checkpoint 直接生成论文结果。然后生成 manifest：
+
+```bash
+environments/futuremamba/.venv/bin/python \
+  scripts/run_robomme_experiment_matrix.py \
+  --checkpoint-mapping /path/to/checkpoint_mapping.json \
+  --output runs/evaluation/manifest_counting.json \
+  --stage counting \
+  --port 8000 \
+  --eval-seed 7
+```
+
+可用阶段为 `minimal`、`counting`、`full_val` 和 `final_test`。RoboMME 有 16 个官方任务，分为 Counting、Permanence、Reference、Imitation 四组；validation 和 test split 每任务各 50 个 episode。评测记录必须保留 task、episode、train seed、eval seed、checkpoint、config、server 和 provenance 字段。完整矩阵运行前，先用 `minimal` 验证服务、数据和结果目录。
+
+### 12. 已有结果、产物和待办
+
+当前已交付但不能误称为论文最终结果：
+
+- Mamba-2 checkpoint：step 5000，train seed 42；
+- 观测 11/16 个官方任务、515 个 episode、97 次成功、515 个视频；
+- Counting Suite：200 个 episode、54 次成功、27.00%；
+- 已完成 `progress_depth=4`、`progress_depth=9`、`flow-only`、`handoff_ratio=0.4`、`handoff_ratio=0.0` 的真实 CUDA 1-step smoke；
+- memory backend 机制实验覆盖 GRU、LSTM、FrameStack、NoMemory、Mamba-2；
+- memory-swap contract 8 项通过，FutureMamba 定向测试 108 项通过，CUDA Mamba-2 测试 34 项通过。
+
+交接后优先级：
+
+1. 复制或重新生成 RoboMME episode 数据、基座和 FutureMamba checkpoint；
+2. 通过最小验收和 `PickXtimes` 单 episode smoke；
+3. 补齐 `VideoPlaceOrder`、`MoveCube`、`InsertPeg`、`PatternLock`、`RouteStick`；
+4. 在同一硬件/软件栈上完成多 seed 正式消融和 FLOPs、显存、episode timing profile；
+5. 最后进行真机验证。当前 README 结果没有真机证据，缺失任务不能计为失败。
+
+当前可迁移的旧服务器产物：
+
+```text
+/tmp/futuremamba_delivery/
+/tmp/futuremamba_full_val_ckpt5000/
+/tmp/futuremamba_ablation_depth4_smoke/
+/tmp/futuremamba_ablation_depth9_smoke/
+/tmp/futuremamba_ablation_flowonly_smoke/
+/tmp/futuremamba_ablation_handoff04_smoke/
+/tmp/futuremamba_ablation_handoff_k0_smoke/
+```
+
+其中 delivery 汇总包含 `evaluation_summary.json`、`evaluation_summary.csv`、`figure_success_rates.png`、`video_index.json`、`representative_montage.mp4` 和 `final_acceptance.json`。这些路径属于旧服务器临时目录，迁移时应复制到新服务器持久化目录，不能假设新服务器仍能访问 `/tmp`。
+
+### 13. 故障排查
+
+| 现象 | 处理 |
+| --- | --- |
+| `Permission denied (publickey)` | 检查新服务器 SSH agent、GitHub key 和两个私有仓库权限；不要改用无权限的公共 URL。 |
+| `mamba_ssm` 编译失败或找不到 `sm_120` | 设置 `CUDA_HOME=/usr/local/cuda-12.8`，确认 `nvcc --version`，清理失败 wheel 后重装。 |
+| `torch.cuda.is_available()` 为 `False` | 检查 NVIDIA 驱动、容器 GPU 透传、Torch CUDA wheel 和 `CUDA_VISIBLE_DEVICES`。 |
+| 子模块显示 `-`、`?` 或 commit 不匹配 | 执行 `git submodule sync --recursive && git submodule update --init --recursive`，再核对固定 commit。 |
+| checkpoint metadata 不匹配 | 不要强行加载；核对 base checksum、assets checksum、RoboMME commit、dataset checksum、Mamba commit 和 state schema。 |
+| `norm_stats.json` 缺失 | 检查 PyTorch 基座 assets 和 `RoboMMEDataConfig.assets_dir`，不要使用其他任务的 norm stats。 |
+| RoboMME 无显示/Vulkan 报错 | 按 RoboMME 文档配置 EGL/Vulkan headless runtime；不要修改 evaluator 或任务语义。 |
+| 显存不足 | 先降低 smoke batch/window 或关闭非必要服务；不要把改变模型结构的临时配置作为正式结果。 |
+| W&B 登录失败 | 使用 `--wandb-enabled false` 做本地 smoke，正式训练前再配置 W&B 凭据。 |
+
+### 14. 交接完成判据
+
+- [ ] 能读取私有 `PhaseVLA` 主仓库和 RoboMME 子模块；
+- [ ] 主仓库、递归子模块 commit 与本节记录一致；
+- [ ] `CUDA_HOME` 指向 CUDA 12.8，Torch/CUDA/Triton/Mamba 版本已记录；
+- [ ] `futuremamba` 策略环境和 `robomme` 仿真环境均可导入；
+- [ ] RoboMME 官方 `simple_test.py` 退出码为 0；
+- [ ] FutureMamba 定向测试和 Mamba-2 smoke 已运行并记录输出；
+- [ ] 基座、assets、episode 数据和插件 checkpoint 的 checksum 已保存；
+- [ ] WebSocket policy server 能启动，`PickXtimes` 至少完成 1 个 episode；
+- [ ] 评测日志、视频、manifest 和 provenance 已写入持久化目录；
+- [ ] 新服务器所有凭据均通过安全凭据管理，不进入 README、shell history 或 Git。
+
 ## Upstream OpenPI models
 
 PhaseVLA retains the upstream OpenPI model support and documentation below. OpenPI currently contains three model types:
