@@ -248,6 +248,28 @@ def test_rejects_non_integer_metadata_scalars(tmp_path, sample_kwargs):
     with pytest.raises(ValueError, match="integer"):
         _robomme_episode.RoboMMEEpisodeDataset(data_dir)
 
+def test_full_episodes_use_variable_length_sequences(tmp_path):
+    data_dir = tmp_path / "data"
+    for step_idx in range(5):
+        _write_pickle(data_dir, step_idx, _sample(0, step_idx))
+
+    dataset = _robomme_episode.RoboMMEEpisodeDataset(
+        data_dir,
+        window_queries=2,
+        query_stride=1,
+        full_episodes=True,
+    )
+
+    assert len(dataset) == 1
+    window = dataset[0]
+    assert len(window.samples) == 5
+    assert window.burn_in_refs == ()
+    assert window.train_step_indices == (0, 1, 2, 3, 4)
+    assert window.padding_query_indices == ()
+    np.testing.assert_array_equal(window.query_mask, [True, True, True, True, True])
+    np.testing.assert_array_equal(window.reset_mask, [True, False, False, False, False])
+
+
 def test_windows_expose_burn_in_train_padding_and_detach_contract(tmp_path):
     data_dir = tmp_path / "data"
     for step_idx in range(4):

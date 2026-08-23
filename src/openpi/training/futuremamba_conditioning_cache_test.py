@@ -15,6 +15,9 @@ def _identity(**overrides):
         "base_checkpoint_checksum": "base-sha256",
         "base_weights_checksum": "live-base-sha256",
         "assets_checksum": "assets-sha256",
+        "dataset_checksum": "dataset-sha256",
+        "task_suite": "Counting",
+        "query_stride": 16,
         "tokenizer_config_checksum": "tokenizer-sha256",
         "preprocessing_checksum": "preprocess-sha256",
         "layer_mapping": [0, 1, 2],
@@ -97,6 +100,18 @@ def test_base_checkpoint_checksum_mismatch_is_rejected(tmp_path: Path):
             expected_identity=_identity(base_checkpoint_checksum="different"),
         )
 
+
+def test_dataset_and_query_identity_mismatches_are_rejected(tmp_path: Path):
+    writer = _writer(tmp_path)
+    writer.write_episode(_entry())
+    writer.commit()
+
+    for field, value in (("dataset_checksum", "different"), ("task_suite", "other"), ("query_stride", 8)):
+        with pytest.raises(ValueError, match=field):
+            cache.ConditioningCacheReader(
+                tmp_path / "cache",
+                expected_identity=_identity(**{field: value}),
+            )
 
 def test_manifest_identity_mismatch_is_rejected_by_field_name(tmp_path: Path):
     writer = _writer(tmp_path)

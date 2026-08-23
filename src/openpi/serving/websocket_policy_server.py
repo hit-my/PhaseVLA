@@ -67,6 +67,21 @@ class WebsocketPolicyServer:
                     )
                     prev_total_time = time.monotonic() - start_time
                     continue
+                if isinstance(obs, dict) and obs.get("__futuremamba_memory_only__") is True:
+                    memory_payload = dict(obs)
+                    memory_payload.pop("__futuremamba_memory_only__", None)
+                    update_memory = getattr(policy, "update_memory_only", None)
+                    if not callable(update_memory):
+                        raise RuntimeError("policy does not support memory-only updates")
+                    update_time = time.monotonic()
+                    response = update_memory(memory_payload)
+                    response["memory_update_time_ms"] = (
+                        time.monotonic() - update_time
+                    ) * 1000
+                    await websocket.send(packer.pack(response))
+                    prev_total_time = time.monotonic() - start_time
+                    continue
+
                 if isinstance(obs, dict) and obs.get("add_buffer") is True:
                     buffer_time = time.monotonic()
                     add_buffer = getattr(policy, "add_buffer", None)

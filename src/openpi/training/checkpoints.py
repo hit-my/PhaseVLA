@@ -90,6 +90,7 @@ def restore_state(
     checkpoint_manager: ocp.CheckpointManager,
     state: training_utils.TrainState,
     data_loader: _data_loader.DataLoader,
+    state_sharding=None,
     step: int | None = None,
 ) -> training_utils.TrainState:
     del data_loader
@@ -97,12 +98,39 @@ def restore_state(
     with at.disable_typechecking():
         # Split params that can be used for inference into a separate item.
         train_state, params = _split_params(state)
+        restore_kwargs = None
+        if state_sharding is not None:
+            train_state_sharding, params_sharding = _split_params(state_sharding)
+
+            def restore_arg(value, target_sharding):
+                if hasattr(value, "shape"):
+                    return ocp.ArrayRestoreArgs(
+                        sharding=target_sharding,
+                        global_shape=tuple(value.shape),
+                    )
+                return ocp.RestoreArgs()
+
+            restore_kwargs = {
+                "train_state": {
+                    "restore_args": jax.tree.map(
+                        restore_arg, train_state, train_state_sharding
+                    )
+                },
+                "params": {
+                    "restore_args": {
+                        "params": jax.tree.map(
+                            restore_arg, params, params_sharding
+                        )
+                    }
+                },
+            }
         restored = checkpoint_manager.restore(
             step,
             items={
                 "train_state": train_state,
                 "params": {"params": params},
             },
+            restore_kwargs=restore_kwargs,
         )
     return _merge_params(restored["train_state"], restored["params"])
 

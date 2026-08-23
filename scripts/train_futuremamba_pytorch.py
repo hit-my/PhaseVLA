@@ -119,6 +119,7 @@ def run_training(
     resume: bool = False,
     device: torch.device | str | None = None,
     metric_logger=None,
+    terminal_monitor_enabled: bool = False,
 ) -> TrainingResult:
     if num_train_steps <= 0:
         raise ValueError("num_train_steps must be positive")
@@ -179,6 +180,28 @@ def run_training(
                 "train/data_iterator_step": data_iterator_step,
             }
         )
+        if terminal_monitor_enabled and (
+            completed_step % log_interval == 0 or completed_step == num_train_steps
+        ):
+            cuda_devices = [torch.cuda.current_device()] if device.type == "cuda" else []
+            was_training = model.training
+            with torch.random.fork_rng(devices=cuda_devices):
+                torch.manual_seed(10_000_000)
+                if device.type == "cuda":
+                    torch.cuda.manual_seed_all(10_000_000)
+                model.eval()
+                try:
+                    terminal_monitor = model.compute_cached_terminal_monitor_loss(batch)
+                finally:
+                    model.train(was_training)
+            if not torch.isfinite(terminal_monitor):
+                raise FloatingPointError(
+                    f"terminal monitor loss must be finite at step {completed_step}"
+                )
+            metrics["train/terminal_monitor_loss"] = float(terminal_monitor.cpu().item())
+            metrics["train/terminal_monitor_step"] = completed_step
+            if metrics["train/loss"] != metrics["train/flow_loss"]:
+                raise RuntimeError("terminal monitor experiment must optimize flow loss only")
         if metric_logger is not None:
             metric_logger(metrics, completed_step)
         if completed_step % log_interval == 0 or completed_step == num_train_steps:
@@ -343,7 +366,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--log-interval", type=int)
     parser.add_argument("--pytorch-training-precision", choices=("float32", "bfloat16"))
     parser.add_argument("--wandb-enabled", choices=("true", "false"))
+    parser.add_argument(
+        "--terminal-monitor-enabled", choices=("true", "false"), default="false"
+    )
     parser.add_argument("--episode-data-dir", type=Path)
+    parser.add_argument("--conditioning-cache-dir", type=Path)
     parser.add_argument("--robomme-dataset-checksum")
     parser.add_argument("--robomme-task-suite")
     parser.add_argument("--overwrite", action="store_true")
@@ -373,6 +400,13 @@ def apply_cli_overrides(train_config: _config.TrainConfig, args: argparse.Namesp
             raise ValueError("--episode-data-dir is only valid for RoboMME configs")
         replacements["data"] = dataclasses.replace(
             train_config.data, episode_data_dir=str(args.episode_data_dir)
+        )
+    if args.conditioning_cache_dir is not None:
+        if not isinstance(train_config.data, _config.RoboMMEDataConfig):
+            raise ValueError("--conditioning-cache-dir is only valid for RoboMME configs")
+        replacements["data"] = dataclasses.replace(
+            replacements.get("data", train_config.data),
+            conditioning_cache_dir=str(args.conditioning_cache_dir),
         )
     if args.robomme_dataset_checksum is not None or args.robomme_task_suite is not None:
         if not isinstance(train_config.data, _config.RoboMMEDataConfig):
@@ -407,6 +441,15 @@ def main(argv: list[str] | None = None) -> int:
         shutil.rmtree(checkpoint_root)
     model = load_training_model(train_config, device)
     metadata = build_checkpoint_metadata(model, train_config.model)
+    terminal_monitor_enabled = args.terminal_monitor_enabled == "true"
+    metadata["memory_update_stride"] = train_config.episode_data.query_stride
+    metadata["train_query_stride"] = (
+        train_config.episode_data.train_query_stride or train_config.episode_data.query_stride
+    )
+    metadata["terminal_monitor_only"] = terminal_monitor_enabled
+    metadata["terminal_monitor_interval"] = (
+        train_config.log_interval if terminal_monitor_enabled else None
+    )
     data = create_training_data(train_config, shuffle=True)
     optimizer_config = train_config.optimizer
     schedule = train_config.lr_schedule
@@ -432,6 +475,7 @@ def main(argv: list[str] | None = None) -> int:
             resume=args.resume,
             device=device,
             metric_logger=metric_logger,
+            terminal_monitor_enabled=terminal_monitor_enabled,
         )
     finally:
         if wandb_run is not None:

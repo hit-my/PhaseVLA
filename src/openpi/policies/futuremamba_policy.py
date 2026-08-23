@@ -96,6 +96,27 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
         outputs["policy_timing"] = {"infer_ms": model_time * 1000}
         return outputs
 
+    def update_memory_only(self, obs: dict[str, Any]) -> dict[str, Any]:
+        """Advance Mamba from an intermediate observation without producing actions."""
+        inputs = self._input_transform(dict(obs))
+        inputs.pop("executed_actions", None)
+        inputs.pop("executed_action_mask", None)
+        batched_inputs = _tree_to_torch_batch(inputs, self._device)
+        observation = _model.Observation.from_dict(batched_inputs)
+        with torch.no_grad():
+            next_memory = self._model.update_memory_with_observation(
+                observation, self._memory_state
+            )
+        self._memory_state = self._validate_memory(
+            next_memory, expected_batch=1, device=self._device
+        )
+        self._query_count += 1
+        return {
+            "memory_update_finished": True,
+            "memory_state_bytes": _memory_nbytes(self._memory_state),
+            "query_count": self._query_count,
+        }
+
     def add_buffer(self, payload: dict[str, Any]) -> dict[str, Any]:
         diagnostic = _validate_buffer_payload(payload)
         self._buffer_diagnostics.append(diagnostic)

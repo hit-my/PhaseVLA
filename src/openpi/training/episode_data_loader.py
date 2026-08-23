@@ -24,6 +24,7 @@ class EpisodeBatch:
     reset_mask: np.ndarray
     episode_index: np.ndarray
     train_query_mask: np.ndarray | None = None
+    conditioning_cache: dict[str, np.ndarray] | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -37,14 +38,16 @@ class TorchEpisodeBatch:
     reset_mask: torch.BoolTensor
     episode_index: torch.Tensor
     train_query_mask: torch.BoolTensor | None = None
+    conditioning_cache: dict[str, torch.Tensor] | None = None
 
 
 def episode_batch_to_torch(batch: EpisodeBatch | TorchEpisodeBatch, device: torch.device | str) -> TorchEpisodeBatch:
     device = torch.device(device)
     train_query_mask = batch.query_mask if batch.train_query_mask is None else batch.train_query_mask
+    cached_observation = batch.observation if batch.conditioning_cache is not None else None
     if isinstance(batch, TorchEpisodeBatch):
         converted = TorchEpisodeBatch(
-            observation=_observation_to_torch(batch.observation, device),
+            observation=cached_observation or _observation_to_torch(batch.observation, device),
             actions=_tensor_to_torch(batch.actions, device, dtype=torch.float32),
             action_mask=_tensor_to_torch(batch.action_mask, device, dtype=torch.bool),
             executed_actions=_tensor_to_torch(batch.executed_actions, device, dtype=torch.float32),
@@ -53,10 +56,11 @@ def episode_batch_to_torch(batch: EpisodeBatch | TorchEpisodeBatch, device: torc
             reset_mask=_tensor_to_torch(batch.reset_mask, device, dtype=torch.bool),
             episode_index=_tensor_to_torch(batch.episode_index, device, dtype=torch.int64),
             train_query_mask=_tensor_to_torch(train_query_mask, device, dtype=torch.bool),
+            conditioning_cache=_tree_to_torch(batch.conditioning_cache, device) if batch.conditioning_cache is not None else None,
         )
     else:
         converted = TorchEpisodeBatch(
-            observation=_observation_to_torch(batch.observation, device),
+            observation=cached_observation or _observation_to_torch(batch.observation, device),
             actions=_tensor_to_torch(batch.actions, device, dtype=torch.float32),
             action_mask=_tensor_to_torch(batch.action_mask, device, dtype=torch.bool),
             executed_actions=_tensor_to_torch(batch.executed_actions, device, dtype=torch.float32),
@@ -65,6 +69,7 @@ def episode_batch_to_torch(batch: EpisodeBatch | TorchEpisodeBatch, device: torc
             reset_mask=_tensor_to_torch(batch.reset_mask, device, dtype=torch.bool),
             episode_index=_tensor_to_torch(batch.episode_index, device, dtype=torch.int64),
             train_query_mask=_tensor_to_torch(train_query_mask, device, dtype=torch.bool),
+            conditioning_cache=_tree_to_torch(batch.conditioning_cache, device) if batch.conditioning_cache is not None else None,
         )
     _validate_torch_episode_batch(converted)
     return converted
@@ -134,9 +139,7 @@ def _validate_torch_episode_batch(batch: TorchEpisodeBatch) -> None:
         raise ValueError(f"train_query_mask must have shape {(batch_size, num_queries)}")
     if torch.any(batch.train_query_mask & ~batch.query_mask):
         raise ValueError("train_query_mask must be a subset of query_mask")
-    train_started = torch.cumsum(batch.train_query_mask.long(), dim=1) > 0
-    if torch.any(train_started & batch.query_mask & ~batch.train_query_mask):
-        raise ValueError("train_query_mask must be a contiguous suffix of valid queries")
+    # Sparse train_query_mask is intentional when intermediate queries update memory only.
     if torch.any(batch.train_query_mask.long().sum(dim=1) == 0):
         raise ValueError("episode batch contains no training queries")
     if tuple(batch.observation.state.shape[:2]) != (batch_size, num_queries):
@@ -173,6 +176,7 @@ class EpisodeExample:
     executed_action_mask: np.ndarray
     episode_index: int
     train_query_mask: np.ndarray | None = None
+    conditioning_cache: dict[str, np.ndarray] | None = None
 
 
 class _RandomAccessDataset(Protocol):
@@ -403,6 +407,38 @@ class EpisodeCollator:
         reset_mask = np.zeros((len(episodes), max_queries), dtype=np.bool_)
         episode_index = np.asarray([episode.episode_index for episode in episodes], dtype=np.int32)
         train_query_mask = np.zeros((len(episodes), max_queries), dtype=np.bool_)
+        cache_keys = None
+        if any(episode.conditioning_cache is not None for episode in episodes):
+            if not all(episode.conditioning_cache is not None for episode in episodes):
+                raise ValueError("conditioning_cache must be present for every episode in a batch")
+            first_cache = episodes[0].conditioning_cache
+            assert first_cache is not None
+            cache_keys = {}
+            cache_variable_axes = {}
+            for key, first_value in first_cache.items():
+                first_array = np.asarray(first_value)
+                if first_array.ndim < 2:
+                    raise ValueError(f"conditioning cache key {key!r} must include query and feature dimensions")
+                arrays = [np.asarray(episode.conditioning_cache[key]) for episode in episodes]
+                if any(array.ndim != first_array.ndim for array in arrays):
+                    raise ValueError(f"conditioning cache key {key!r} has inconsistent ranks")
+                varying_axes = [
+                    axis
+                    for axis in range(1, first_array.ndim)
+                    if len({array.shape[axis] for array in arrays}) > 1
+                ]
+                if len(varying_axes) > 1:
+                    raise ValueError(f"conditioning cache key {key!r} has multiple variable feature axes")
+                variable_axis = varying_axes[0] if varying_axes else None
+                cache_variable_axes[key] = variable_axis
+                feature_shape = list(first_array.shape[1:])
+                if variable_axis is not None:
+                    feature_index = variable_axis - 1
+                    feature_shape[feature_index] = max(array.shape[variable_axis] for array in arrays)
+                cache_keys[key] = np.zeros(
+                    (len(episodes), max_queries, *feature_shape),
+                    dtype=first_array.dtype,
+                )
 
         padded_observations = []
         for batch_index, episode in enumerate(episodes):
@@ -420,6 +456,31 @@ class EpisodeCollator:
             if episode_train_mask.shape != (num_queries,):
                 raise ValueError(f"episode train_query_mask must have shape {(num_queries,)}")
             train_query_mask[batch_index, :num_queries] = episode_train_mask
+            if cache_keys is not None:
+                assert episode.conditioning_cache is not None
+                for key, value in episode.conditioning_cache.items():
+                    array = np.asarray(value)
+                    if array.shape[0] != num_queries:
+                        raise ValueError(f"conditioning cache key {key!r} query dimension mismatch")
+                    target = cache_keys[key][batch_index, :num_queries]
+                    variable_axis = cache_variable_axes[key]
+                    if variable_axis is None:
+                        if array.shape[1:] != target.shape[1:]:
+                            raise ValueError(f"conditioning cache key {key!r} feature shape mismatch")
+                        target[...] = array
+                    else:
+                        target_shape = list(target.shape)
+                        if any(
+                            array.shape[axis] != target_shape[axis]
+                            for axis in range(1, array.ndim)
+                            if axis != variable_axis
+                        ):
+                            raise ValueError(f"conditioning cache key {key!r} fixed feature shape mismatch")
+                        if array.shape[variable_axis] > target_shape[variable_axis]:
+                            raise ValueError(f"conditioning cache key {key!r} variable feature shape mismatch")
+                        target_slices = [slice(None)] * target.ndim
+                        target_slices[variable_axis] = slice(0, array.shape[variable_axis])
+                        target[tuple(target_slices)] = array
             padded_observations.append(_pad_observation_queries(episode.observation, max_queries))
 
         return EpisodeBatch(
@@ -432,6 +493,7 @@ class EpisodeCollator:
             reset_mask=reset_mask,
             episode_index=episode_index,
             train_query_mask=train_query_mask,
+            conditioning_cache=cache_keys,
         )
 
 

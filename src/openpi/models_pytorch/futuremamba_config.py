@@ -40,6 +40,7 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
     memory: MambaMemoryConfig = dataclasses.field(default_factory=MambaMemoryConfig)
     memory_backend: MemoryBackend = "mamba2"
     progress_depth: int = 6
+    progress_layer_mapping: tuple[int, ...] | None = None
     handoff_ratio: float = 0.2
     num_denoise_steps: int = 10
     execution_horizon: int = 16
@@ -120,9 +121,26 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
             raise ValueError(
                 f"progress_depth must be in [1, {action_expert_config.depth}], got {self.progress_depth}"
             )
-        if self.memory.d_model != action_expert_config.width:
+        if self.progress_layer_mapping is not None:
+            mapping = tuple(int(layer) for layer in self.progress_layer_mapping)
+            if len(mapping) != self.progress_depth:
+                raise ValueError("progress_layer_mapping length must equal progress_depth")
+            if mapping[0] != 0 or mapping[-1] != action_expert_config.depth - 1:
+                raise ValueError("progress_layer_mapping must cover first and last Action Expert layers")
+            if any(layer < 0 or layer >= action_expert_config.depth for layer in mapping):
+                raise ValueError("progress_layer_mapping contains an out-of-range layer")
+            if any(left >= right for left, right in zip(mapping[:-1], mapping[1:], strict=True)):
+                raise ValueError("progress_layer_mapping must be strictly increasing")
+        if self.memory.d_model <= 0:
+            raise ValueError(f"memory d_model must be positive, got {self.memory.d_model}")
+        if self.memory.depth <= 0 or self.memory.d_state <= 0:
+            raise ValueError("memory depth and d_state must be positive")
+        if self.memory.expand <= 0 or self.memory.headdim <= 0:
+            raise ValueError("memory expand and headdim must be positive")
+        if (self.memory.d_model * self.memory.expand) % self.memory.headdim != 0:
             raise ValueError(
-                f"memory d_model ({self.memory.d_model}) must match action expert width ({action_expert_config.width})"
+                "memory d_model * expand must be divisible by headdim, "
+                f"got {self.memory.d_model} * {self.memory.expand} and {self.memory.headdim}"
             )
 
     @property
@@ -143,6 +161,8 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
     @property
     def resolved_progress_layer_indices(self) -> tuple[int, ...]:
         action_depth = _gemma.get_config(self.action_expert_variant).depth
+        if self.progress_layer_mapping is not None:
+            return tuple(self.progress_layer_mapping)
         if self.progress_depth == 1:
             return (0,)
         if self.progress_depth == action_depth:

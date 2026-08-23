@@ -87,6 +87,44 @@ def _batch_from_fake_episode_lengths(episode_lengths=(12, 7)):
     return _episode_loader.EpisodeCollator()(episodes)
 
 
+def test_episode_collator_pads_variable_prefix_axes_for_conditioning_cache():
+    def episode(prefix_length: int) -> _episode_loader.EpisodeExample:
+        queries = 2
+        observation = _episode_loader._stack_observations(
+            [
+                _episode_loader._model.Observation.from_dict(
+                    {
+                        "image": {},
+                        "image_mask": {},
+                        "state": np.zeros((2,), dtype=np.float32),
+                    }
+                )
+                for _ in range(queries)
+            ]
+        )
+        cache = {
+            "last_valid_hidden": np.zeros((queries, 4), dtype=np.float32),
+            "prefix_mask": np.ones((queries, prefix_length), dtype=np.bool_),
+            "action_expert_keys": np.zeros((queries, 2, 3, prefix_length, 5), dtype=np.float32),
+            "action_expert_values": np.zeros((queries, 2, 3, prefix_length, 5), dtype=np.float32),
+        }
+        return _episode_loader.EpisodeExample(
+            observation=observation,
+            actions=np.zeros((queries, ACTION_HORIZON, ACTION_DIM), dtype=np.float32),
+            action_mask=np.ones((queries, ACTION_HORIZON), dtype=np.bool_),
+            executed_actions=np.zeros((queries, QUERY_STRIDE, ACTION_DIM), dtype=np.float32),
+            executed_action_mask=np.ones((queries, QUERY_STRIDE), dtype=np.bool_),
+            episode_index=prefix_length,
+            conditioning_cache=cache,
+        )
+
+    batch = _episode_loader.EpisodeCollator()([episode(7), episode(11)])
+    assert batch.conditioning_cache is not None
+    assert batch.conditioning_cache["prefix_mask"].shape == (2, 2, 11)
+    assert batch.conditioning_cache["action_expert_keys"].shape == (2, 2, 2, 3, 11, 5)
+    np.testing.assert_array_equal(batch.conditioning_cache["prefix_mask"][0, 0], [True] * 7 + [False] * 4)
+
+
 def test_episode_batch_collates_full_episodes_with_query_padding_and_masks():
     batch = _batch_from_fake_episode_lengths()
 

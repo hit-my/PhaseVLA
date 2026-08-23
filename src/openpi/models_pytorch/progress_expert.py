@@ -223,7 +223,12 @@ class ProgressExpertPytorch(nn.Module):
         self.action_dim = int(config.action_dim)
         action_config = _gemma.get_config(config.action_expert_variant)
         progress_depth = int(getattr(config, "progress_depth", default_progress_depth(action_config.depth)))
-        self.layer_mapping = make_layer_mapping(action_config.depth, progress_depth)
+        configured_mapping = getattr(config, "progress_layer_mapping", None)
+        self.layer_mapping = (
+            tuple(configured_mapping)
+            if configured_mapping is not None
+            else make_layer_mapping(action_config.depth, progress_depth)
+        )
         self.width = action_config.width
         self.num_key_value_heads = action_config.num_kv_heads
         self.head_dim = action_config.head_dim

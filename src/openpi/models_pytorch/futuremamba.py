@@ -205,6 +205,21 @@ class FutureMambaPytorch(nn.Module):
         }
         return x_t, next_memory_state, diagnostics
 
+    @torch.no_grad()
+    def update_memory_with_observation(
+        self, observation, memory_state: MemorySnapshot
+    ) -> MemorySnapshot:
+        """Advance recurrent memory from one observation without running the Progress Expert."""
+        batch_size = int(observation.state.shape[0])
+        if not isinstance(memory_state, MemorySnapshot) or memory_state.batch_size != batch_size:
+            raise ValueError("memory-only update state does not match observation batch")
+        frozen = self._detached_frozen_prefix(
+            self.base.extract_prefix_context(observation, train=False)
+        )
+        last_vlm = self.base.last_valid_prefix(frozen).detach()
+        _, next_memory_state = self.futuremamba.compute_memory_token(last_vlm, memory_state)
+        return next_memory_state
+
     def compute_episode_loss(
         self,
         batch,
@@ -252,6 +267,18 @@ class FutureMambaPytorch(nn.Module):
         terminal_weight = float(getattr(self.config, "terminal_loss_weight", 0.0))
         handoff_weight = float(getattr(self.config, "handoff_loss_weight", 0.0))
         boundary_weight = float(getattr(self.config, "boundary_loss_weight", 0.0))
+        conditioning_cache = batch.conditioning_cache
+        if conditioning_cache is not None and (terminal_weight or handoff_weight or boundary_weight):
+            raise ValueError("conditioning cache training currently supports flow loss only")
+        if conditioning_cache is not None:
+            return self._compute_cached_flow_loss(
+                batch,
+                safe_actions=safe_actions,
+                safe_noise=safe_noise,
+                x_t=x_t,
+                target_velocity=target_velocity,
+                time=time,
+            )
         terminal_error_steps = torch.zeros_like(flow_error)
         handoff_error_steps = torch.zeros_like(flow_error)
         boundary_error_steps = torch.zeros_like(flow_error)
@@ -279,28 +306,38 @@ class FutureMambaPytorch(nn.Module):
                 observation_batch = _slice_episode_observation_range(
                     batch.observation, episode_index, query_start, query_stop
                 )
-                with torch.no_grad():
-                    *_, processed_states = self.base._preprocess_observation(observation_batch, train=train)
-                    frozen_batch = self._detached_frozen_prefix(
-                        self.base.encode_frozen_prefix(observation_batch, train=train)
-                    )
-                    last_vlm_batch = self.base.last_valid_prefix(frozen_batch).detach()
-                    prefix_cache_batch = PrefixKVView.from_cache(
-                        frozen_batch.kv_cache,
-                        self.futuremamba.progress_layer_indices,
-                        frozen_batch.pad_mask,
-                    )
+                if conditioning_cache is None:
+                    with torch.no_grad():
+                        *_, processed_states = self.base._preprocess_observation(observation_batch, train=train)
+                        frozen_batch = self._detached_frozen_prefix(
+                            self.base.encode_frozen_prefix(observation_batch, train=train)
+                        )
+                        last_vlm_batch = self.base.last_valid_prefix(frozen_batch).detach()
+                        prefix_cache_batch = PrefixKVView.from_cache(
+                            frozen_batch.kv_cache,
+                            self.futuremamba.progress_layer_indices,
+                            frozen_batch.pad_mask,
+                        )
                 for local_index, query_index in enumerate(range(query_start, query_stop)):
                     if bool(batch.reset_mask[episode_index, query_index].item()):
                         memory_state = self.initial_memory_state(1, device, dtype)
-                    processed_state = processed_states[local_index : local_index + 1]
-                    frozen = FrozenPrefix(
-                        hidden=frozen_batch.hidden[local_index : local_index + 1],
-                        pad_mask=frozen_batch.pad_mask[local_index : local_index + 1],
-                        kv_cache=slice_cache_batch(frozen_batch.kv_cache, local_index),
-                    )
-                    last_vlm = last_vlm_batch[local_index : local_index + 1]
-                    prefix_cache = prefix_cache_batch.batch_slice(local_index)
+                    if conditioning_cache is None:
+                        processed_state = processed_states[local_index : local_index + 1]
+                        frozen = FrozenPrefix(
+                            hidden=frozen_batch.hidden[local_index : local_index + 1],
+                            pad_mask=frozen_batch.pad_mask[local_index : local_index + 1],
+                            kv_cache=slice_cache_batch(frozen_batch.kv_cache, local_index),
+                        )
+                        last_vlm = last_vlm_batch[local_index : local_index + 1]
+                        prefix_cache = prefix_cache_batch.batch_slice(local_index)
+                    else:
+                        cache_index = query_start + local_index
+                        last_vlm = conditioning_cache["last_valid_hidden"][episode_index, cache_index : cache_index + 1]
+                        prefix_mask = conditioning_cache["prefix_mask"][episode_index, cache_index : cache_index + 1].to(torch.bool)
+                        keys = conditioning_cache["action_expert_keys"][episode_index, cache_index : cache_index + 1]
+                        values = conditioning_cache["action_expert_values"][episode_index, cache_index : cache_index + 1]
+                        layers = tuple((keys[:, layer], values[:, layer]) for layer in range(keys.shape[1]))
+                        prefix_cache = PrefixKVView.from_layers(layers, prefix_mask)
                     if bool(train_query_mask[episode_index, query_index].item()):
                         memory_token, memory_state = self.futuremamba.compute_memory_token(last_vlm, memory_state)
                     else:
@@ -438,6 +475,127 @@ class FutureMambaPytorch(nn.Module):
             "sample_time_min": sampled_time.min(),
             "sample_time_max": sampled_time.max(),
         }
+
+    def _compute_cached_flow_loss(
+        self,
+        batch,
+        *,
+        safe_actions: torch.Tensor,
+        safe_noise: torch.Tensor,
+        x_t: torch.Tensor,
+        target_velocity: torch.Tensor,
+        time: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        cache = batch.conditioning_cache
+        assert cache is not None
+        query_mask = batch.query_mask
+        train_query_mask = batch.train_query_mask
+        if train_query_mask is None:
+            raise ValueError("cached flow loss requires train_query_mask")
+        last_hidden = cache["last_valid_hidden"].to(dtype=self.futuremamba.vlm_memory_in_proj.weight.dtype)
+        memory_inputs = self.futuremamba.vlm_memory_in_proj(last_hidden)
+        memory_outputs, _ = self.futuremamba.memory_backend.forward_sequence(memory_inputs, query_mask=query_mask)
+        memory_tokens = self.futuremamba.memory_token_proj(
+            memory_outputs.to(dtype=self.futuremamba.memory_token_proj.weight.dtype)
+        ).unsqueeze(2)
+
+        selected = torch.nonzero(train_query_mask, as_tuple=False)
+        batch_indices = selected[:, 0]
+        query_indices = selected[:, 1]
+        prefix_mask = cache["prefix_mask"][batch_indices, query_indices].to(torch.bool)
+        keys = cache["action_expert_keys"][batch_indices, query_indices]
+        values = cache["action_expert_values"][batch_indices, query_indices]
+        layers = tuple((keys[:, layer], values[:, layer]) for layer in range(keys.shape[1]))
+        prefix_cache = PrefixKVView.from_layers(layers, prefix_mask)
+        predicted = self.futuremamba.forward_progress(
+            prefix_cache,
+            prefix_mask,
+            memory_tokens[batch_indices, query_indices],
+            x_t[batch_indices, query_indices],
+            time[batch_indices, query_indices],
+        )
+        error = torch.mean(
+            torch.square(predicted - target_velocity[batch_indices, query_indices]),
+            dim=-1,
+        )
+        action_mask = batch.action_mask[batch_indices, query_indices]
+        flow_loss = (error * action_mask).sum() / action_mask.sum().clamp_min(1)
+        zero = torch.zeros((), dtype=flow_loss.dtype, device=flow_loss.device)
+        sampled_time = time[train_query_mask]
+        return {
+            "loss": flow_loss,
+            "flow_loss": flow_loss,
+            "terminal_loss": zero,
+            "terminal_error": zero,
+            "handoff_loss": zero,
+            "handoff_error": zero,
+            "boundary_loss": zero,
+            "boundary_error": zero,
+            "sample_time_mean": sampled_time.mean(),
+            "sample_time_min": sampled_time.min(),
+            "sample_time_max": sampled_time.max(),
+        }
+
+    @torch.no_grad()
+    def compute_cached_terminal_monitor_loss(self, batch) -> torch.Tensor:
+        """Measure hybrid terminal MSE without adding it to the optimized loss."""
+        from openpi.training import episode_data_loader as _episode_loader
+
+        device = batch.actions.device if torch.is_tensor(batch.actions) else torch.device("cpu")
+        batch = _episode_loader.episode_batch_to_torch(batch, device)
+        observation_torch = _episode_loader._observation_to_torch(batch.observation, device)
+        cache = batch.conditioning_cache
+        if cache is None:
+            raise ValueError("terminal monitoring requires the conditioning cache")
+        query_mask = batch.query_mask
+        last_hidden = cache["last_valid_hidden"].to(dtype=self.futuremamba.vlm_memory_in_proj.weight.dtype)
+        memory_inputs = self.futuremamba.vlm_memory_in_proj(last_hidden)
+        memory_outputs, _ = self.futuremamba.memory_backend.forward_sequence(
+            memory_inputs, query_mask=query_mask
+        )
+        memory_tokens = self.futuremamba.memory_token_proj(
+            memory_outputs.to(dtype=self.futuremamba.memory_token_proj.weight.dtype)
+        ).unsqueeze(2)
+        num_steps = int(self.config.num_denoise_steps)
+        handoff_steps = _handoff_steps(float(self.config.handoff_ratio), num_steps)
+        dt = torch.tensor(-1.0 / num_steps, dtype=torch.float32, device=device)
+        errors = []
+        for episode_index in range(int(query_mask.shape[0])):
+            valid_queries = torch.nonzero(query_mask[episode_index], as_tuple=False).flatten()
+            if valid_queries.numel() == 0:
+                continue
+            query_index = int(valid_queries[0].item())
+            observation = _slice_episode_observation(observation_torch, episode_index, query_index)
+            *_, processed_state = self.base._preprocess_observation(observation, train=False)
+            frozen = self.base.encode_frozen_prefix(observation, train=False)
+            prefix_cache = PrefixKVView.from_cache(
+                frozen.kv_cache, self.futuremamba.progress_layer_indices, frozen.pad_mask
+            )
+            memory_token = memory_tokens[episode_index : episode_index + 1, query_index]
+            x_t = self.base.sample_noise(
+                (1, int(self.config.action_horizon), int(self.config.action_dim)), device
+            )
+            for step in range(num_steps):
+                timestep = torch.full(
+                    (1,), 1.0 + step * float(dt.item()), dtype=torch.float32, device=device
+                )
+                if step < handoff_steps:
+                    velocity = self.futuremamba.forward_progress(
+                        prefix_cache, frozen.pad_mask, memory_token, x_t, timestep
+                    )
+                else:
+                    velocity = self.base.denoise_step(
+                        processed_state, frozen.pad_mask, frozen.kv_cache, x_t, timestep
+                    )
+                x_t = x_t + dt.to(dtype=x_t.dtype) * velocity
+            target = batch.actions[episode_index : episode_index + 1, query_index]
+            per_step = torch.mean(torch.square(x_t - target), dim=-1)
+            action_mask = batch.action_mask[episode_index : episode_index + 1, query_index]
+            weights = action_mask.to(per_step.dtype)
+            errors.append((per_step * weights).sum() / weights.sum().clamp_min(1.0))
+        if not errors:
+            raise ValueError("terminal monitor batch contains no valid query")
+        return torch.stack(errors).mean()
 
     def _sample_high_noise_time(self, shape: tuple[int, ...], *, handoff_steps: int, device: torch.device) -> torch.Tensor:
         lower = 1.0 - (float(handoff_steps) / float(self.config.num_denoise_steps))

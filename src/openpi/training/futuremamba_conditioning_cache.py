@@ -20,6 +20,9 @@ _REQUIRED_IDENTITY_FIELDS = (
     "base_checkpoint_checksum",
     "base_weights_checksum",
     "assets_checksum",
+    "dataset_checksum",
+    "task_suite",
+    "query_stride",
     "tokenizer_config_checksum",
     "preprocessing_checksum",
     "layer_mapping",
@@ -245,8 +248,14 @@ def _validate_identity(identity: Mapping[str, Any] | None) -> dict[str, Any]:
         raise ValueError("conditioning cache identity layer_mapping must be non-empty integers")
     normalized["layer_mapping"] = list(layer_mapping)
     for field in _REQUIRED_IDENTITY_FIELDS:
-        if field not in ("layer_mapping",) and not isinstance(normalized[field], str):
-            raise ValueError(f"conditioning cache identity field {field} must be a string")
+        if field == "layer_mapping":
+            continue
+        if field == "query_stride":
+            if not isinstance(normalized[field], int) or normalized[field] <= 0:
+                raise ValueError("conditioning cache identity query_stride must be a positive integer")
+            continue
+        if not isinstance(normalized[field], str) or not normalized[field]:
+            raise ValueError(f"conditioning cache identity field {field} must be a non-empty string")
     return normalized
 
 

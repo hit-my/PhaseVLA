@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import json
 import pathlib
 import pickle
 from typing import Any
@@ -12,6 +13,7 @@ import numpy as np
 from openpi import transforms as _transforms
 from openpi.models import model as _model
 from openpi.training import episode_data_loader as _episode_loader
+from openpi.training.futuremamba_conditioning_cache import ConditioningCacheReader
 
 
 _DEFAULT_ACTION_HORIZON = 20
@@ -98,6 +100,8 @@ class RoboMMEEpisodeDataset:
         window_queries: int = 1,
         action_horizon: int = _DEFAULT_ACTION_HORIZON,
         query_stride: int = 1,
+        full_episodes: bool = False,
+        train_query_stride: int | None = None,
     ) -> None:
         if window_queries <= 0:
             raise ValueError(f"window_queries must be positive, got {window_queries}")
@@ -110,6 +114,13 @@ class RoboMMEEpisodeDataset:
         self._window_queries = int(window_queries)
         self._action_horizon = int(action_horizon)
         self._query_stride = int(query_stride)
+        self._full_episodes = bool(full_episodes)
+        self._train_query_stride = int(train_query_stride or query_stride)
+        if self._train_query_stride % self._query_stride != 0:
+            raise ValueError(
+                "train_query_stride must be a multiple of query_stride, "
+                f"got {self._train_query_stride} and {self._query_stride}"
+            )
         indexed_episodes = self._build_index(self._data_dir)
         self._episodes = tuple(
             _EpisodeIndex(epis_idx=episode.epis_idx, samples=episode.samples[:: self._query_stride])
@@ -118,7 +129,7 @@ class RoboMMEEpisodeDataset:
         self._windows = tuple(
             _WindowIndex(episode_index=episode_index, start_offset=start_offset)
             for episode_index, episode in enumerate(self._episodes)
-            for start_offset in range(len(episode.samples))
+            for start_offset in ([0] if self._full_episodes else range(len(episode.samples)))
         )
         self._sample_by_ref = {
             sample.ref: _readonly_copy(sample.payload) for episode in self._episodes for sample in episode.samples
@@ -158,14 +169,21 @@ class RoboMMEEpisodeDataset:
         window_index = self._windows[int(index)]
         episode = self._episodes[window_index.episode_index]
         start_offset = window_index.start_offset
-        window_samples = episode.samples[start_offset : start_offset + self._window_queries]
+        if self._full_episodes:
+            window_samples = episode.samples[start_offset:]
+            sequence_queries = len(window_samples)
+        else:
+            window_samples = episode.samples[start_offset : start_offset + self._window_queries]
+            sequence_queries = self._window_queries
+        if not window_samples:
+            raise ValueError(f"RoboMME episode {episode.epis_idx} produced an empty query sequence")
         first_sample = episode.samples[0]
         action_width = first_sample.action_width
 
-        actions = np.zeros((self._window_queries, self._action_horizon, action_width), dtype=np.float32)
-        action_mask = np.zeros((self._window_queries, self._action_horizon), dtype=np.bool_)
-        query_mask = np.zeros((self._window_queries,), dtype=np.bool_)
-        reset_mask = np.zeros((self._window_queries,), dtype=np.bool_)
+        actions = np.zeros((sequence_queries, self._action_horizon, action_width), dtype=np.float32)
+        action_mask = np.zeros((sequence_queries, self._action_horizon), dtype=np.bool_)
+        query_mask = np.zeros((sequence_queries,), dtype=np.bool_)
+        reset_mask = np.zeros((sequence_queries,), dtype=np.bool_)
 
         for query_index, sample in enumerate(window_samples):
             action_array = _actions_as_2d(sample.payload["actions"], sample.ref.path)
@@ -176,11 +194,10 @@ class RoboMMEEpisodeDataset:
 
         burn_in_samples = episode.samples[:start_offset]
         valid_queries = len(window_samples)
-        burn_in_reset_mask = tuple(index == 0 for index in range(len(burn_in_samples)))
         train_step_indices = tuple(sample.ref.step_idx for sample in window_samples) + (None,) * (
-            self._window_queries - valid_queries
+            sequence_queries - valid_queries
         )
-        padding_query_indices = tuple(range(valid_queries, self._window_queries))
+        padding_query_indices = tuple(range(valid_queries, sequence_queries))
         return RoboMMEEpisodeWindow(
             epis_idx=episode.epis_idx,
             start_step_idx=episode.samples[start_offset].ref.step_idx,
@@ -188,7 +205,7 @@ class RoboMMEEpisodeDataset:
             samples=tuple(_readonly_copy(sample.payload) for sample in window_samples),
             burn_in_refs=tuple(sample.ref for sample in burn_in_samples),
             burn_in_step_indices=tuple(sample.ref.step_idx for sample in burn_in_samples),
-            burn_in_reset_mask=burn_in_reset_mask,
+            burn_in_reset_mask=tuple(index == 0 for index in range(len(burn_in_samples))),
             train_step_indices=train_step_indices,
             train_query_slice=slice(0, valid_queries),
             padding_query_indices=padding_query_indices,
@@ -353,6 +370,30 @@ class RoboMMETransformedEpisodeDataset:
         self._transform = _transforms.compose(
             _episode_loader.make_transform_pipeline(data_config, skip_norm_stats=False)
         )
+        cache_dir = getattr(data_config, "conditioning_cache_dir", None)
+        self._conditioning_cache = None
+        if cache_dir:
+            manifest = pathlib.Path(cache_dir) / "manifest.json"
+            if not manifest.is_file():
+                raise ValueError(f"conditioning cache manifest is missing: {manifest}")
+            identity = json.loads(manifest.read_text(encoding="utf-8"))["identity"]
+            expected_mapping = list(getattr(model_config, "resolved_progress_layer_indices"))
+            if int(identity.get("query_stride", -1)) != self._windows.query_stride:
+                raise ValueError("conditioning cache query_stride does not match dataset")
+            if identity.get("layer_mapping") != expected_mapping:
+                raise ValueError("conditioning cache layer_mapping does not match model config")
+            if identity.get("dtype") != str(getattr(model_config, "dtype", "float32")):
+                raise ValueError("conditioning cache dtype does not match model config")
+            expected_assets = getattr(model_config, "base_assets_checksum", None)
+            if expected_assets is not None and identity.get("assets_checksum") != expected_assets:
+                raise ValueError("conditioning cache assets_checksum does not match model config")
+            expected_dataset = getattr(model_config, "robomme_dataset_checksum", None)
+            if expected_dataset is not None and identity.get("dataset_checksum") != expected_dataset:
+                raise ValueError("conditioning cache dataset_checksum does not match model config")
+            expected_task_suite = getattr(model_config, "robomme_task_suite", None)
+            if expected_task_suite is not None and identity.get("task_suite") != expected_task_suite:
+                raise ValueError("conditioning cache task_suite does not match model config")
+            self._conditioning_cache = ConditioningCacheReader(cache_dir, expected_identity=identity)
         self._executed_horizon = int(
             getattr(model_config, "execution_horizon", getattr(model_config, "executed_horizon", 0))
         )
@@ -368,7 +409,13 @@ class RoboMMETransformedEpisodeDataset:
         burn_in_queries = len(window.burn_in_refs)
         observations = []
         actions = []
-        for sample in all_samples:
+        cached_hidden = []
+        cached_masks = []
+        cached_keys = []
+        cached_values = []
+        cache_enabled = self._conditioning_cache is not None
+        refs = tuple(window.burn_in_refs) + tuple(window.sample_refs)
+        for sample, ref in zip(all_samples, refs, strict=True):
             transformed = self._transform(_mutable_copy(sample))
             observation_data = _episode_loader._copy_observation_fields(transformed)
             observation_data["image_mask"] = {
@@ -380,12 +427,49 @@ class RoboMMETransformedEpisodeDataset:
             if action.shape != expected:
                 raise ValueError(f"RoboMME transformed action target must have shape {expected}, got {action.shape}")
             actions.append(action)
+            if cache_enabled:
+                assert self._conditioning_cache is not None
+                entry = self._conditioning_cache.read_episode(f"e{ref.epis_idx}", query_id=int(ref.step_idx))
+                cached_hidden.append(entry.last_valid_hidden.float().numpy())
+                cached_masks.append(entry.prefix_mask.numpy())
+                cached_keys.append(entry.action_expert_kv[0].float().numpy())
+                cached_values.append(entry.action_expert_kv[1].float().numpy())
         if not observations or burn_in_queries == len(observations):
             raise ValueError(f"RoboMME episode window {index.__index__()} has no training queries")
         stacked_actions = np.stack(actions, axis=0)
         num_queries = len(observations)
-        train_query_mask = np.arange(num_queries) >= burn_in_queries
-        action_mask = np.broadcast_to(train_query_mask[:, None], (num_queries, self._windows.action_horizon)).copy()
+        training_target_mask = np.asarray(
+            [
+                index >= burn_in_queries
+                and (ref.step_idx - ref.episode_start_step_idx) % self._windows._train_query_stride == 0
+                for index, ref in enumerate(refs)
+            ],
+            dtype=np.bool_,
+        )
+        if not np.any(training_target_mask):
+            raise ValueError(f"RoboMME episode window {index.__index__()} has no stride-aligned training query")
+        train_query_mask = training_target_mask
+        action_mask = np.broadcast_to(
+            train_query_mask[:, None], (num_queries, self._windows.action_horizon)
+        ).copy()
+        conditioning_cache = None
+        if cache_enabled:
+            max_prefix = max(array.shape[2] for array in cached_keys)
+            key_shape = (len(cached_keys), cached_keys[0].shape[0], cached_keys[0].shape[1], max_prefix, cached_keys[0].shape[3])
+            padded_keys = np.zeros(key_shape, dtype=cached_keys[0].dtype)
+            padded_values = np.zeros(key_shape, dtype=cached_values[0].dtype)
+            padded_masks = np.zeros((len(cached_masks), max_prefix), dtype=np.bool_)
+            for cache_index, (keys, values, mask) in enumerate(zip(cached_keys, cached_values, cached_masks, strict=True)):
+                prefix_length = keys.shape[2]
+                padded_keys[cache_index, :, :, :prefix_length] = keys
+                padded_values[cache_index, :, :, :prefix_length] = values
+                padded_masks[cache_index, :prefix_length] = True
+            conditioning_cache = {
+                "last_valid_hidden": np.stack(cached_hidden, axis=0),
+                "prefix_mask": padded_masks,
+                "action_expert_keys": padded_keys,
+                "action_expert_values": padded_values,
+            }
         return _episode_loader.EpisodeExample(
             observation=_episode_loader._stack_observations(observations),
             actions=stacked_actions,
@@ -396,6 +480,7 @@ class RoboMMETransformedEpisodeDataset:
             executed_action_mask=np.zeros((num_queries, self._executed_horizon), dtype=np.bool_),
             episode_index=window.epis_idx,
             train_query_mask=train_query_mask,
+            conditioning_cache=conditioning_cache,
         )
 
 
@@ -410,5 +495,7 @@ def create_robomme_episode_dataset(data_config: Any, model_config: Any, episode_
         window_queries=int(getattr(episode_config, "window_queries", 1)),
         action_horizon=int(model_config.action_horizon),
         query_stride=int(getattr(episode_config, "query_stride", 1)),
+        full_episodes=bool(getattr(episode_config, "full_episodes", False)),
+        train_query_stride=getattr(episode_config, "train_query_stride", None),
     )
     return RoboMMETransformedEpisodeDataset(windows, data_config, model_config)

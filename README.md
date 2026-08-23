@@ -23,42 +23,46 @@ This is the standalone PhaseVLA research codebase, not a GitHub fork. OpenPI is 
 
 ### Current evaluation snapshot
 
-The current handover scope contains only three RoboMME Counting tasks: `BinFill`, `PickXtimes`, and `SwingXtimes`. The numbers below are the currently observed evidence, not a complete paper benchmark. They use the FutureMamba Mamba-2 checkpoint at step 5000 with training seed 42.
+The current formal RoboMME scope contains three Counting tasks: `BinFill`, `PickXtimes`, and `SwingXtimes`. The checkpoint sweep below uses one independently trained task-specific model per task (`handoff_ratio=0.4`, batch size 4, train seed 42). Every cell is a validation evaluation over episode IDs 0–49 with evaluation seed 7; aggregates describe the three task-specific models and are not a single shared-model evaluation.
 
-| Metric | Observed value |
-| --- | ---: |
-| In-scope RoboMME tasks evaluated | 3 / 3 |
-| In-scope episodes | 150 |
-| In-scope successful episodes | 53 / 150 |
-| In-scope success rate | 35.33% |
-| Saved evaluation videos | 150 |
+| Checkpoint | BinFill | PickXtimes | SwingXtimes | Aggregate |
+| ---: | ---: | ---: | ---: | ---: |
+| 500 | 17/50 (34%) | 13/50 (26%) | 20/50 (40%) | 50/150 (33.33%) |
+| 1000 | 14/50 (28%) | 16/50 (32%) | 22/50 (44%) | 52/150 (34.67%) |
+| 1500 | 14/50 (28%) | 15/50 (30%) | 24/50 (48%) | 53/150 (35.33%) |
+| 2000 | 15/50 (30%) | 13/50 (26%) | 27/50 (54%) | 55/150 (36.67%) |
+| 2500 | 15/50 (30%) | 12/50 (24%) | 27/50 (54%) | 54/150 (36.00%) |
 
-Per-task success rates and Wilson 95% confidence intervals:
+Best observed checkpoints are BinFill step 500 (34%), PickXtimes step 1000 (32%), and SwingXtimes step 2000/2500 (54%). The historical shared-model step-5000 snapshot (`17/15/21 = 53/150`) is retained as prior evidence but is not mixed with this task-specific sweep.
 
-| Task | Episodes | Successes | Success rate | Wilson 95% CI |
-| --- | ---: | ---: | ---: | ---: |
-| BinFill | 50 | 17 | 34.00% | 22.44–47.85% |
-| PickXtimes | 50 | 15 | 30.00% | 19.10–43.75% |
-| SwingXtimes | 50 | 21 | 42.00% | 29.38–55.77% |
+The PI0.5 LIBERO-Mem baseline checkpoint at step 10000 was also evaluated formally on all 10 tasks, 20 rollouts per task (200 total), with rollout seed 10001. It achieved `2/200` successes (1.00%, Wilson 95% CI 0.27–3.57%). The complete audited record is `/data/libero_mem_baseline/formal_10k_libero_mem_audited_summary.json`; the raw 200-rollout file has SHA256 `787e290aca11d1317bcc6106e8b9d69d5a76011b5d3f5f505704e15dd44f8375`.
 
-All other RoboMME tasks are outside the current handover scope and are not counted as failures or included in the aggregate above.
+### Current training status (2026-08-23)
 
-### Ablation and mechanism evidence
+- LIBERO-Mem PI0.5 is running at step 41000/50000 on four A100 80 GB GPUs (`batch_size=64`, `fsdp_devices=4`), resumed from the durable step-10000 checkpoint. Cross-topology Orbax restore now explicitly reshards FSDP2 checkpoint arrays onto the FSDP4 mesh. The next durable checkpoint target is step 45000.
+- Four exploratory FutureMamba runs were intentionally stopped on 2026-08-22. Their final logged steps were 1100/5000 for `handoff=0.4 + stride8 + batch4`, and 390/2500, 430/2500, and 540/2500 for the `handoff=0.7 + batch16` BinFill, PickXtimes, and SwingXtimes runs. These partial runs are not reported as final evaluation results.
+- No `train_futuremamba_pytorch.py` process is currently active. LIBERO-Mem training remains active and was not interrupted by stopping the FutureMamba jobs.
 
-- Real CUDA one-step training smoke tests completed for `progress_depth=4`, `progress_depth=9`, `flow-only`, `handoff_ratio=0.4`, and `handoff_ratio=0.0`.
-- CUDA metadata confirms RTX 5090, PyTorch 2.9.1+cu128, CUDA 12.8, Mamba-2, and the locked RoboMME dataset checksum.
-- A memory-backend mechanism experiment ran on RTX 5090 for GRU, LSTM, FrameStack, NoMemory, and Mamba-2; sequence outputs were finite and reset/snapshot/restore behavior was checked.
-- Memory-swap contract tests: 8 passed.
-- FutureMamba targeted tests: 108 passed; CUDA Mamba-2 tests: 34 passed.
+### Ablation, data-pipeline, and mechanism evidence
+
+- Full-episode variable-length RoboMME training, independent online/training query strides, sparse train-query masks, and observation-only memory updates are implemented.
+- Conditioning-cache production and consumption now support cached final hidden states, variable-length prefix masks, and Action Expert KV tensors with provenance checks.
+- Flow-only training supports a deterministic terminal-loss monitor that is logged but never added to the optimized objective.
+- Registered configurations cover light Progress Expert depth, handoff ratios, stride-8 online memory updates, batch-size variants, memory depth/width, and six-layer Progress Expert placement.
+- Real CUDA one-step smoke tests completed for `progress_depth=4`, `progress_depth=9`, `flow-only`, `handoff_ratio=0.4`, and `handoff_ratio=0.0`.
+- A memory-backend mechanism experiment covered GRU, LSTM, FrameStack, NoMemory, and Mamba-2; sequence outputs were finite and reset/snapshot/restore behavior was checked.
+- The latest 18 modified Python files compile successfully. Ten targeted test files covering training, checkpointing, conditioning-cache integrity, model/config, policy/server, episode collation, and RoboMME datasets pass: **143 passed in 11.42s**. This is a targeted regression run, not the project-wide suite.
 
 ### Known limitations
 
-- Full multi-seed evaluation on the three in-scope tasks has not been completed; the evidence above is smoke evidence rather than a final paper table.
-- The formal FLOPs, inference peak-memory, training peak-memory, and episode-timing profile has not been executed with a complete provenance-bound artifact set.
+- Full multi-seed formal evaluation has not been completed; all current RoboMME checkpoint results use train seed 42 and evaluation seed 7.
+- The handoff=0.7/batch16 and handoff=0.4/stride8/batch4 runs were stopped before completion and must not be treated as final ablations.
+- The audited LIBERO-Mem step-10000 baseline result is only 1.00%; later checkpoints still require the same 10-task × 20-rollout protocol before any training-progress claim can be made.
+- Formal FLOPs, peak-memory, and end-to-end episode-timing profiles with a single provenance-bound artifact set remain incomplete.
 - Real-robot validation is not included in the current evidence snapshot.
 - The RoboMME mirror configured in `.gitmodules` is private and requires access when initializing submodules.
 
-Local delivery artifacts are generated under `/tmp/futuremamba_delivery/`, including `evaluation_summary.json`, `evaluation_summary.csv`, `figure_success_rates.png`, `video_index.json`, `representative_montage.mp4`, and `final_acceptance.json`. These runtime artifacts are not committed to Git.
+Runtime evaluation artifacts and large checkpoints remain outside Git. Persisted result paths and hashes are recorded above and in `/data/phasevla/PhaseVLA-results.md`.
 
 ## 服务器迁移交接手册
 
@@ -370,39 +374,32 @@ environments/futuremamba/.venv/bin/python \
 
 `counting` 固定生成 `BinFill`、`PickXtimes`、`SwingXtimes` 三个 validation 任务，每个任务 50 个 episode，共 150 个 episode。`minimal` 仅用于迁移后的快速 smoke。评测记录必须保留 task、episode、train seed、eval seed、checkpoint、config、server 和 provenance 字段。
 
-### 12. 已有三任务结果、产物和待办
+### 12. 当前服务器结果、训练状态和待办
 
-当前已交付但不能误称为论文最终结果：
+截至 2026-08-23，已核验的正式结果包括：
 
-- Mamba-2 checkpoint：step 5000，train seed 42；
-- 三个 in-scope 任务共 150 个 episode、53 次成功、成功率 35.33%；
-- `BinFill`：50 个 episode、17 次成功、34.00%；
-- `PickXtimes`：50 个 episode、15 次成功、30.00%；
-- `SwingXtimes`：50 个 episode、21 次成功、42.00%；
-- 已完成 `progress_depth=4`、`progress_depth=9`、`flow-only`、`handoff_ratio=0.4`、`handoff_ratio=0.0` 的真实 CUDA 1-step smoke；
-- memory backend 机制实验覆盖 GRU、LSTM、FrameStack、NoMemory、Mamba-2；
-- memory-swap contract 8 项通过，FutureMamba 定向测试 108 项通过，CUDA Mamba-2 测试 34 项通过。
+- FutureMamba 三个任务特定模型的 step 500/1000/1500/2000/2500 checkpoint 均完成 50-episode validation 测评；完整表见 README 顶部。
+- 任务最佳结果为 `BinFill 17/50`（step 500）、`PickXtimes 16/50`（step 1000）、`SwingXtimes 27/50`（step 2000/2500）。
+- LIBERO-Mem PI0.5 step 10000 已完成 10 tasks × 20 rollouts，结果 `2/200`（1.00%，Wilson 95% CI `[0.27%, 3.57%]`），200 条记录覆盖完整且 identity violations 为 0。
+- LIBERO-Mem 当前运行在四张 A100 80 GB 上，最新核验 step 41000/50000；FutureMamba 的四个探索性训练进程已按要求停止，不再占用 GPU。
 
-交接后优先级：
+最新代码增量包括：全 episode 变长序列、独立 `train_query_stride`、稀疏训练 query mask、conditioning cache 及变长 prefix padding、memory-only 在线更新、terminal monitor、stride-8 在线评测参数、扩展实验配置，以及 FSDP2→FSDP4 checkpoint 显式重分片恢复。18 个变更 Python 文件已通过 `py_compile`；10 个定向测试文件共 `143 passed`。
 
-1. 复制或重新生成三任务所需的 RoboMME episode 数据、基座和 FutureMamba checkpoint；
-2. 通过 `BinFill`、`PickXtimes`、`SwingXtimes` 各至少 1 个单 episode smoke；
-3. 在三任务上完成正式多 seed 评测和消融；
-4. 在同一硬件/软件栈上完成 FLOPs、显存和 episode timing profile；
-5. 最后进行真机验证。其他 RoboMME 任务暂不纳入当前交接、统计或结论。
+后续优先级：
 
-当前可迁移的旧服务器产物：
+1. 等待 LIBERO-Mem step 45000/50000 checkpoint 完整落盘，并按相同 10×20 正式协议测评，禁止用训练 loss 代替成功率；
+2. 对 FutureMamba 正式结果补齐多 seed 重复实验；
+3. 在同一硬件/软件栈完成 FLOPs、训练/推理峰值显存和 episode timing profile；
+4. 最后进行真机验证。其他 RoboMME 任务仍不纳入当前统计或结论。
+
+主要持久化产物：
 
 ```text
-/tmp/futuremamba_delivery/
-/tmp/futuremamba_ablation_depth4_smoke/
-/tmp/futuremamba_ablation_depth9_smoke/
-/tmp/futuremamba_ablation_flowonly_smoke/
-/tmp/futuremamba_ablation_handoff04_smoke/
-/tmp/futuremamba_ablation_handoff_k0_smoke/
+/data/phasevla/formal_task_specific_handoff_0p4_batch4/
+/data/libero_mem_baseline/formal_10k_libero_mem_rollouts.jsonl
+/data/libero_mem_baseline/formal_10k_libero_mem_audited_summary.json
+/data/phasevla/PhaseVLA-results.md
 ```
-
-其中 delivery 汇总包含 `evaluation_summary.json`、`evaluation_summary.csv`、`figure_success_rates.png`、`video_index.json`、`representative_montage.mp4` 和 `final_acceptance.json`。这些路径属于旧服务器临时目录，迁移时应复制到新服务器持久化目录，不能假设新服务器仍能访问 `/tmp`。
 
 ### 13. 故障排查
 
@@ -444,6 +441,7 @@ For upstream installation, conversion, inference, and fine-tuning instructions, 
 ## Updates
 
 - [Aug 2026] PhaseVLA: added the PyTorch FutureMamba memory plugin, RoboMME evaluation pipeline, ablation contracts, and current evaluation snapshot.
+- [Aug 2026] Added full-episode/sparse-stride training, conditioning-cache integration, memory-only online updates, terminal monitoring, expanded RoboMME variants, and audited RoboMME/LIBERO-Mem progress records.
 - [Sept 2025] OpenPI released PyTorch support.
 - [Sept 2025] OpenPI released π₀.₅, an upgraded version of π₀ with better open-world generalization.
 - [Sept 2025] OpenPI added an [improved idle filter](examples/droid/README_train.md#data-filtering) for DROID training.

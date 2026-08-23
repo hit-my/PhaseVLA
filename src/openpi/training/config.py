@@ -101,13 +101,16 @@ class DataConfig:
     datasets: Sequence[droid_rlds_dataset.RLDSDataset] = ()
     # Directory containing official RoboMME execution-step pickle samples.
     episode_data_dir: str | None = None
+    conditioning_cache_dir: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
 class EpisodeDataConfig:
     query_stride: int = 5
     executed_horizon: int = 5
+    train_query_stride: int | None = None
     window_queries: int = 8
+    full_episodes: bool = False
     suite_weights: dict[str, float] = dataclasses.field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -115,8 +118,17 @@ class EpisodeDataConfig:
             raise ValueError(f"query_stride must be positive, got {self.query_stride}")
         if self.executed_horizon <= 0:
             raise ValueError(f"executed_horizon must be positive, got {self.executed_horizon}")
+        if self.train_query_stride is not None and (
+            self.train_query_stride <= 0 or self.train_query_stride % self.query_stride != 0
+        ):
+            raise ValueError(
+                "train_query_stride must be a positive multiple of query_stride, "
+                f"got train_query_stride={self.train_query_stride}, query_stride={self.query_stride}"
+            )
         if self.window_queries <= 0:
             raise ValueError(f"window_queries must be positive, got {self.window_queries}")
+        if not isinstance(self.full_episodes, bool):
+            raise ValueError("full_episodes must be bool")
         for suite, weight in self.suite_weights.items():
             if weight <= 0:
                 raise ValueError(f"suite weight for {suite!r} must be positive, got {weight}")
@@ -309,6 +321,7 @@ class LeRobotAlohaDataConfig(DataConfigFactory):
 class RoboMMEDataConfig(DataConfigFactory):
     """Official RoboMME observation/action mapping for simulation and inference."""
     episode_data_dir: str | None = None
+    conditioning_cache_dir: str | None = None
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
@@ -343,6 +356,7 @@ class RoboMMEDataConfig(DataConfigFactory):
             data_transforms=data_transforms,
             model_transforms=model_transforms,
             episode_data_dir=self.episode_data_dir,
+            conditioning_cache_dir=self.conditioning_cache_dir,
             action_sequence_keys=("actions",),
         )
 
@@ -659,6 +673,44 @@ _ROBOMME_FUTUREMAMBA_MODEL = futuremamba_pytorch_config.FutureMambaPytorchConfig
     robomme_policy_commit="ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
     robomme_benchmark_commit="856bc3a189d4172f3f47dbee4424d585f8d78db3",
 )
+def _robomme_futuremamba_requested_config(
+    name: str,
+    model: futuremamba_pytorch_config.FutureMambaPytorchConfig,
+    *,
+    query_stride: int = 16,
+    train_query_stride: int | None = None,
+) -> TrainConfig:
+    return TrainConfig(
+        name=name,
+        model=model,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=query_stride,
+            train_query_stride=train_query_stride,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=model.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=2,
+        num_train_steps=5000,
+        log_interval=10,
+        save_interval=5000,
+        keep_period=5000,
+        num_workers=0,
+    )
+
+
 def _robomme_futuremamba_ablation_config(
     name: str, model: futuremamba_pytorch_config.FutureMambaPytorchConfig
 ) -> TrainConfig:
@@ -682,6 +734,26 @@ def _robomme_futuremamba_ablation_config(
     )
 
 
+_ROBOMME_FUTUREMAMBA_LIGHT_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_MODEL,
+    progress_depth=4,
+    progress_layer_mapping=(0, 3, 10, 17),
+    handoff_ratio=0.3,
+    terminal_loss_weight=0.0,
+    terminal_loss_queries_per_episode=None,
+)
+_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P5_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    handoff_ratio=0.5,
+)
+_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P4_TERMINAL_MONITOR_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    handoff_ratio=0.4,
+)
+_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    handoff_ratio=0.7,
+)
 _ROBOMME_FUTUREMAMBA_DEPTH4_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, progress_depth=4)
 _ROBOMME_FUTUREMAMBA_DEPTH9_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, progress_depth=9)
 _ROBOMME_FUTUREMAMBA_HANDOFF_0P4_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, handoff_ratio=0.4)
@@ -690,6 +762,32 @@ _ROBOMME_FUTUREMAMBA_HANDOFF_K0_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA
 _ROBOMME_FUTUREMAMBA_HANDOFF_KN_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, handoff_ratio=1.0)
 _ROBOMME_FUTUREMAMBA_FLOW_ONLY_MODEL = dataclasses.replace(
     _ROBOMME_FUTUREMAMBA_MODEL, terminal_loss_weight=0.0
+)
+
+_ROBOMME_FUTUREMAMBA_HANDOFF_0P4_STRIDE8_BATCH4_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    handoff_ratio=0.4,
+)
+
+_ROBOMME_FUTUREMAMBA_QUERY8_OVERLAP_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    handoff_ratio=0.3,
+)
+_ROBOMME_FUTUREMAMBA_DEPTH4_HANDOFF_0P4_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    memory=dataclasses.replace(_ROBOMME_FUTUREMAMBA_LIGHT_MODEL.memory, depth=4),
+    handoff_ratio=0.4,
+)
+_ROBOMME_FUTUREMAMBA_DIM512_HANDOFF_0P4_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    memory=dataclasses.replace(_ROBOMME_FUTUREMAMBA_LIGHT_MODEL.memory, d_model=512),
+    handoff_ratio=0.4,
+)
+_ROBOMME_FUTUREMAMBA_PE6_HANDOFF_0P4_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+    progress_depth=6,
+    progress_layer_mapping=None,
+    handoff_ratio=0.4,
 )
 
 
@@ -788,6 +886,175 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
     ),
     TrainConfig(
+        name="futuremamba_robomme_mamba2_light_flow",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=16,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_LIGHT_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=2,
+        num_train_steps=1000,
+        log_interval=10,
+        save_interval=500,
+        keep_period=500,
+        num_workers=0,
+    ),
+    TrainConfig(
+        name="futuremamba_robomme_mamba2_light_flow_batch4",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=16,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_LIGHT_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=4,
+        num_train_steps=1000,
+        log_interval=10,
+        save_interval=500,
+        keep_period=500,
+        num_workers=0,
+    ),
+    TrainConfig(
+        name="futuremamba_robomme_mamba2_light_flow_handoff_0p5",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P5_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=16,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P5_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=2,
+        num_train_steps=1000,
+        log_interval=10,
+        save_interval=500,
+        keep_period=500,
+        num_workers=0,
+    ),
+    TrainConfig(
+        name="futuremamba_robomme_mamba2_light_flow_handoff_0p4_terminal_monitor",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P4_TERMINAL_MONITOR_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=16,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P4_TERMINAL_MONITOR_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=2,
+        num_train_steps=1000,
+        log_interval=10,
+        save_interval=500,
+        keep_period=500,
+        num_workers=0,
+    ),
+    TrainConfig(
+        name="futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=16,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=16,
+        num_train_steps=2500,
+        log_interval=10,
+        save_interval=500,
+        keep_period=500,
+        num_workers=0,
+    ),
+    TrainConfig(
+        name="futuremamba_robomme_mamba2_light_flow_stride8",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=8,
+            train_query_stride=16,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_LIGHT_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=2,
+        num_train_steps=1000,
+        log_interval=10,
+        save_interval=500,
+        keep_period=500,
+        num_workers=0,
+    ),
+    TrainConfig(
         name="futuremamba_robomme_mamba2",
         model=_ROBOMME_FUTUREMAMBA_MODEL,
         data=RoboMMEDataConfig(
@@ -825,6 +1092,53 @@ _CONFIGS = [
     ),
     _robomme_futuremamba_ablation_config(
         "futuremamba_robomme_mamba2_flow_only", _ROBOMME_FUTUREMAMBA_FLOW_ONLY_MODEL
+    ),
+    TrainConfig(
+        name="futuremamba_robomme_mamba2_light_flow_handoff_0p4_stride8_batch4",
+        model=_ROBOMME_FUTUREMAMBA_HANDOFF_0P4_STRIDE8_BATCH4_MODEL,
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        episode_data=EpisodeDataConfig(
+            query_stride=8,
+            train_query_stride=16,
+            executed_horizon=16,
+            window_queries=8,
+            full_episodes=True,
+        ),
+        weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+        pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+        freeze_filter=_ROBOMME_FUTUREMAMBA_HANDOFF_0P4_STRIDE8_BATCH4_MODEL.get_freeze_filter(),
+        ema_decay=None,
+        batch_size=4,
+        num_train_steps=5000,
+        log_interval=10,
+        save_interval=5000,
+        keep_period=5000,
+        num_workers=0,
+    ),
+    _robomme_futuremamba_requested_config(
+        "futuremamba_robomme_mamba2_light_flow_query8_overlap",
+        _ROBOMME_FUTUREMAMBA_QUERY8_OVERLAP_MODEL,
+        query_stride=8,
+        train_query_stride=16,
+    ),
+    _robomme_futuremamba_requested_config(
+        "futuremamba_robomme_mamba2_light_flow_depth4_handoff_0p4",
+        _ROBOMME_FUTUREMAMBA_DEPTH4_HANDOFF_0P4_MODEL,
+    ),
+    _robomme_futuremamba_requested_config(
+        "futuremamba_robomme_mamba2_light_flow_dim512_handoff_0p4",
+        _ROBOMME_FUTUREMAMBA_DIM512_HANDOFF_0P4_MODEL,
+    ),
+    _robomme_futuremamba_requested_config(
+        "futuremamba_robomme_mamba2_light_flow_pe6_handoff_0p4",
+        _ROBOMME_FUTUREMAMBA_PE6_HANDOFF_0P4_MODEL,
     ),
     #
     # Two-stage FutureMamba training configs.

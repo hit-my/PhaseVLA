@@ -181,6 +181,7 @@ class LauncherArgs:
     port: int = 8001
     obs_horizon: int = 16
     max_steps: int = 1300
+    memory_update_stride: int | None = None
     save_dir: str = "runs/evaluation"
     overwrite: bool = False
     use_history: bool = False
@@ -215,6 +216,7 @@ def main(args: LauncherArgs) -> None:
         port=args.port,
         obs_horizon=args.obs_horizon,
         max_steps=args.max_steps,
+        memory_update_stride=args.memory_update_stride,
         save_dir=args.save_dir,
         overwrite=args.overwrite,
         use_history=args.use_history,

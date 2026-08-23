@@ -145,6 +145,29 @@ class PrefixKVView:
             )
         return cls(layers=tuple(layers), valid_lengths=valid_lengths.detach().clone())
 
+    @classmethod
+    def from_layers(
+        cls,
+        layers: tuple[tuple[torch.Tensor, torch.Tensor], ...],
+        prefix_mask: torch.BoolTensor,
+    ) -> "PrefixKVView":
+        if prefix_mask.ndim != 2:
+            raise ValueError(f"prefix_mask must have shape [batch, prefix], got {tuple(prefix_mask.shape)}")
+        batch_size, source_prefix_len = prefix_mask.shape
+        valid_lengths = prefix_mask.long().sum(dim=-1)
+        max_valid_length = int(valid_lengths.max().item()) if valid_lengths.numel() else 0
+        packed = []
+        for layer_idx, (key, value) in enumerate(layers):
+            _validate_kv_tensor(key, "key", layer_idx, batch_size, source_prefix_len)
+            _validate_kv_tensor(value, "value", layer_idx, batch_size, source_prefix_len)
+            if key.shape != value.shape:
+                raise ValueError("prefix cache layer key/value shapes must match")
+            packed.append((
+                _pack_valid_prefix_tensor(key, prefix_mask, max_valid_length),
+                _pack_valid_prefix_tensor(value, prefix_mask, max_valid_length),
+            ))
+        return cls(layers=tuple(packed), valid_lengths=valid_lengths.detach().clone())
+
     def layer(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
         key, value = self.layers[index]
         return key.detach(), value.detach()
