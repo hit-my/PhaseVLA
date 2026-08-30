@@ -91,24 +91,39 @@ def create_trained_policy(
     is_futuremamba = isinstance(
         train_config.model, (_futuremamba_config.FutureMambaConfig, FutureMambaPytorchConfig)
     )
-    input_transforms = [
-        *repack_transforms.inputs,
-        transforms.InjectDefaultPrompt(default_prompt),
-        *data_config.data_transforms.inputs,
-        transforms.Normalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
-    ]
-    input_transforms.extend(data_config.model_transforms.inputs)
-
-    output_transforms = [
-        *data_config.model_transforms.outputs,
-        transforms.Unnormalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
-        *data_config.data_transforms.outputs,
-        *repack_transforms.outputs,
-    ]
+    action_only = False
+    if action_only:
+        action_stats = norm_stats["actions"]
+        input_transforms = [
+            transforms.NormalizeExecutedActions(action_stats, use_quantiles=True),
+        ]
+        output_transforms = [
+            transforms.Unnormalize({"actions": action_stats}, use_quantiles=True),
+            *data_config.data_transforms.outputs,
+            *repack_transforms.outputs,
+        ]
+    else:
+        input_transforms = [
+            *repack_transforms.inputs,
+            transforms.InjectDefaultPrompt(default_prompt),
+            *data_config.data_transforms.inputs,
+            transforms.Normalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
+            transforms.NormalizeExecutedActions(
+                norm_stats["actions"], use_quantiles=data_config.use_quantile_norm
+            ),
+        ]
+        input_transforms.extend(data_config.model_transforms.inputs)
+        output_transforms = [
+            *data_config.model_transforms.outputs,
+            transforms.Unnormalize(norm_stats, use_quantiles=data_config.use_quantile_norm),
+            *data_config.data_transforms.outputs,
+            *repack_transforms.outputs,
+        ]
     if is_futuremamba:
         futuremamba_sample_kwargs = dict(sample_kwargs or {})
         futuremamba_sample_kwargs.setdefault("num_steps", train_config.model.num_denoise_steps)
-        futuremamba_sample_kwargs.setdefault("handoff_ratio", train_config.model.handoff_ratio)
+        if not action_only:
+            futuremamba_sample_kwargs.setdefault("handoff_ratio", train_config.model.handoff_ratio)
         return _futuremamba_policy.FutureMambaPolicy(
             model,
             transforms=input_transforms,
@@ -152,6 +167,9 @@ def _load_futuremamba_bundle(
                 f"expected {expected_value!r}, got {identity[field]!r}"
             )
 
+    if identity.get("architecture") == "action_history_mamba_progress_expert":
+        raise ValueError("standalone action-only FutureMamba bundles are incompatible with PE-to-AE handoff")
+
     base_uri = identity["base_checkpoint_uri"]
     if not isinstance(base_uri, str) or not base_uri:
         raise ValueError("FutureMamba bundle base_checkpoint_uri must be a non-empty string")
@@ -181,10 +199,8 @@ def _load_futuremamba_bundle(
         actual_assets_checksum = _directory_checksum(assets_path)
         if expected_assets_checksum != actual_assets_checksum:
             raise ValueError(
-                "base_assets_checksum mismatch: "
-                f"expected {expected_assets_checksum!r}, got {actual_assets_checksum!r}"
+                f"base_assets_checksum mismatch: expected {expected_assets_checksum!r}, got {actual_assets_checksum!r}"
             )
-
     try:
         plugin_state = safetensors.torch.load_file(plugin_path, device=str(device))
         _futuremamba_checkpoint._strict_load_plugin(model, plugin_state)

@@ -82,6 +82,8 @@ def _metadata(model):
         "terminal_loss_batch_fraction": 1.0,
         "terminal_loss_queries_per_episode": None,
         "frozen_prefix_microbatch_size": 2,
+        "progress_use_prefix_kv": True,
+        "progress_prefix_kv_dropout": 0.0,
         "loss_weights": {"terminal": 1.0, "handoff": 0.0, "boundary": 0.0},
         "training_dtype": "float32",
         "state_dtypes": {},
@@ -321,6 +323,142 @@ def test_checkpoint_metadata_records_training_seed():
     metadata = train.build_checkpoint_metadata(model, model_config)
 
     assert metadata["train_seed"] == 7
+
+
+def test_pe_prefix_experiment_configs_are_registered_per_task():
+    task_checksums = {
+        "BinFill": "sha256:f81a2a5dda0fdc205343148d613f3dc91321c5071c15038c8b99f32357ea8109",
+        "PickXtimes": "sha256:5b7941c418141161726e0f8212db437cddca7d0ac9ad14e81922b19c41e5bf49",
+        "SwingXtimes": "sha256:dcc41c472f1d1a4383ac1ade699c8c36d272cbd8c7e6814a62012af5d1a26922",
+    }
+    task_slugs = {
+        "BinFill": "binfill",
+        "PickXtimes": "pickxtimes",
+        "SwingXtimes": "swingxtimes",
+    }
+    variants = {
+        "prefixdrop0p3": {
+            "name_prefix": "futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16_prefixdrop0p3",
+            "checkpoint_base_dir": "/data/phasevla/checkpoints/pe_prefix_kv_ablation/prefixdrop0p3_seed42",
+            "log_dir": "/data/phasevla/logs/pe_prefix_kv_ablation/prefixdrop0p3",
+            "progress_use_prefix_kv": True,
+            "progress_prefix_kv_dropout": 0.3,
+        },
+        "prefixoff": {
+            "name_prefix": "futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16_prefixoff",
+            "checkpoint_base_dir": "/data/phasevla/checkpoints/pe_prefix_kv_ablation/prefixoff_seed42",
+            "log_dir": "/data/phasevla/logs/pe_prefix_kv_ablation/prefixoff",
+            "progress_use_prefix_kv": False,
+            "progress_prefix_kv_dropout": 0.0,
+        },
+    }
+    configs_by_variant_and_task = {}
+
+    for variant, expected in variants.items():
+        for task_suite, task_slug in task_slugs.items():
+            name = f"{expected['name_prefix']}_{task_slug}"
+            config = train._config.get_config(name)
+            configs_by_variant_and_task[(variant, task_suite)] = config
+
+            assert config.name == name
+            assert config.data.episode_data_dir == f"/data/phasevla/task_training_data_2500/{task_suite}"
+            assert config.model.robomme_task_suite == task_suite
+            assert config.model.robomme_dataset_checksum == task_checksums[task_suite]
+            assert config.model.progress_use_prefix_kv is expected["progress_use_prefix_kv"]
+            assert config.model.progress_prefix_kv_dropout == expected["progress_prefix_kv_dropout"]
+            assert config.model.handoff_ratio == 0.7
+            assert config.batch_size == 16
+            assert config.num_train_steps == 2500
+            assert config.save_interval == 500
+            assert config.keep_period == 500
+            assert config.num_workers == 0
+            assert config.seed == 42
+            assert config.checkpoint_base_dir == expected["checkpoint_base_dir"]
+            assert config.log_file == f"{expected['log_dir']}/{task_suite}.log"
+            assert config.wandb_run_name == f"{name}-{task_suite}-seed42"
+            assert str(Path(config.checkpoint_base_dir) / config.name).endswith(name)
+            assert config.pytorch_weight_path == "./runs/ckpts/pi05_baseline_pytorch/79999"
+            assert config.model.base_checkpoint_uri == "./runs/ckpts/pi05_baseline_pytorch/79999"
+            assert config.model.base_assets_checksum == (
+                "3f15cc514b5a1941325bbeb673a776d80823cdbbff47629da8b9c7d84911f945"
+            )
+            assert config.data.assets.assets_dir == "./runs/ckpts/pi05_baseline_pytorch/79999/assets"
+            assert config.data.assets.asset_id == "robomme"
+
+    config_names = [config.name for config in configs_by_variant_and_task.values()]
+    assert len(config_names) == 6
+    assert len(set(config_names)) == 6
+    for task_suite in task_slugs:
+        prefix_dropout = configs_by_variant_and_task[("prefixdrop0p3", task_suite)]
+        prefix_disabled = configs_by_variant_and_task[("prefixoff", task_suite)]
+        dropout_model = train.dataclasses.asdict(prefix_dropout.model)
+        disabled_model = train.dataclasses.asdict(prefix_disabled.model)
+        model_differences = {
+            key for key in dropout_model if dropout_model[key] != disabled_model[key]
+        }
+        assert model_differences == {"progress_use_prefix_kv", "progress_prefix_kv_dropout"}
+
+
+def test_existing_handoff_0p7_batch16_config_is_unchanged():
+    config = train._config.get_config("futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16")
+
+    assert config.data.episode_data_dir is None
+    assert config.checkpoint_base_dir == "./checkpoints"
+    assert config.log_file is None
+    assert config.wandb_run_name is None
+    assert config.model.robomme_task_suite is None
+    assert config.model.robomme_dataset_checksum is None
+    assert config.model.handoff_ratio == 0.7
+    assert config.model.progress_use_prefix_kv is True
+    assert config.model.progress_prefix_kv_dropout == 0.0
+
+
+def test_progress_prefix_cli_overrides_reach_config_metadata_and_log(tmp_path: Path, caplog):
+    args = train._parser().parse_args(
+        [
+            "futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16_prefixdrop0p3_binfill",
+            "--progress-use-prefix-kv",
+            "false",
+            "--progress-prefix-kv-dropout",
+            "0.125",
+            "--log-file",
+            str(tmp_path / "logs" / "train.log"),
+            "--wandb-run-name",
+            "custom-prefix-run",
+        ]
+    )
+    config = train.apply_cli_overrides(train._config.get_config(args.config), args)
+
+    assert config.model.progress_use_prefix_kv is False
+    assert config.model.progress_prefix_kv_dropout == 0.125
+    assert config.log_file == str(tmp_path / "logs" / "train.log")
+    assert config.wandb_run_name == "custom-prefix-run"
+
+    model = _model_with_seed(5)
+    metadata = train.build_checkpoint_metadata(model, config.model)
+    assert metadata["progress_use_prefix_kv"] is False
+    assert metadata["progress_prefix_kv_dropout"] == 0.125
+
+    caplog.set_level(train.logging.INFO, logger=train.__name__)
+    train._log_training_identity(config, metadata, tmp_path / "checkpoints")
+
+    assert any(
+        "progress_use_prefix_kv=False" in record.message
+        and "progress_prefix_kv_dropout=0.1250" in record.message
+        and "wandb_run_name=custom-prefix-run" in record.message
+        for record in caplog.records
+    )
+
+
+def test_registered_wandb_run_name_is_used_for_prefix_experiment():
+    config = train._config.get_config(
+        "futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16_prefixoff_swingxtimes"
+    )
+
+    assert train._wandb_run_name(config) == (
+        "futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16_prefixoff_swingxtimes-"
+        "SwingXtimes-seed42"
+    )
 
 def test_cli_overrides_save_and_log_intervals():
     args = train._parser().parse_args(

@@ -26,6 +26,7 @@ class LiberoMemEnvAdapter:
 
     def __init__(self, env: Any, *, task_text: str):
         self._env = env
+        self._progress_env = getattr(env, "env", env)
         self._task_text = task_text
 
     @property
@@ -38,13 +39,19 @@ class LiberoMemEnvAdapter:
 
     def reset(self) -> EnvSnapshot:
         observation = self._env.reset()
-        self._env.reset_subgoal_progress()
-        setattr(self._env, "_overshot", False)
+        reset_progress = getattr(self._progress_env, "reset_subgoal_progress", None)
+        if not callable(reset_progress):
+            raise TypeError(
+                "LIBERO-Mem environment must provide reset_subgoal_progress(); "
+                f"got {type(self._progress_env).__module__}.{type(self._progress_env).__qualname__}"
+            )
+        reset_progress()
+        setattr(self._progress_env, "_overshot", False)
         return self.snapshot(observation, success=False)
 
     def step(self, action: Any) -> EnvStepResult:
         observation, reward, done, info = self._env.step(action)
-        success = bool(self._env._check_success(inc=True))
+        success = bool(self._progress_env._check_success(inc=True))
         snapshot = self.snapshot(observation, success=success)
         return EnvStepResult(
             observation=snapshot.observation,
@@ -61,23 +68,24 @@ class LiberoMemEnvAdapter:
         return EnvSnapshot(
             observation=observation,
             success=bool(success),
-            satisfied_subgoals=list(self._env.get_satisfied_subgoals(self._task_text)),
-            overshot=bool(getattr(self._env, "_overshot", False)),
+            satisfied_subgoals=list(self._progress_env.get_satisfied_subgoals(self._task_text)),
+            overshot=bool(getattr(self._progress_env, "_overshot", False)),
             atomic_predicates=self._atomic_predicates(),
         )
 
     def _atomic_predicates(self) -> dict[str, bool]:
-        if hasattr(self._env, "get_atomic_predicate_states"):
-            return _bool_dict(self._env.get_atomic_predicate_states())
-        if hasattr(self._env, "get_atomic_predicates"):
-            return _bool_dict(self._env.get_atomic_predicates())
-        if hasattr(self._env, "atomic_predicates"):
-            value = self._env.atomic_predicates
+        env = self._progress_env
+        if hasattr(env, "get_atomic_predicate_states"):
+            return _bool_dict(env.get_atomic_predicate_states())
+        if hasattr(env, "get_atomic_predicates"):
+            return _bool_dict(env.get_atomic_predicates())
+        if hasattr(env, "atomic_predicates"):
+            value = env.atomic_predicates
             if callable(value):
                 value = value()
             return _bool_dict(value)
-        if hasattr(self._env, "_atomic_predicates"):
-            return _bool_dict(getattr(self._env, "_atomic_predicates"))
+        if hasattr(env, "_atomic_predicates"):
+            return _bool_dict(getattr(env, "_atomic_predicates"))
         return {}
 
 

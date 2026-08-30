@@ -1,0 +1,4550 @@
+{
+  "schema": "phasevla.libero-mem-all10-final-audit.v1",
+  "audited_at": "2026-08-30 00:45:22 UTC",
+  "protocol": {
+    "suite": "libero_mem",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "train_seed": 42,
+    "rollout_seed": 10001,
+    "episodes_per_task": 20,
+    "max_steps": 600,
+    "replan_steps": 20,
+    "mujoco_version": "3.2.2",
+    "handoff_ratio": 0.4,
+    "progress_denoise_steps": 4,
+    "action_expert_denoise_steps": 6,
+    "execution_horizon": 20,
+    "fixed_stabilized_init": true
+  },
+  "baseline": {
+    "checkpoint_step": 49999,
+    "successes": 162,
+    "episodes": 200,
+    "rate": 0.81,
+    "audit_valid": true,
+    "violations": [],
+    "path": "/data/libero_mem_baseline/formal_visualfix_mujoco322_step49999_replan20_v4/audited_summary.json"
+  },
+  "tasks": {
+    "1": {
+      "task_id": 0,
+      "task": "pick up the bowl and place it back on the plate",
+      "expected_training_episodes": 100,
+      "conditioning_files": 100,
+      "conditioning_manifest": true,
+      "action_files": 100,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "ci95": [
+          0.8388748419471806,
+          1.0
+        ],
+        "mean_success_steps": 141.8,
+        "median_success_steps": 130.0,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_0500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 132.4,
+          "median_success_steps": 126.0,
+          "min_success_steps": 91,
+          "max_success_steps": 276,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_1000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 129.7,
+          "median_success_steps": 126.0,
+          "min_success_steps": 101,
+          "max_success_steps": 206,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_1500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 133.25,
+          "median_success_steps": 129.5,
+          "min_success_steps": 99,
+          "max_success_steps": 228,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_2000/rollouts.jsonl",
+          "successes": 19,
+          "episodes": 20,
+          "rate": 0.95,
+          "ci95": [
+            0.763868806553258,
+            0.9911185511992047
+          ],
+          "mean_success_steps": 127.73684210526316,
+          "median_success_steps": 125,
+          "min_success_steps": 111,
+          "max_success_steps": 176,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 0,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_2500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 124.05,
+          "median_success_steps": 123.0,
+          "min_success_steps": 98,
+          "max_success_steps": 165,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_00/step_3000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 124.4,
+          "median_success_steps": 123.5,
+          "min_success_steps": 93,
+          "max_success_steps": 172,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 2500,
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "mean_success_steps": 124.05,
+        "median_success_steps": 123.0,
+        "delta_pp": 0.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 0,
+          "future_only": 0,
+          "discordant": 0,
+          "two_sided_exact_p": 1.0
+        }
+      }
+    },
+    "2": {
+      "task_id": 1,
+      "task": "lift the bottle and put it down on the plate",
+      "expected_training_episodes": 98,
+      "conditioning_files": 98,
+      "conditioning_manifest": true,
+      "action_files": 98,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "ci95": [
+          0.8388748419471806,
+          1.0
+        ],
+        "mean_success_steps": 172.8,
+        "median_success_steps": 140.0,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_0500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 144.6,
+          "median_success_steps": 132.0,
+          "min_success_steps": 88,
+          "max_success_steps": 281,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_1000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 155,
+          "median_success_steps": 128.5,
+          "min_success_steps": 88,
+          "max_success_steps": 380,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_1500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 145.35,
+          "median_success_steps": 124.0,
+          "min_success_steps": 100,
+          "max_success_steps": 249,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_2000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 145.65,
+          "median_success_steps": 131.5,
+          "min_success_steps": 103,
+          "max_success_steps": 310,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_2500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 149.15,
+          "median_success_steps": 130.5,
+          "min_success_steps": 90,
+          "max_success_steps": 453,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_01/step_3000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 143.05,
+          "median_success_steps": 126.0,
+          "min_success_steps": 96,
+          "max_success_steps": 254,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 3000,
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "mean_success_steps": 143.05,
+        "median_success_steps": 126.0,
+        "delta_pp": 0.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 0,
+          "future_only": 0,
+          "discordant": 0,
+          "two_sided_exact_p": 1.0
+        }
+      }
+    },
+    "3": {
+      "task_id": 2,
+      "task": "lift the bowl and place it back on the plate 3 times",
+      "expected_training_episodes": 98,
+      "conditioning_files": 98,
+      "conditioning_manifest": true,
+      "action_files": 98,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "ci95": [
+          0.8388748419471806,
+          1.0
+        ],
+        "mean_success_steps": 339.95,
+        "median_success_steps": 307.5,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_0500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 291.55,
+          "median_success_steps": 268.5,
+          "min_success_steps": 197,
+          "max_success_steps": 537,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_1000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 281.65,
+          "median_success_steps": 268.0,
+          "min_success_steps": 221,
+          "max_success_steps": 480,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_1500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 291.95,
+          "median_success_steps": 291.5,
+          "min_success_steps": 211,
+          "max_success_steps": 416,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_2000/rollouts.jsonl",
+          "successes": 19,
+          "episodes": 20,
+          "rate": 0.95,
+          "ci95": [
+            0.763868806553258,
+            0.9911185511992047
+          ],
+          "mean_success_steps": 275.89473684210526,
+          "median_success_steps": 273,
+          "min_success_steps": 228,
+          "max_success_steps": 385,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 0,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_2500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 284.15,
+          "median_success_steps": 279.0,
+          "min_success_steps": 238,
+          "max_success_steps": 376,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_02/step_3000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 274.2,
+          "median_success_steps": 267.5,
+          "min_success_steps": 231,
+          "max_success_steps": 343,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 3000,
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "mean_success_steps": 274.2,
+        "median_success_steps": 267.5,
+        "delta_pp": 0.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 0,
+          "future_only": 0,
+          "discordant": 0,
+          "two_sided_exact_p": 1.0
+        }
+      }
+    },
+    "4": {
+      "task_id": 3,
+      "task": "pick up the bottle and put it down the plate 3 times",
+      "expected_training_episodes": 99,
+      "conditioning_files": 99,
+      "conditioning_manifest": true,
+      "action_files": 99,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 19,
+        "episodes": 20,
+        "rate": 0.95,
+        "ci95": [
+          0.763868806553258,
+          0.9911185511992047
+        ],
+        "mean_success_steps": 318.2631578947368,
+        "median_success_steps": 311,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_0500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 296.6,
+          "median_success_steps": 279.0,
+          "min_success_steps": 246,
+          "max_success_steps": 446,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 1,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_1000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 285.35,
+          "median_success_steps": 259.0,
+          "min_success_steps": 230,
+          "max_success_steps": 414,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 1,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_1500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 287.2,
+          "median_success_steps": 263.0,
+          "min_success_steps": 238,
+          "max_success_steps": 446,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 1,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_2000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 265.05,
+          "median_success_steps": 255.5,
+          "min_success_steps": 227,
+          "max_success_steps": 343,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 1,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_2500/rollouts.jsonl",
+          "successes": 19,
+          "episodes": 20,
+          "rate": 0.95,
+          "ci95": [
+            0.763868806553258,
+            0.9911185511992047
+          ],
+          "mean_success_steps": 297.05263157894734,
+          "median_success_steps": 274,
+          "min_success_steps": 232,
+          "max_success_steps": 404,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_03/step_3000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 280.85,
+          "median_success_steps": 264.0,
+          "min_success_steps": 231,
+          "max_success_steps": 459,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 1,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 2000,
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "mean_success_steps": 265.05,
+        "median_success_steps": 255.5,
+        "delta_pp": 5.000000000000004,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 0,
+          "future_only": 1,
+          "discordant": 1,
+          "two_sided_exact_p": 1.0
+        }
+      }
+    },
+    "5": {
+      "task_id": 4,
+      "task": "lift the bowl and place it back on the plate 5 times",
+      "expected_training_episodes": 97,
+      "conditioning_files": 97,
+      "conditioning_manifest": true,
+      "action_files": 97,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "ci95": [
+          0.8388748419471806,
+          1.0
+        ],
+        "mean_success_steps": 388.8,
+        "median_success_steps": 376.0,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_0500/rollouts.jsonl",
+          "successes": 19,
+          "episodes": 20,
+          "rate": 0.95,
+          "ci95": [
+            0.763868806553258,
+            0.9911185511992047
+          ],
+          "mean_success_steps": 375.10526315789474,
+          "median_success_steps": 369,
+          "min_success_steps": 327,
+          "max_success_steps": 488,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 0,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_1000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 384.95,
+          "median_success_steps": 374.5,
+          "min_success_steps": 315,
+          "max_success_steps": 573,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_1500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 378.2,
+          "median_success_steps": 373.0,
+          "min_success_steps": 268,
+          "max_success_steps": 502,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_2000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 374.2,
+          "median_success_steps": 370.0,
+          "min_success_steps": 329,
+          "max_success_steps": 472,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_2500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 370.5,
+          "median_success_steps": 367.0,
+          "min_success_steps": 333,
+          "max_success_steps": 419,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_04/step_3000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 376.3,
+          "median_success_steps": 373.0,
+          "min_success_steps": 299,
+          "max_success_steps": 528,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 2500,
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "mean_success_steps": 370.5,
+        "median_success_steps": 367.0,
+        "delta_pp": 0.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 0,
+          "future_only": 0,
+          "discordant": 0,
+          "two_sided_exact_p": 1.0
+        }
+      }
+    },
+    "6": {
+      "task_id": 5,
+      "task": "pick up the bowl and place it on the plate 7 times",
+      "expected_training_episodes": 100,
+      "conditioning_files": 100,
+      "conditioning_manifest": true,
+      "action_files": 100,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 6,
+        "episodes": 20,
+        "rate": 0.3,
+        "ci95": [
+          0.1454772448676043,
+          0.5189728183535235
+        ],
+        "mean_success_steps": 552.1666666666666,
+        "median_success_steps": 554.5,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_0500/rollouts.jsonl",
+          "successes": 11,
+          "episodes": 20,
+          "rate": 0.55,
+          "ci95": [
+            0.34208534245034233,
+            0.7418021417443759
+          ],
+          "mean_success_steps": 554.3636363636364,
+          "median_success_steps": 566,
+          "min_success_steps": 501,
+          "max_success_steps": 593,
+          "successful_episode_ids": [
+            0,
+            2,
+            3,
+            4,
+            5,
+            7,
+            10,
+            11,
+            13,
+            16,
+            18
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 6,
+            "discordant": 7,
+            "two_sided_exact_p": 0.125
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_1000/rollouts.jsonl",
+          "successes": 13,
+          "episodes": 20,
+          "rate": 0.65,
+          "ci95": [
+            0.43285427668523624,
+            0.818808175898918
+          ],
+          "mean_success_steps": 536.4615384615385,
+          "median_success_steps": 539,
+          "min_success_steps": 487,
+          "max_success_steps": 581,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            9,
+            10,
+            13,
+            16,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 8,
+            "discordant": 9,
+            "two_sided_exact_p": 0.0390625
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_1500/rollouts.jsonl",
+          "successes": 12,
+          "episodes": 20,
+          "rate": 0.6,
+          "ci95": [
+            0.3865815007622531,
+            0.781193467627183
+          ],
+          "mean_success_steps": 554,
+          "median_success_steps": 561.0,
+          "min_success_steps": 487,
+          "max_success_steps": 597,
+          "successful_episode_ids": [
+            0,
+            1,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            16,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 3,
+            "future_only": 9,
+            "discordant": 12,
+            "two_sided_exact_p": 0.14599609375
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_2000/rollouts.jsonl",
+          "successes": 16,
+          "episodes": 20,
+          "rate": 0.8,
+          "ci95": [
+            0.5839825677481064,
+            0.919342337420202
+          ],
+          "mean_success_steps": 542.4375,
+          "median_success_steps": 535.0,
+          "min_success_steps": 493,
+          "max_success_steps": 588,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            12,
+            13,
+            14,
+            16,
+            18
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 11,
+            "discordant": 12,
+            "two_sided_exact_p": 0.00634765625
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_2500/rollouts.jsonl",
+          "successes": 13,
+          "episodes": 20,
+          "rate": 0.65,
+          "ci95": [
+            0.43285427668523624,
+            0.818808175898918
+          ],
+          "mean_success_steps": 552.2307692307693,
+          "median_success_steps": 553,
+          "min_success_steps": 495,
+          "max_success_steps": 595,
+          "successful_episode_ids": [
+            0,
+            1,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            12,
+            16,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 3,
+            "future_only": 10,
+            "discordant": 13,
+            "two_sided_exact_p": 0.09228515625
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_05/step_3000/rollouts.jsonl",
+          "successes": 15,
+          "episodes": 20,
+          "rate": 0.75,
+          "ci95": [
+            0.531299122381256,
+            0.8881382985923343
+          ],
+          "mean_success_steps": 544.1333333333333,
+          "median_success_steps": 549,
+          "min_success_steps": 502,
+          "max_success_steps": 585,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            12,
+            13,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 10,
+            "discordant": 11,
+            "two_sided_exact_p": 0.01171875
+          }
+        }
+      ],
+      "best": {
+        "step": 2000,
+        "successes": 16,
+        "episodes": 20,
+        "rate": 0.8,
+        "mean_success_steps": 542.4375,
+        "median_success_steps": 535.0,
+        "delta_pp": 50.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 1,
+          "future_only": 11,
+          "discordant": 12,
+          "two_sided_exact_p": 0.00634765625
+        }
+      }
+    },
+    "7": {
+      "task_id": 6,
+      "task": "swap the 2 bowls on their plates using the empty plate",
+      "expected_training_episodes": 88,
+      "conditioning_files": 88,
+      "conditioning_manifest": true,
+      "action_files": 88,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 6,
+        "episodes": 20,
+        "rate": 0.3,
+        "ci95": [
+          0.1454772448676043,
+          0.5189728183535235
+        ],
+        "mean_success_steps": 411.1666666666667,
+        "median_success_steps": 375.5,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_0500/rollouts.jsonl",
+          "successes": 8,
+          "episodes": 20,
+          "rate": 0.4,
+          "ci95": [
+            0.21880653237281705,
+            0.6134184992377469
+          ],
+          "mean_success_steps": 383.75,
+          "median_success_steps": 383.0,
+          "min_success_steps": 325,
+          "max_success_steps": 472,
+          "successful_episode_ids": [
+            1,
+            4,
+            9,
+            10,
+            11,
+            16,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 3,
+            "discordant": 4,
+            "two_sided_exact_p": 0.625
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_1000/rollouts.jsonl",
+          "successes": 8,
+          "episodes": 20,
+          "rate": 0.4,
+          "ci95": [
+            0.21880653237281705,
+            0.6134184992377469
+          ],
+          "mean_success_steps": 467.625,
+          "median_success_steps": 512.0,
+          "min_success_steps": 329,
+          "max_success_steps": 548,
+          "successful_episode_ids": [
+            1,
+            4,
+            7,
+            9,
+            10,
+            11,
+            17,
+            18
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 3,
+            "future_only": 5,
+            "discordant": 8,
+            "two_sided_exact_p": 0.7265625
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_1500/rollouts.jsonl",
+          "successes": 7,
+          "episodes": 20,
+          "rate": 0.35,
+          "ci95": [
+            0.18119182410108206,
+            0.5671457233147638
+          ],
+          "mean_success_steps": 414.57142857142856,
+          "median_success_steps": 411,
+          "min_success_steps": 345,
+          "max_success_steps": 473,
+          "successful_episode_ids": [
+            1,
+            2,
+            3,
+            7,
+            9,
+            11,
+            12
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 4,
+            "future_only": 5,
+            "discordant": 9,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_2000/rollouts.jsonl",
+          "successes": 10,
+          "episodes": 20,
+          "rate": 0.5,
+          "ci95": [
+            0.2992980081982123,
+            0.7007019918017877
+          ],
+          "mean_success_steps": 414.4,
+          "median_success_steps": 403.0,
+          "min_success_steps": 328,
+          "max_success_steps": 514,
+          "successful_episode_ids": [
+            1,
+            2,
+            4,
+            5,
+            9,
+            10,
+            11,
+            12,
+            14,
+            15
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 4,
+            "future_only": 8,
+            "discordant": 12,
+            "two_sided_exact_p": 0.3876953125
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_2500/rollouts.jsonl",
+          "successes": 6,
+          "episodes": 20,
+          "rate": 0.3,
+          "ci95": [
+            0.1454772448676043,
+            0.5189728183535235
+          ],
+          "mean_success_steps": 476.3333333333333,
+          "median_success_steps": 445.5,
+          "min_success_steps": 387,
+          "max_success_steps": 592,
+          "successful_episode_ids": [
+            1,
+            3,
+            5,
+            12,
+            13,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 3,
+            "future_only": 3,
+            "discordant": 6,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_06/step_3000/rollouts.jsonl",
+          "successes": 6,
+          "episodes": 20,
+          "rate": 0.3,
+          "ci95": [
+            0.1454772448676043,
+            0.5189728183535235
+          ],
+          "mean_success_steps": 416.8333333333333,
+          "median_success_steps": 413.5,
+          "min_success_steps": 321,
+          "max_success_steps": 514,
+          "successful_episode_ids": [
+            4,
+            8,
+            9,
+            10,
+            15,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 4,
+            "future_only": 4,
+            "discordant": 8,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 2000,
+        "successes": 10,
+        "episodes": 20,
+        "rate": 0.5,
+        "mean_success_steps": 414.4,
+        "median_success_steps": 403.0,
+        "delta_pp": 20.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 4,
+          "future_only": 8,
+          "discordant": 12,
+          "two_sided_exact_p": 0.3876953125
+        }
+      }
+    },
+    "8": {
+      "task_id": 7,
+      "task": "rotate the 3 bowls on their plates from left to right using the empty plate",
+      "expected_training_episodes": 82,
+      "conditioning_files": 82,
+      "conditioning_manifest": true,
+      "action_files": 82,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 11,
+        "episodes": 20,
+        "rate": 0.55,
+        "ci95": [
+          0.34208534245034233,
+          0.7418021417443759
+        ],
+        "mean_success_steps": 533.1818181818181,
+        "median_success_steps": 538,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_0500/rollouts.jsonl",
+          "successes": 8,
+          "episodes": 20,
+          "rate": 0.4,
+          "ci95": [
+            0.21880653237281705,
+            0.6134184992377469
+          ],
+          "mean_success_steps": 512.5,
+          "median_success_steps": 512.0,
+          "min_success_steps": 448,
+          "max_success_steps": 556,
+          "successful_episode_ids": [
+            0,
+            1,
+            7,
+            10,
+            12,
+            15,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 6,
+            "future_only": 3,
+            "discordant": 9,
+            "two_sided_exact_p": 0.5078125
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_1000/rollouts.jsonl",
+          "successes": 10,
+          "episodes": 20,
+          "rate": 0.5,
+          "ci95": [
+            0.2992980081982123,
+            0.7007019918017877
+          ],
+          "mean_success_steps": 538.7,
+          "median_success_steps": 531.0,
+          "min_success_steps": 466,
+          "max_success_steps": 600,
+          "successful_episode_ids": [
+            1,
+            3,
+            5,
+            6,
+            11,
+            14,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 3,
+            "future_only": 2,
+            "discordant": 5,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_1500/rollouts.jsonl",
+          "successes": 9,
+          "episodes": 20,
+          "rate": 0.45,
+          "ci95": [
+            0.2581978582556243,
+            0.6579146575496577
+          ],
+          "mean_success_steps": 512.1111111111111,
+          "median_success_steps": 516,
+          "min_success_steps": 468,
+          "max_success_steps": 539,
+          "successful_episode_ids": [
+            1,
+            2,
+            4,
+            7,
+            8,
+            11,
+            15,
+            16,
+            18
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 6,
+            "future_only": 4,
+            "discordant": 10,
+            "two_sided_exact_p": 0.75390625
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_2000/rollouts.jsonl",
+          "successes": 14,
+          "episodes": 20,
+          "rate": 0.7,
+          "ci95": [
+            0.4810271816464765,
+            0.8545227551323956
+          ],
+          "mean_success_steps": 527.8571428571429,
+          "median_success_steps": 528.5,
+          "min_success_steps": 480,
+          "max_success_steps": 588,
+          "successful_episode_ids": [
+            0,
+            2,
+            5,
+            6,
+            7,
+            8,
+            10,
+            12,
+            13,
+            14,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 4,
+            "future_only": 7,
+            "discordant": 11,
+            "two_sided_exact_p": 0.548828125
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_2500/rollouts.jsonl",
+          "successes": 10,
+          "episodes": 20,
+          "rate": 0.5,
+          "ci95": [
+            0.2992980081982123,
+            0.7007019918017877
+          ],
+          "mean_success_steps": 521.3,
+          "median_success_steps": 512.5,
+          "min_success_steps": 466,
+          "max_success_steps": 592,
+          "successful_episode_ids": [
+            1,
+            5,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            16
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 5,
+            "future_only": 4,
+            "discordant": 9,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_07/step_3000/rollouts.jsonl",
+          "successes": 10,
+          "episodes": 20,
+          "rate": 0.5,
+          "ci95": [
+            0.2992980081982123,
+            0.7007019918017877
+          ],
+          "mean_success_steps": 505.7,
+          "median_success_steps": 501.5,
+          "min_success_steps": 448,
+          "max_success_steps": 584,
+          "successful_episode_ids": [
+            2,
+            5,
+            6,
+            8,
+            10,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 4,
+            "future_only": 3,
+            "discordant": 7,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 2000,
+        "successes": 14,
+        "episodes": 20,
+        "rate": 0.7,
+        "mean_success_steps": 527.8571428571429,
+        "median_success_steps": 528.5,
+        "delta_pp": 14.999999999999991,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 4,
+          "future_only": 7,
+          "discordant": 11,
+          "two_sided_exact_p": 0.548828125
+        }
+      }
+    },
+    "9": {
+      "task_id": 8,
+      "task": "put the cream cheese in the nearest basket and place that basket in the center",
+      "expected_training_episodes": 100,
+      "conditioning_files": 100,
+      "conditioning_manifest": true,
+      "action_files": 100,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "ci95": [
+          0.8388748419471806,
+          1.0
+        ],
+        "mean_success_steps": 299.15,
+        "median_success_steps": 297.5,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_0500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 298.8,
+          "median_success_steps": 300.0,
+          "min_success_steps": 276,
+          "max_success_steps": 316,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_1000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 296.45,
+          "median_success_steps": 295.5,
+          "min_success_steps": 281,
+          "max_success_steps": 322,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_1500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 295.4,
+          "median_success_steps": 295.0,
+          "min_success_steps": 269,
+          "max_success_steps": 330,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_2000/rollouts.jsonl",
+          "successes": 19,
+          "episodes": 20,
+          "rate": 0.95,
+          "ci95": [
+            0.763868806553258,
+            0.9911185511992047
+          ],
+          "mean_success_steps": 307.10526315789474,
+          "median_success_steps": 296,
+          "min_success_steps": 273,
+          "max_success_steps": 496,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 1,
+            "future_only": 0,
+            "discordant": 1,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_2500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 298.9,
+          "median_success_steps": 293.0,
+          "min_success_steps": 275,
+          "max_success_steps": 389,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_08/step_3000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 298.9,
+          "median_success_steps": 300.5,
+          "min_success_steps": 253,
+          "max_success_steps": 332,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 1500,
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "mean_success_steps": 295.4,
+        "median_success_steps": 295.0,
+        "delta_pp": 0.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 0,
+          "future_only": 0,
+          "discordant": 0,
+          "two_sided_exact_p": 1.0
+        }
+      }
+    },
+    "10": {
+      "task_id": 9,
+      "task": "put the cream cheese in the nearest basket and place the empty basket in the center",
+      "expected_training_episodes": 99,
+      "conditioning_files": 99,
+      "conditioning_manifest": true,
+      "action_files": 99,
+      "action_manifest": true,
+      "baseline": {
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "ci95": [
+          0.8388748419471806,
+          1.0
+        ],
+        "mean_success_steps": 283.15,
+        "median_success_steps": 285.5,
+        "episode_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "checkpoints": [
+        {
+          "step": 500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_0500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_0500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 280.55,
+          "median_success_steps": 282.0,
+          "min_success_steps": 253,
+          "max_success_steps": 304,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_1000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_1000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 292.15,
+          "median_success_steps": 290.5,
+          "min_success_steps": 264,
+          "max_success_steps": 393,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 1500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_1500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_1500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 290,
+          "median_success_steps": 290.5,
+          "min_success_steps": 268,
+          "max_success_steps": 309,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_2000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_2000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 288.9,
+          "median_success_steps": 283.5,
+          "min_success_steps": 262,
+          "max_success_steps": 340,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 2500,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_2500/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_2500/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 286.45,
+          "median_success_steps": 280.5,
+          "min_success_steps": 264,
+          "max_success_steps": 378,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        },
+        {
+          "step": 3000,
+          "checkpoint_required_files": {
+            "plugin.safetensors": true,
+            "optimizer.pt": true,
+            "scheduler.pt": true,
+            "rng_state.pt": true,
+            "metadata.json": true
+          },
+          "summary": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_3000/audited_summary.json",
+          "rollouts": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/task_09/step_3000/rollouts.jsonl",
+          "successes": 20,
+          "episodes": 20,
+          "rate": 1.0,
+          "ci95": [
+            0.8388748419471806,
+            1.0
+          ],
+          "mean_success_steps": 285.65,
+          "median_success_steps": 284.0,
+          "min_success_steps": 248,
+          "max_success_steps": 323,
+          "successful_episode_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "videos": 20,
+          "checks": {
+            "checkpoint_complete": true,
+            "status_completed": true,
+            "audit_valid": true,
+            "no_audit_violations": true,
+            "task_identity": true,
+            "model_identity": true,
+            "protocol_identity": true,
+            "raw_20": true,
+            "episode_ids_0_19": true,
+            "summary_consistent": true,
+            "videos_20": true,
+            "video_files_nonempty": true
+          },
+          "mcnemar_vs_baseline": {
+            "baseline_only": 0,
+            "future_only": 0,
+            "discordant": 0,
+            "two_sided_exact_p": 1.0
+          }
+        }
+      ],
+      "best": {
+        "step": 500,
+        "successes": 20,
+        "episodes": 20,
+        "rate": 1.0,
+        "mean_success_steps": 280.55,
+        "median_success_steps": 282.0,
+        "delta_pp": 0.0,
+        "mcnemar_vs_baseline": {
+          "baseline_only": 0,
+          "future_only": 0,
+          "discordant": 0,
+          "two_sided_exact_p": 1.0
+        }
+      }
+    }
+  },
+  "aggregate": {
+    "500": {
+      "successes": 166,
+      "episodes": 200,
+      "rate": 0.83,
+      "ci95": [
+        0.7718411637168737,
+        0.8757209208741302
+      ],
+      "delta_pp": 1.9999999999999907,
+      "mcnemar_vs_baseline": {
+        "baseline_only": 9,
+        "future_only": 13,
+        "discordant": 22,
+        "two_sided_exact_p": 0.5234670639038086
+      }
+    },
+    "1000": {
+      "successes": 171,
+      "episodes": 200,
+      "rate": 0.855,
+      "ci95": [
+        0.7995133246921847,
+        0.8971064935799559
+      ],
+      "delta_pp": 4.499999999999993,
+      "mcnemar_vs_baseline": {
+        "baseline_only": 7,
+        "future_only": 16,
+        "discordant": 23,
+        "two_sided_exact_p": 0.0931396484375
+      }
+    },
+    "1500": {
+      "successes": 168,
+      "episodes": 200,
+      "rate": 0.84,
+      "ci95": [
+        0.7828592983793289,
+        0.8843258796841297
+      ],
+      "delta_pp": 2.9999999999999916,
+      "mcnemar_vs_baseline": {
+        "baseline_only": 13,
+        "future_only": 19,
+        "discordant": 32,
+        "two_sided_exact_p": 0.37708558747544885
+      }
+    },
+    "2000": {
+      "successes": 177,
+      "episodes": 200,
+      "rate": 0.885,
+      "ci95": [
+        0.8333528310151243,
+        0.9221362676743804
+      ],
+      "delta_pp": 7.499999999999996,
+      "mcnemar_vs_baseline": {
+        "baseline_only": 12,
+        "future_only": 27,
+        "discordant": 39,
+        "two_sided_exact_p": 0.023702702470473014
+      }
+    },
+    "2500": {
+      "successes": 168,
+      "episodes": 200,
+      "rate": 0.84,
+      "ci95": [
+        0.7828592983793289,
+        0.8843258796841297
+      ],
+      "delta_pp": 2.9999999999999916,
+      "mcnemar_vs_baseline": {
+        "baseline_only": 11,
+        "future_only": 17,
+        "discordant": 28,
+        "two_sided_exact_p": 0.34492845088243484
+      }
+    },
+    "3000": {
+      "successes": 171,
+      "episodes": 200,
+      "rate": 0.855,
+      "ci95": [
+        0.7995133246921847,
+        0.8971064935799559
+      ],
+      "delta_pp": 4.499999999999993,
+      "mcnemar_vs_baseline": {
+        "baseline_only": 9,
+        "future_only": 18,
+        "discordant": 27,
+        "two_sided_exact_p": 0.12207812070846558
+      }
+    }
+  },
+  "counts": {
+    "conditioning_files": 961,
+    "expected_conditioning_files": 961,
+    "action_files": 961,
+    "expected_action_files": 961,
+    "checkpoints": 60,
+    "formal_evaluations": 60,
+    "rollouts": 1200,
+    "videos": 1200
+  },
+  "violations": [],
+  "best_aggregate_step": {
+    "step": 2000,
+    "successes": 177,
+    "episodes": 200,
+    "rate": 0.885,
+    "ci95": [
+      0.8333528310151243,
+      0.9221362676743804
+    ],
+    "delta_pp": 7.499999999999996,
+    "mcnemar_vs_baseline": {
+      "baseline_only": 12,
+      "future_only": 27,
+      "discordant": 39,
+      "two_sided_exact_p": 0.023702702470473014
+    }
+  },
+  "workflow_processes_remaining": [],
+  "completion_event": {
+    "event": "all_tasks_completed",
+    "time": "2026-08-30 00:37:57 UTC"
+  },
+  "repository_export": {
+    "source": "/data/libero_mem_baseline/formal_action_history_handoff04_all10_step_sweep_v1/final_audit.json",
+    "source_sha256": "sha256:c65b7322b0cf38b7a1de9e213d81eb8a2964eb9adb92aafc7ae0062716d90daf",
+    "exported_at": "2026-08-30 03:32:35 UTC",
+    "episode_csv": "results/libero_mem_all10_episode_steps.csv",
+    "summary_csv": "results/libero_mem_all10_summary.csv"
+  }
+}

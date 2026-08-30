@@ -27,6 +27,97 @@ LIBERO_SUITE_MAX_STEPS = {
     "libero_10": 520,
     "libero_mem": 600,
 }
+LIBERO_MEM_SETTLE_STEPS = 20
+LIBERO_MEM_BOTTLE_JOINT = "wine_bottle_1_joint0"
+LIBERO_MEM_PLATE_JOINT_PREFIX = "plate_"
+LIBERO_MEM_BOTTLE_MAX_TILT_DEGREES = 20.0
+LIBERO_MEM_BOTTLE_PLACEMENT_HEIGHT = 0.0135
+
+
+@dataclasses.dataclass(frozen=True)
+class ObjectStabilizationPlan:
+    object_joint: str
+    support_joint: str
+    support_xy_offset: np.ndarray
+    upright_quaternion: np.ndarray
+
+
+def _joint_names(model: Any) -> list[str]:
+    names = []
+    for index in range(int(model.njnt)):
+        name = model.joint_id2name(index)
+        if name is not None:
+            names.append(str(name))
+    return names
+
+
+def _upright_quaternion(quaternion: Any) -> np.ndarray:
+    quaternion = np.asarray(quaternion, dtype=np.float64)
+    yaw_components = np.asarray([quaternion[0], quaternion[3]], dtype=np.float64)
+    norm = float(np.linalg.norm(yaw_components))
+    if norm == 0.0:
+        return np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+    return np.asarray([yaw_components[0] / norm, 0.0, 0.0, yaw_components[1] / norm], dtype=np.float64)
+
+
+def _object_tilt_degrees(quaternion: Any) -> float:
+    quaternion = np.asarray(quaternion, dtype=np.float64)
+    quaternion /= np.linalg.norm(quaternion)
+    w, x, y, z = quaternion
+    del w, z
+    vertical_component = 1.0 - 2.0 * (x * x + y * y)
+    return float(np.degrees(np.arccos(np.clip(abs(vertical_component), -1.0, 1.0))))
+
+
+def _capture_libero_mem_stabilization_plan(env: Any) -> ObjectStabilizationPlan | None:
+    sim = getattr(env, "sim", None)
+    if sim is None:
+        raise TypeError("LIBERO-Mem object stabilization requires env.sim")
+    joint_names = _joint_names(sim.model)
+    if LIBERO_MEM_BOTTLE_JOINT not in joint_names:
+        return None
+    plate_joints = [
+        name
+        for name in joint_names
+        if name.startswith(LIBERO_MEM_PLATE_JOINT_PREFIX) and name.endswith("_joint0")
+    ]
+    if not plate_joints:
+        raise ValueError("LIBERO-Mem scene contains a wine bottle but no plate free joint")
+    bottle_qpos = np.asarray(sim.data.get_joint_qpos(LIBERO_MEM_BOTTLE_JOINT), dtype=np.float64).copy()
+    support_joint = min(
+        plate_joints,
+        key=lambda name: float(
+            np.linalg.norm(bottle_qpos[:2] - np.asarray(sim.data.get_joint_qpos(name), dtype=np.float64)[:2])
+        ),
+    )
+    support_qpos = np.asarray(sim.data.get_joint_qpos(support_joint), dtype=np.float64)
+    return ObjectStabilizationPlan(
+        object_joint=LIBERO_MEM_BOTTLE_JOINT,
+        support_joint=support_joint,
+        support_xy_offset=(bottle_qpos[:2] - support_qpos[:2]).copy(),
+        upright_quaternion=_upright_quaternion(bottle_qpos[3:7]),
+    )
+
+
+def _stabilize_libero_mem_object(env: Any, plan: ObjectStabilizationPlan | None) -> bool:
+    if plan is None:
+        return False
+    sim = env.sim
+    object_qpos = np.asarray(sim.data.get_joint_qpos(plan.object_joint), dtype=np.float64)
+    if _object_tilt_degrees(object_qpos[3:7]) <= LIBERO_MEM_BOTTLE_MAX_TILT_DEGREES:
+        return False
+    support_qpos = np.asarray(sim.data.get_joint_qpos(plan.support_joint), dtype=np.float64)
+    stabilized_qpos = np.concatenate(
+        (
+            support_qpos[:2] + plan.support_xy_offset,
+            np.asarray([support_qpos[2] + LIBERO_MEM_BOTTLE_PLACEMENT_HEIGHT]),
+            plan.upright_quaternion,
+        )
+    )
+    sim.data.set_joint_qpos(plan.object_joint, stabilized_qpos)
+    sim.data.set_joint_qvel(plan.object_joint, np.zeros(6, dtype=np.float64))
+    sim.forward()
+    return True
 
 
 @dataclasses.dataclass(frozen=True)
@@ -65,21 +156,39 @@ class PlainLiberoEnvAdapter:
 
 
 class EpisodeSetupAdapter:
-    """Resets a LIBERO task to a fixed init state and waits before metric steps."""
+    """Resets a LIBERO task to a fixed init state and stabilizes fragile objects."""
 
-    def __init__(self, base_adapter: Any, *, env: Any, init_state: Any, num_steps_wait: int):
+    def __init__(
+        self,
+        base_adapter: Any,
+        *,
+        env: Any,
+        init_state: Any,
+        num_steps_wait: int,
+        stabilize_libero_mem_objects: bool = False,
+    ):
         self._base_adapter = base_adapter
         self._env = env
         self._init_state = init_state
         self._num_steps_wait = int(num_steps_wait)
+        self._stabilize_libero_mem_objects = bool(stabilize_libero_mem_objects)
 
     def reset(self) -> Any:
-        snapshot = self._base_adapter.reset()
-        observation = getattr(snapshot, "observation", None)
-        if hasattr(self._env, "set_init_state"):
-            observation = self._env.set_init_state(self._init_state)
+        if not hasattr(self._env, "set_init_state"):
+            raise TypeError(
+                "LIBERO evaluation environment must provide set_init_state(init_state); "
+                f"got {type(self._env).__module__}.{type(self._env).__qualname__}"
+            )
+        self._base_adapter.reset()
+        observation = self._env.set_init_state(self._init_state)
+        stabilization_plan = (
+            _capture_libero_mem_stabilization_plan(self._env) if self._stabilize_libero_mem_objects else None
+        )
         for _ in range(self._num_steps_wait):
             observation, _, _, _ = self._env.step(LIBERO_DUMMY_ACTION)
+        if _stabilize_libero_mem_object(self._env, stabilization_plan):
+            for _ in range(self._num_steps_wait):
+                observation, _, _, _ = self._env.step(LIBERO_DUMMY_ACTION)
         return self._snapshot(observation, success=False)
 
     def step(self, action: Any) -> Any:
@@ -113,7 +222,8 @@ class Args:
     train_seed: int = 0
     rollout_seed: int = 0
     num_trials_per_task: int = 1
-    num_steps_wait: int = 10
+    num_steps_wait: int = LIBERO_MEM_SETTLE_STEPS
+    stabilize_libero_mem_objects: bool = True
     task_ids: tuple[int, ...] | None = None
     results_path: str = "data/libero_mem/rollouts.jsonl"
     checkpoint_path: str | None = None
@@ -299,6 +409,11 @@ def eval_libero_mem(args: Args, *, episode_runner=run_single_episode) -> list[di
         env = offscreen_env(bddl_file_name=task_bddl, camera_heights=256, camera_widths=256)
         if hasattr(env, "seed"):
             env.seed(args.rollout_seed)
+        if not hasattr(env, "set_init_state"):
+            raise TypeError(
+                "OffScreenRenderEnv must expose set_init_state; "
+                f"got {type(env).__module__}.{type(env).__qualname__}"
+            )
         base_adapter = PlainLiberoEnvAdapter(env) if is_plain_libero else env_adapter_module.LiberoMemEnvAdapter(env, task_text=task_text)
         for episode_index in range(args.num_trials_per_task):
             init_state = _trial_init_state(initial_states, episode_index, task_id=task_id)
@@ -307,6 +422,9 @@ def eval_libero_mem(args: Args, *, episode_runner=run_single_episode) -> list[di
                 env=env,
                 init_state=init_state,
                 num_steps_wait=args.num_steps_wait,
+                stabilize_libero_mem_objects=(
+                    args.task_suite_name == "libero_mem" and args.stabilize_libero_mem_objects
+                ),
             )
             records.append(
                 episode_runner(
@@ -390,8 +508,8 @@ def _libero_infer_payload(*, observation: Any, task: str, executed_prefix: list[
     if not isinstance(observation, dict):
         raise TypeError("LIBERO infer observation must be a dict")
 
-    image = np.ascontiguousarray(observation["agentview_image"][::-1, ::-1])
-    wrist_image = np.ascontiguousarray(observation["robot0_eye_in_hand_image"][::-1, ::-1])
+    image = np.ascontiguousarray(observation["agentview_image"][::-1, :])
+    wrist_image = np.ascontiguousarray(observation["robot0_eye_in_hand_image"][::-1, :])
     image = image_tools.convert_to_uint8(
         image_tools.resize_with_pad(image, LIBERO_INFERENCE_IMAGE_SIZE, LIBERO_INFERENCE_IMAGE_SIZE)
     )

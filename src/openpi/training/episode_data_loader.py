@@ -4,6 +4,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 import dataclasses
 import math
 from typing import Any, Protocol, SupportsIndex
+from pathlib import Path
 
 import jax
 import numpy as np
@@ -200,12 +201,15 @@ class LeRobotEpisodeDataset:
         *,
         dataset: _RandomAccessDataset | None = None,
         repo_id: str | None = None,
+        dataset_root: str | None = None,
         action_horizon: int,
         query_stride: int,
         executed_horizon: int | None = None,
         transforms: Sequence[_transforms.DataTransformFn] = (),
         action_sequence_keys: Sequence[str] = ("actions",),
+        conditioning_cache_dir: str | None = None,
         prompt_from_task: bool = False,
+        task_name: str | None = None,
         dataset_factory: Callable[..., _RandomAccessDataset] | None = None,
         dataset_metadata_factory: Callable[[str], Any] | None = None,
     ):
@@ -228,12 +232,15 @@ class LeRobotEpisodeDataset:
 
                 dataset_factory = lerobot_dataset.LeRobotDataset
                 dataset_metadata_factory = lerobot_dataset.LeRobotDatasetMetadata
-            metadata = dataset_metadata_factory(repo_id)
+            metadata_kwargs = {} if dataset_root is None else {"root": dataset_root}
+            metadata = dataset_metadata_factory(repo_id, **metadata_kwargs)
+            dataset_kwargs = {} if dataset_root is None else {"root": dataset_root}
             dataset = dataset_factory(
                 repo_id,
                 delta_timestamps={
                     key: [t / metadata.fps for t in range(action_horizon)] for key in action_sequence_keys
                 },
+                **dataset_kwargs,
             )
         elif repo_id is not None:
             raise ValueError("Pass either dataset or repo_id, not both")
@@ -241,9 +248,11 @@ class LeRobotEpisodeDataset:
         self._dataset = dataset
         self._transform = _transforms.compose(transforms)
         self._action_horizon = int(action_horizon)
+        self._conditioning_cache_dir = None if conditioning_cache_dir is None else Path(conditioning_cache_dir)
         self._query_stride = int(query_stride)
         self._executed_horizon = int(executed_horizon)
         self._prompt_from_task = bool(prompt_from_task)
+        self._task_name = task_name
         self._tasks = _tasks_from_dataset(dataset)
         self.episodes = self._build_episode_records(dataset)
 
@@ -280,13 +289,13 @@ class LeRobotEpisodeDataset:
             action_chunk, mask = self._action_chunk(record, query, transformed)
             actions.append(action_chunk)
             action_masks.append(mask)
-
         if not observations:
             raise ValueError(f"Episode {episode_index} has no queries")
-
         stacked_actions = np.stack(actions, axis=0)
         stacked_action_mask = np.stack(action_masks, axis=0)
-        executed_actions, executed_action_mask = self._executed_prefixes(stacked_actions, stacked_action_mask)
+        executed_actions, executed_action_mask = self._executed_prefixes(
+            stacked_actions, stacked_action_mask
+        )
         return EpisodeExample(
             observation=_stack_observations(observations),
             actions=stacked_actions,
@@ -294,6 +303,7 @@ class LeRobotEpisodeDataset:
             executed_actions=executed_actions,
             executed_action_mask=executed_action_mask,
             episode_index=record.episode_index,
+            conditioning_cache=self._load_conditioning_cache(record),
         )
 
     def _build_episode_records(self, dataset: _RandomAccessDataset) -> tuple[EpisodeRecord, ...]:
@@ -304,12 +314,19 @@ class LeRobotEpisodeDataset:
         ends = _to_int_array(index["to"])
         if starts.shape != ends.shape:
             raise ValueError("episode_data_index['from'] and ['to'] must have matching shapes")
-
         task_indices = getattr(dataset, "episode_task_index", None)
         records = []
         for episode_index, (start, end) in enumerate(zip(starts.tolist(), ends.tolist(), strict=True)):
             if end <= start:
                 raise ValueError(f"Episode {episode_index} has non-positive length: from={start}, to={end}")
+            task_index = (
+                int(np.asarray(task_indices)[episode_index])
+                if task_indices is not None
+                else _sample_task_index(dataset, start)
+            )
+            task_name = None if task_index is None else self._tasks.get(task_index)
+            if self._task_name is not None and task_name != self._task_name:
+                continue
             queries = tuple(
                 QueryRecord(
                     episode_index=episode_index,
@@ -319,7 +336,6 @@ class LeRobotEpisodeDataset:
                 )
                 for query_index, frame_index in enumerate(range(start, end, self._query_stride))
             )
-            task_index = None if task_indices is None else int(np.asarray(task_indices)[episode_index])
             records.append(
                 EpisodeRecord(
                     episode_index=episode_index,
@@ -327,10 +343,38 @@ class LeRobotEpisodeDataset:
                     end_frame=int(end),
                     queries=queries,
                     task_index=task_index,
-                    task_name=None if task_index is None else self._tasks.get(task_index),
+                    task_name=task_name,
                 )
             )
+        if self._task_name is not None and not records:
+            raise ValueError(f"No episodes match task_name={self._task_name!r}")
         return tuple(records)
+
+    def _load_conditioning_cache(self, record: EpisodeRecord) -> dict[str, np.ndarray] | None:
+        if self._conditioning_cache_dir is None:
+            return None
+        path = self._conditioning_cache_dir / f"episode_{record.episode_index:06d}.pt"
+        if not path.is_file():
+            raise FileNotFoundError(f"conditioning cache missing: {path}")
+        import torch
+        payload = torch.load(path, map_location="cpu", weights_only=True)
+        if not isinstance(payload, dict):
+            raise ValueError(f"invalid conditioning cache: {path}")
+        required = {"last_valid_hidden", "prefix_mask", "action_expert_keys", "action_expert_values"}
+        if set(payload) != required:
+            raise ValueError(f"conditioning cache keys mismatch: {path}")
+        result = {
+            key: (
+                value.float().numpy()
+                if torch.is_tensor(value) and value.dtype is torch.bfloat16
+                else np.asarray(value)
+            )
+            for key, value in payload.items()
+        }
+        expected = len(record.queries)
+        if any(value.shape[0] != expected for value in result.values()):
+            raise ValueError(f"conditioning cache query count mismatch: {path}")
+        return result
 
     def _with_prompt(self, sample: dict[str, Any], record: EpisodeRecord) -> dict[str, Any]:
         if not self._prompt_from_task:
@@ -609,12 +653,15 @@ def create_lerobot_episode_dataset(
     return LeRobotEpisodeDataset(
         dataset=dataset,
         repo_id=None if dataset is not None else data_config.repo_id,
+        dataset_root=getattr(data_config, "dataset_root", None),
+        conditioning_cache_dir=getattr(data_config, "conditioning_cache_dir", None),
         action_horizon=action_horizon,
         query_stride=episode_config.query_stride,
         executed_horizon=episode_config.executed_horizon,
         transforms=make_transform_pipeline(data_config, skip_norm_stats=skip_norm_stats),
         action_sequence_keys=data_config.action_sequence_keys,
         prompt_from_task=data_config.prompt_from_task,
+        task_name=getattr(data_config, "task_name", None),
         dataset_factory=dataset_factory,
         dataset_metadata_factory=dataset_metadata_factory,
     )
@@ -643,6 +690,12 @@ def _tasks_from_dataset(dataset: Any) -> dict[int, str]:
         return {int(key): value for key, value in dataset.tasks.items()}
     return {}
 
+def _sample_task_index(dataset: Any, frame_index: int) -> int | None:
+    sample = dataset[int(frame_index)]
+    if "task_index" not in sample:
+        return None
+    return int(np.asarray(sample["task_index"]).item())
+
 
 def _string_from_value(value: Any) -> str:
     if hasattr(value, "item"):
@@ -661,13 +714,23 @@ def _as_action_array(value: Any) -> np.ndarray:
 
 def _copy_observation_fields(data: dict[str, Any]) -> dict[str, Any]:
     return {
-        "image": data["image"],
-        "image_mask": data["image_mask"],
-        "state": data["state"],
-        **({"tokenized_prompt": data["tokenized_prompt"]} if "tokenized_prompt" in data else {}),
-        **({"tokenized_prompt_mask": data["tokenized_prompt_mask"]} if "tokenized_prompt_mask" in data else {}),
-        **({"token_ar_mask": data["token_ar_mask"]} if "token_ar_mask" in data else {}),
-        **({"token_loss_mask": data["token_loss_mask"]} if "token_loss_mask" in data else {}),
+        "image": {key: np.asarray(value) for key, value in data["image"].items()},
+        "image_mask": {
+            key: np.asarray(value, dtype=np.bool_) for key, value in data["image_mask"].items()
+        },
+        "state": np.asarray(data["state"], dtype=np.float32),
+        **({"tokenized_prompt": np.asarray(data["tokenized_prompt"])} if "tokenized_prompt" in data else {}),
+        **(
+            {"tokenized_prompt_mask": np.asarray(data["tokenized_prompt_mask"], dtype=np.bool_)}
+            if "tokenized_prompt_mask" in data
+            else {}
+        ),
+        **({"token_ar_mask": np.asarray(data["token_ar_mask"])} if "token_ar_mask" in data else {}),
+        **(
+            {"token_loss_mask": np.asarray(data["token_loss_mask"], dtype=np.bool_)}
+            if "token_loss_mask" in data
+            else {}
+        ),
     }
 
 

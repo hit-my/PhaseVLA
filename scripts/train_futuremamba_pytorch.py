@@ -20,7 +20,6 @@ from openpi.models_pytorch.futuremamba_config import FutureMambaPytorchConfig
 from openpi.training import config as _config
 from openpi.training import data_loader as _data_loader
 from openpi.training import episode_data_loader as _episode_data_loader
-from openpi.training import robomme_episode_dataset as _robomme_episode_dataset
 from openpi.training.futuremamba_checkpoint import load_futuremamba_checkpoint
 from openpi.training.futuremamba_checkpoint import save_futuremamba_checkpoint
 
@@ -102,6 +101,47 @@ def create_wandb_metric_logger(
         resume="allow",
     )
     return run, WandbMetricLogger(run)
+
+
+def _architecture_metadata(model_config: FutureMambaPytorchConfig) -> dict[str, Any]:
+    return {
+        "architecture": model_config.architecture,
+        "memory_input_source": model_config.memory_input_source,
+        "action_history_encoding": model_config.action_history_encoding,
+    }
+
+
+def _attach_file_log_handler(log_file: str | Path | None) -> logging.Handler | None:
+    if log_file is None:
+        return None
+    path = Path(log_file)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler(path, mode="a", encoding="utf-8")
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+    LOGGER.addHandler(handler)
+    return handler
+
+
+def _wandb_run_name(train_config: _config.TrainConfig) -> str:
+    return train_config.wandb_run_name or f"{train_config.name}-seed{train_config.seed}"
+
+
+def _log_training_identity(
+    train_config: _config.TrainConfig, metadata: Mapping[str, Any], checkpoint_root: Path
+) -> None:
+    LOGGER.info(
+        "config=%s task=%s seed=%d checkpoint_root=%s log_file=%s wandb_run_name=%s "
+        "architecture=%s memory_input_source=%s",
+        train_config.name,
+        metadata.get("task_name") or "unknown",
+        train_config.seed,
+        checkpoint_root,
+        train_config.log_file,
+        _wandb_run_name(train_config),
+        metadata["architecture"],
+        metadata["memory_input_source"],
+    )
 
 
 def run_training(
@@ -239,9 +279,8 @@ def run_training(
 
 def build_checkpoint_metadata(model: nn.Module, model_config: FutureMambaPytorchConfig) -> dict[str, Any]:
     metadata = model_config.checkpoint_metadata()
-    metadata["base_checkpoint_checksum"] = _base_checksum(model)
-    metadata["base_checkpoint_uri"] = model_config.base_checkpoint_uri
-    metadata["base_assets_checksum"] = model_config.base_assets_checksum
+    metadata.update(_architecture_metadata(model_config))
+    metadata["base_checkpoint_checksum"] = model.base_checksum()
     metadata["torch_version"] = torch.__version__
     metadata["cuda_version"] = torch.version.cuda
     try:
@@ -256,22 +295,24 @@ def build_checkpoint_metadata(model: nn.Module, model_config: FutureMambaPytorch
     return metadata
 
 def create_training_data(train_config: _config.TrainConfig, *, shuffle: bool):
+    if not isinstance(train_config.data, _config.LeRobotLiberoDataConfig):
+        raise TypeError("action-history handoff FutureMamba requires LeRobotLiberoDataConfig")
     data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
-    if isinstance(train_config.data, _config.RoboMMEDataConfig):
-        dataset = _robomme_episode_dataset.create_robomme_episode_dataset(
-            data_config, train_config.model, train_config.episode_data
-        )
-        data_loader = _data_loader.TorchDataLoader(
-            dataset,
-            local_batch_size=train_config.batch_size,
-            shuffle=shuffle,
-            num_workers=train_config.num_workers,
-            seed=train_config.seed,
-            framework="pytorch",
-            collate_fn=_episode_data_loader.EpisodeCollator(),
-        )
-        return _data_loader.EpisodeDataLoaderImpl(data_config, data_loader)
-    return _data_loader.create_episode_data_loader(train_config, shuffle=shuffle)
+    dataset = _episode_data_loader.create_lerobot_episode_dataset(
+        data_config=data_config,
+        episode_config=train_config.episode_data,
+        action_horizon=int(train_config.model.action_horizon),
+    )
+    data_loader = _data_loader.TorchDataLoader(
+        dataset,
+        local_batch_size=train_config.batch_size,
+        shuffle=shuffle,
+        num_workers=train_config.num_workers,
+        seed=train_config.seed,
+        framework="pytorch",
+        collate_fn=_episode_data_loader.EpisodeCollator(),
+    )
+    return _data_loader.EpisodeDataLoaderImpl(data_config, data_loader)
 
 
 def load_training_model(train_config: _config.TrainConfig, device: torch.device) -> nn.Module:
@@ -279,11 +320,11 @@ def load_training_model(train_config: _config.TrainConfig, device: torch.device)
         raise TypeError("train config model must be FutureMambaPytorchConfig")
     base_checkpoint = train_config.pytorch_weight_path or train_config.model.base_checkpoint_uri
     if not base_checkpoint:
-        raise ValueError("FutureMamba PyTorch training requires pytorch_weight_path or base_checkpoint_uri")
+        raise ValueError("action-history handoff training requires a frozen base checkpoint")
     checkpoint_path = Path(base_checkpoint.removeprefix("file://")).expanduser()
     weight_path = checkpoint_path if checkpoint_path.name == "model.safetensors" else checkpoint_path / "model.safetensors"
     if not weight_path.is_file():
-        raise FileNotFoundError(f"converted pi0.5 model.safetensors not found: {weight_path}")
+        raise FileNotFoundError(f"converted base model.safetensors not found: {weight_path}")
     model = train_config.model.create_pytorch().to(device)
     try:
         safetensors.torch.load_model(model.base, weight_path, strict=True)
@@ -349,15 +390,10 @@ def _model_device(model: nn.Module) -> torch.device:
     return torch.device("cpu") if parameter is None else parameter.device
 
 
-def _base_checksum(model: nn.Module) -> str:
-    checksum = getattr(model, "base_checksum", None)
-    if not callable(checksum):
-        raise ValueError("FutureMamba model must provide base_checksum()")
-    return checksum()
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Train the pure PyTorch FutureMamba plugin")
+    parser = argparse.ArgumentParser(description="Train action-history Mamba + Progress Expert")
     parser.add_argument("config")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--num-train-steps", type=int)
@@ -366,13 +402,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--log-interval", type=int)
     parser.add_argument("--pytorch-training-precision", choices=("float32", "bfloat16"))
     parser.add_argument("--wandb-enabled", choices=("true", "false"))
-    parser.add_argument(
-        "--terminal-monitor-enabled", choices=("true", "false"), default="false"
-    )
-    parser.add_argument("--episode-data-dir", type=Path)
-    parser.add_argument("--conditioning-cache-dir", type=Path)
-    parser.add_argument("--robomme-dataset-checksum")
-    parser.add_argument("--robomme-task-suite")
+    parser.add_argument("--log-file", type=Path)
+    parser.add_argument("--wandb-run-name")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--checkpoint-root", type=Path)
@@ -395,31 +426,12 @@ def apply_cli_overrides(train_config: _config.TrainConfig, args: argparse.Namesp
         replacements["pytorch_training_precision"] = args.pytorch_training_precision
     if args.wandb_enabled is not None:
         replacements["wandb_enabled"] = args.wandb_enabled == "true"
-    if args.episode_data_dir is not None:
-        if not isinstance(train_config.data, _config.RoboMMEDataConfig):
-            raise ValueError("--episode-data-dir is only valid for RoboMME configs")
-        replacements["data"] = dataclasses.replace(
-            train_config.data, episode_data_dir=str(args.episode_data_dir)
-        )
-    if args.conditioning_cache_dir is not None:
-        if not isinstance(train_config.data, _config.RoboMMEDataConfig):
-            raise ValueError("--conditioning-cache-dir is only valid for RoboMME configs")
-        replacements["data"] = dataclasses.replace(
-            replacements.get("data", train_config.data),
-            conditioning_cache_dir=str(args.conditioning_cache_dir),
-        )
-    if args.robomme_dataset_checksum is not None or args.robomme_task_suite is not None:
-        if not isinstance(train_config.data, _config.RoboMMEDataConfig):
-            raise ValueError("RoboMME provenance overrides are only valid for RoboMME configs")
-        replacements["model"] = dataclasses.replace(
-            replacements.get("model", train_config.model),
-            robomme_dataset_checksum=args.robomme_dataset_checksum,
-            robomme_task_suite=args.robomme_task_suite,
-        )
+    if args.log_file is not None:
+        replacements["log_file"] = str(args.log_file)
+    if args.wandb_run_name is not None:
+        replacements["wandb_run_name"] = args.wandb_run_name
     effective_seed = train_config.seed if args.seed is None else args.seed
-    replacements["model"] = dataclasses.replace(
-        replacements.get("model", train_config.model), train_seed=effective_seed
-    )
+    replacements["model"] = dataclasses.replace(train_config.model, train_seed=effective_seed)
     return dataclasses.replace(train_config, **replacements) if replacements else train_config
 
 
@@ -437,30 +449,27 @@ def main(argv: list[str] | None = None) -> int:
     seed_training_runtime(train_config.seed)
     device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     checkpoint_root = args.checkpoint_root or Path(train_config.checkpoint_base_dir) / train_config.name
-    if args.overwrite and checkpoint_root.exists():
-        shutil.rmtree(checkpoint_root)
-    model = load_training_model(train_config, device)
-    metadata = build_checkpoint_metadata(model, train_config.model)
-    terminal_monitor_enabled = args.terminal_monitor_enabled == "true"
-    metadata["memory_update_stride"] = train_config.episode_data.query_stride
-    metadata["train_query_stride"] = (
-        train_config.episode_data.train_query_stride or train_config.episode_data.query_stride
-    )
-    metadata["terminal_monitor_only"] = terminal_monitor_enabled
-    metadata["terminal_monitor_interval"] = (
-        train_config.log_interval if terminal_monitor_enabled else None
-    )
-    data = create_training_data(train_config, shuffle=True)
-    optimizer_config = train_config.optimizer
-    schedule = train_config.lr_schedule
-    learning_rate = float(getattr(schedule, "peak_lr", 2.5e-5))
-    wandb_run, metric_logger = create_wandb_metric_logger(
-        enabled=train_config.wandb_enabled,
-        project="futuremamba",
-        name=f"{train_config.name}-{train_config.model.robomme_task_suite or 'default'}-seed{train_config.seed}",
-        config=metadata,
-    )
+    file_log_handler = _attach_file_log_handler(train_config.log_file)
+    wandb_run = None
     try:
+        if args.overwrite and checkpoint_root.exists():
+            shutil.rmtree(checkpoint_root)
+        model = load_training_model(train_config, device)
+        metadata = build_checkpoint_metadata(model, train_config.model)
+        metadata["memory_update_stride"] = train_config.episode_data.query_stride
+        metadata["train_query_stride"] = train_config.episode_data.query_stride
+        _log_training_identity(train_config, metadata, checkpoint_root)
+        data = create_training_data(train_config, shuffle=True)
+        optimizer_config = train_config.optimizer
+        schedule = train_config.lr_schedule
+        learning_rate = float(getattr(schedule, "peak_lr", 2.5e-5))
+        wandb_name = _wandb_run_name(train_config)
+        wandb_run, metric_logger = create_wandb_metric_logger(
+            enabled=train_config.wandb_enabled,
+            project="futuremamba",
+            name=wandb_name,
+            config=metadata,
+        )
         run_training(
             model,
             data,
@@ -475,11 +484,14 @@ def main(argv: list[str] | None = None) -> int:
             resume=args.resume,
             device=device,
             metric_logger=metric_logger,
-            terminal_monitor_enabled=terminal_monitor_enabled,
+            terminal_monitor_enabled=False,
         )
     finally:
         if wandb_run is not None:
             wandb_run.finish()
+        if file_log_handler is not None:
+            LOGGER.removeHandler(file_log_handler)
+            file_log_handler.close()
     return 0
 
 

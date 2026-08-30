@@ -335,8 +335,6 @@ class ProgressExpertPytorch(nn.Module):
         if prefix_mask.ndim != 2 or prefix_mask.dtype is not torch.bool:
             raise ValueError(f"prefix_mask must have shape [batch, prefix] and bool dtype, got {tuple(prefix_mask.shape)}")
         batch, prefix_len = prefix_mask.shape
-        if torch.any(prefix_mask.long().sum(dim=-1) == 0):
-            raise ValueError("prefix contains no valid token")
         if memory_token.shape != (batch, 1, self.width):
             raise ValueError(f"memory_token must have shape [{batch}, 1, {self.width}], got {tuple(memory_token.shape)}")
         if noisy_actions.shape != (batch, self.action_horizon, self.action_dim):

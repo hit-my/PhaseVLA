@@ -68,6 +68,7 @@ class AssetsConfig:
 class DataConfig:
     # LeRobot repo id. If None, fake data will be created.
     repo_id: str | None = None
+    dataset_root: str | None = None
     # Directory within the assets directory containing the data assets.
     asset_id: str | None = None
     # Contains precomputed normalization stats. If None, normalization will not be performed.
@@ -102,6 +103,7 @@ class DataConfig:
     # Directory containing official RoboMME execution-step pickle samples.
     episode_data_dir: str | None = None
     conditioning_cache_dir: str | None = None
+    task_name: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -370,6 +372,9 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
     """
 
     extra_delta_transform: bool = False
+    conditioning_cache_dir: str | None = None
+    task_name: str | None = None
+    dataset_root: str | None = None
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
@@ -432,9 +437,40 @@ class LeRobotLiberoDataConfig(DataConfigFactory):
         # We return all data transforms for training and inference. No need to change anything here.
         return dataclasses.replace(
             self.create_base_config(assets_dirs, model_config),
+            repo_id=self.repo_id,
+            dataset_root=self.dataset_root,
             repack_transforms=repack_transform,
             data_transforms=data_transforms,
             model_transforms=model_transforms,
+            task_name=self.task_name,
+            conditioning_cache_dir=self.conditioning_cache_dir,
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class ActionHistoryLiberoDataConfig(DataConfigFactory):
+    """Local HDF5 actions for VLA-free action-history FutureMamba training."""
+
+    hdf5_path: str = tyro.MISSING
+    norm_stats_path: str = tyro.MISSING
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        base = self.create_base_config(assets_dirs, model_config)
+        action_stats = None if base.norm_stats is None else base.norm_stats.get("actions")
+        if action_stats is None:
+            raise ValueError("ActionHistoryLiberoDataConfig requires action normalization stats")
+        return dataclasses.replace(
+            base,
+            data_transforms=_transforms.Group(
+                inputs=[
+                    _transforms.NormalizeExecutedActions(action_stats, use_quantiles=True),
+                    _transforms.PadExecutedActions(model_config.action_horizon, model_config.action_dim),
+                ],
+                outputs=[libero_policy.LiberoOutputs()],
+            ),
+            model_transforms=_transforms.Group(),
+            action_sequence_keys=("actions",),
         )
 
 
@@ -584,6 +620,10 @@ class TrainConfig:
     assets_base_dir: str = "./assets"
     # Base directory for checkpoints.
     checkpoint_base_dir: str = "./checkpoints"
+    # Optional log file used by PyTorch trainers that support direct file logging.
+    log_file: str | None = None
+    # Optional explicit W&B run name used by PyTorch trainers.
+    wandb_run_name: str | None = None
 
     # Random seed that will be used by random generators during training.
     seed: int = 42
@@ -754,6 +794,87 @@ _ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_MODEL = dataclasses.replace(
     _ROBOMME_FUTUREMAMBA_LIGHT_MODEL,
     handoff_ratio=0.7,
 )
+_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_PREFIX_DROPOUT_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_MODEL,
+    progress_use_prefix_kv=True,
+    progress_prefix_kv_dropout=0.3,
+)
+_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_PREFIX_DISABLED_MODEL = dataclasses.replace(
+    _ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_MODEL,
+    progress_use_prefix_kv=False,
+    progress_prefix_kv_dropout=0.0,
+)
+_ROBOMME_PE_PREFIX_TASKS = (
+    (
+        "BinFill",
+        "binfill",
+        "sha256:f81a2a5dda0fdc205343148d613f3dc91321c5071c15038c8b99f32357ea8109",
+    ),
+    (
+        "PickXtimes",
+        "pickxtimes",
+        "sha256:5b7941c418141161726e0f8212db437cddca7d0ac9ad14e81922b19c41e5bf49",
+    ),
+    (
+        "SwingXtimes",
+        "swingxtimes",
+        "sha256:dcc41c472f1d1a4383ac1ade699c8c36d272cbd8c7e6814a62012af5d1a26922",
+    ),
+)
+_ROBOMME_PE_PREFIX_DATA_ROOT = "/data/phasevla/task_training_data_2500"
+
+
+def _robomme_futuremamba_pe_prefix_task_configs(
+    *,
+    config_name_prefix: str,
+    model: futuremamba_pytorch_config.FutureMambaPytorchConfig,
+    checkpoint_base_dir: str,
+    log_dir: str,
+) -> tuple[TrainConfig, ...]:
+    configs = []
+    for task_suite, task_slug, dataset_checksum in _ROBOMME_PE_PREFIX_TASKS:
+        task_model = dataclasses.replace(
+            model,
+            robomme_dataset_checksum=dataset_checksum,
+            robomme_task_suite=task_suite,
+        )
+        config_name = f"{config_name_prefix}_{task_slug}"
+        configs.append(
+            TrainConfig(
+                name=config_name,
+                model=task_model,
+                data=RoboMMEDataConfig(
+                    repo_id="robomme",
+                    assets=AssetsConfig(
+                        assets_dir="./runs/ckpts/pi05_baseline_pytorch/79999/assets",
+                        asset_id="robomme",
+                    ),
+                    base_config=DataConfig(prompt_from_task=True),
+                    episode_data_dir=f"{_ROBOMME_PE_PREFIX_DATA_ROOT}/{task_suite}",
+                ),
+                episode_data=EpisodeDataConfig(
+                    query_stride=16,
+                    executed_horizon=16,
+                    window_queries=8,
+                    full_episodes=True,
+                ),
+                weight_loader=weight_loaders.LatestCheckpointWeightLoader("./checkpoints/pi05_robomme_pytorch"),
+                pytorch_weight_path="./runs/ckpts/pi05_baseline_pytorch/79999",
+                freeze_filter=task_model.get_freeze_filter(),
+                ema_decay=None,
+                batch_size=16,
+                num_train_steps=2500,
+                log_interval=10,
+                save_interval=500,
+                keep_period=500,
+                num_workers=0,
+                seed=42,
+                checkpoint_base_dir=checkpoint_base_dir,
+                log_file=f"{log_dir}/{task_suite}.log",
+                wandb_run_name=f"{config_name}-{task_suite}-seed42",
+            )
+        )
+    return tuple(configs)
 _ROBOMME_FUTUREMAMBA_DEPTH4_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, progress_depth=4)
 _ROBOMME_FUTUREMAMBA_DEPTH9_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, progress_depth=9)
 _ROBOMME_FUTUREMAMBA_HANDOFF_0P4_MODEL = dataclasses.replace(_ROBOMME_FUTUREMAMBA_MODEL, handoff_ratio=0.4)
@@ -789,6 +910,101 @@ _ROBOMME_FUTUREMAMBA_PE6_HANDOFF_0P4_MODEL = dataclasses.replace(
     progress_layer_mapping=None,
     handoff_ratio=0.4,
 )
+
+
+_ACTION_HISTORY_BOWL_ROOT = "/data/libero_mem_baseline"
+_ACTION_HISTORY_BASE = (
+    f"{_ACTION_HISTORY_BOWL_ROOT}/pytorch/pi05_libero_mem_all10_step49999_float32"
+)
+_ACTION_HISTORY_DATASET = (
+    f"{_ACTION_HISTORY_BOWL_ROOT}/lerobot/libero-mem/LIBERO-Mem-Lerobot"
+)
+_ACTION_HISTORY_ASSETS = f"{_ACTION_HISTORY_BASE}/assets"
+_ACTION_HISTORY_TASKS = (
+    "pick up the bowl and place it back on the plate",
+    "lift the bottle and put it down on the plate",
+    "lift the bowl and place it back on the plate 3 times",
+    "pick up the bottle and put it down the plate 3 times",
+    "lift the bowl and place it back on the plate 5 times",
+    "pick up the bowl and place it on the plate 7 times",
+    "swap the 2 bowls on their plates using the empty plate",
+    "rotate the 3 bowls on their plates from left to right using the empty plate",
+    "put the cream cheese in the nearest basket and place that basket in the center",
+    "put the cream cheese in the nearest basket and place the empty basket in the center",
+)
+_ACTION_HISTORY_CONFIGS = tuple(
+    (f"futuremamba_action_history_handoff04_libero_mem_bowl_t{task_index + 1}", task_name)
+    for task_index, task_name in enumerate(_ACTION_HISTORY_TASKS)
+)
+
+
+def _action_history_bowl_configs() -> tuple[TrainConfig, ...]:
+    configs = []
+    for name, task_name in _ACTION_HISTORY_CONFIGS:
+        model = futuremamba_pytorch_config.FutureMambaPytorchConfig(
+            pi05=True,
+            action_dim=32,
+            action_horizon=20,
+            execution_horizon=20,
+            action_history_chunk_size=20,
+            discrete_state_input=False,
+            progress_depth=4,
+            progress_layer_mapping=(0, 3, 10, 17),
+            memory_backend="mamba2",
+            handoff_ratio=0.4,
+            terminal_loss_weight=0.0,
+            frozen_prefix_microbatch_size=16,
+            dtype="bfloat16",
+            base_checkpoint_uri=_ACTION_HISTORY_BASE,
+            assets_uri=_ACTION_HISTORY_ASSETS,
+            dataset_uri=_ACTION_HISTORY_DATASET,
+            task_name=task_name,
+            train_seed=42,
+        )
+        configs.append(
+            TrainConfig(
+                name=name,
+                model=model,
+                data=LeRobotLiberoDataConfig(
+                    conditioning_cache_dir=(
+                        f"{_ACTION_HISTORY_BOWL_ROOT}/conditioning_cache_handoff04_all10/{name}"
+                    ),
+                    repo_id="libero-mem/LIBERO-Mem-Lerobot",
+                    dataset_root=_ACTION_HISTORY_DATASET,
+                    task_name=task_name,
+                    assets=AssetsConfig(
+                        assets_dir=_ACTION_HISTORY_ASSETS,
+                        asset_id="libero-mem/LIBERO-Mem-Lerobot",
+                    ),
+                    base_config=DataConfig(prompt_from_task=True),
+                    extra_delta_transform=False,
+                ),
+                episode_data=EpisodeDataConfig(
+                    query_stride=1,
+                    executed_horizon=1,
+                    window_queries=20,
+                    full_episodes=True,
+                ),
+                pytorch_weight_path=_ACTION_HISTORY_BASE,
+                freeze_filter=model.get_freeze_filter(),
+                ema_decay=None,
+                batch_size=1,
+                num_train_steps=3000,
+                log_interval=10,
+                save_interval=500,
+                keep_period=500,
+                num_workers=0,
+                seed=42,
+                checkpoint_base_dir=(
+                    f"{_ACTION_HISTORY_BOWL_ROOT}/checkpoints/action_history_handoff04_futuremamba_all10"
+                ),
+                log_file=(
+                    f"{_ACTION_HISTORY_BOWL_ROOT}/logs/action_history_handoff04_futuremamba_all10/{name}.log"
+                ),
+                wandb_run_name=f"{name}-all10-base49999-seed42",
+            )
+        )
+    return tuple(configs)
 
 
 # Use `get_config` if you need to get a config by name in your code.
@@ -1024,6 +1240,18 @@ _CONFIGS = [
         save_interval=500,
         keep_period=500,
         num_workers=0,
+    ),
+    *_robomme_futuremamba_pe_prefix_task_configs(
+        config_name_prefix="futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16_prefixdrop0p3",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_PREFIX_DROPOUT_MODEL,
+        checkpoint_base_dir="/data/phasevla/checkpoints/pe_prefix_kv_ablation/prefixdrop0p3_seed42",
+        log_dir="/data/phasevla/logs/pe_prefix_kv_ablation/prefixdrop0p3",
+    ),
+    *_robomme_futuremamba_pe_prefix_task_configs(
+        config_name_prefix="futuremamba_robomme_mamba2_light_flow_handoff_0p7_batch16_prefixoff",
+        model=_ROBOMME_FUTUREMAMBA_LIGHT_HANDOFF_0P7_BATCH16_PREFIX_DISABLED_MODEL,
+        checkpoint_base_dir="/data/phasevla/checkpoints/pe_prefix_kv_ablation/prefixoff_seed42",
+        log_dir="/data/phasevla/logs/pe_prefix_kv_ablation/prefixoff",
     ),
     TrainConfig(
         name="futuremamba_robomme_mamba2_light_flow_stride8",
@@ -1462,6 +1690,7 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi0_base/params"),
         num_train_steps=20_000,
     ),
+    *_action_history_bowl_configs(),
     #
     # Debugging configs.
     #

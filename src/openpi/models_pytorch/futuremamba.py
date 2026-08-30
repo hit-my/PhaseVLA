@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+import dataclasses
 import hashlib
 import math
-from collections.abc import Mapping
 from typing import Any
 
 import torch
 from torch import nn
 
 import openpi.models.gemma as _gemma
-from openpi.models_pytorch.gemma_pytorch import PrefixKVView, detach_cache, slice_cache_batch
+from openpi.models_pytorch.gemma_pytorch import PrefixKVView, detach_cache
 from openpi.models_pytorch.mamba_memory import (
     FrameStackMemoryBackend,
     GRUMemoryBackend,
@@ -22,7 +23,20 @@ from openpi.models_pytorch.pi0_pytorch import FrozenPrefix, PI0Pytorch
 from openpi.models_pytorch.progress_expert import ProgressExpertPytorch
 
 
+@dataclasses.dataclass(frozen=True)
+class ActionHistoryState:
+    """Committed 20-action Mamba state plus one uncommitted right-padded chunk."""
+
+    memory: MemorySnapshot
+    committed_output: torch.Tensor
+    committed_chunks: torch.LongTensor
+    pending_actions: torch.Tensor
+    pending_mask: torch.BoolTensor
+
+
 class FutureMambaPluginPytorch(nn.Module):
+    """Executed-action Mamba conditioning the early-denoising Progress Expert."""
+
     def __init__(
         self,
         config,
@@ -32,31 +46,139 @@ class FutureMambaPluginPytorch(nn.Module):
     ) -> None:
         super().__init__()
         self.config = config
+        self.chunk_size = int(config.action_history_chunk_size)
+        self.action_dim = int(config.action_dim)
         self.memory_width = int(config.memory.d_model)
         self.action_expert_width = _action_expert_width(config, self.memory_width)
         self.progress_layer_indices = tuple(config.resolved_progress_layer_indices)
-
-        self.vlm_width = _vlm_width(config, self.memory_width)
-        self.vlm_memory_in_proj = nn.Linear(self.vlm_width, self.memory_width)
-        self.progress_expert = progress_expert if progress_expert is not None else ProgressExpertPytorch(config)
+        flattened_width = self.chunk_size * (self.action_dim + 1)
+        self.action_chunk_projection = nn.Sequential(
+            nn.Linear(flattened_width, self.memory_width),
+            nn.SiLU(),
+            nn.Linear(self.memory_width, self.memory_width),
+        )
+        self.empty_history = nn.Parameter(torch.zeros(self.memory_width))
         self.memory_backend = memory_backend if memory_backend is not None else _make_memory_backend(config)
-        self.memory_token_proj = nn.Linear(self.memory_width, self.action_expert_width)
+        self.memory_token_projection = nn.Linear(self.memory_width, self.action_expert_width)
+        self.progress_expert = progress_expert if progress_expert is not None else ProgressExpertPytorch(config)
+        self.progress_num_key_value_heads = _action_expert_num_key_value_heads(config, 1)
+        self.progress_head_dim = _action_expert_head_dim(
+            config, max(1, self.action_expert_width // self.progress_num_key_value_heads)
+        )
         self.to(dtype=_dtype_from_config(config))
 
-    def initial_memory_state(self, batch_size: int, device: torch.device, dtype: torch.dtype) -> MemorySnapshot:
-        return self.memory_backend.initial_state(batch_size, device=device, dtype=dtype)
+    def initial_history_state(
+        self, batch_size: int, device: torch.device, dtype: torch.dtype
+    ) -> ActionHistoryState:
+        memory = self.memory_backend.initial_state(batch_size, device=device, dtype=dtype)
+        empty = self.empty_history.to(device=device, dtype=dtype)[None].expand(batch_size, -1).clone()
+        return ActionHistoryState(
+            memory=memory,
+            committed_output=empty,
+            committed_chunks=torch.zeros(batch_size, dtype=torch.long, device=device),
+            pending_actions=torch.zeros(
+                batch_size, self.chunk_size, self.action_dim, dtype=dtype, device=device
+            ),
+            pending_mask=torch.zeros(batch_size, self.chunk_size, dtype=torch.bool, device=device),
+        )
 
-    def compute_memory_token(
+    def encode_action_chunk(
+        self, actions: torch.Tensor, action_mask: torch.BoolTensor
+    ) -> torch.Tensor:
+        self._validate_chunk(actions, action_mask)
+        mask = action_mask.to(device=actions.device, dtype=torch.bool)
+        values = actions.to(dtype=self.action_chunk_projection[0].weight.dtype)
+        values = torch.where(mask[..., None], values, torch.zeros_like(values))
+        features = torch.cat((values, mask.to(values.dtype)[..., None]), dim=-1)
+        return self.action_chunk_projection(features.flatten(start_dim=1))
+
+    def advance_history(
         self,
-        last_vlm_token: torch.Tensor,
-        memory_state: MemorySnapshot,
-    ) -> tuple[torch.Tensor, MemorySnapshot]:
-        if last_vlm_token.ndim != 2 or last_vlm_token.shape[1] != self.vlm_width:
-            raise ValueError(f"last_vlm_token must have shape [batch, {self.vlm_width}], got {tuple(last_vlm_token.shape)}")
-        memory_input = self.vlm_memory_in_proj(last_vlm_token.to(dtype=self.vlm_memory_in_proj.weight.dtype))
-        memory_output, next_state = self.memory_backend.step(memory_input, memory_state)
-        memory_token = self.memory_token_proj(memory_output.to(dtype=self.memory_token_proj.weight.dtype)).unsqueeze(1)
-        return memory_token, next_state
+        history: ActionHistoryState,
+        executed_actions: torch.Tensor,
+        executed_action_mask: torch.BoolTensor,
+    ) -> tuple[torch.Tensor, ActionHistoryState, dict[str, int]]:
+        """Append new actions and expose all prior actions without double-counting partial chunks."""
+        self._validate_history(history)
+        self._validate_executed_actions(executed_actions, executed_action_mask, history)
+        actions = executed_actions.to(
+            device=history.pending_actions.device, dtype=history.pending_actions.dtype
+        )
+        mask = executed_action_mask.to(device=actions.device, dtype=torch.bool)
+        memory = history.memory
+        committed_output = history.committed_output
+        committed_chunks = history.committed_chunks
+        pending_actions = history.pending_actions
+        pending_mask = history.pending_mask
+        commit_count = 0
+
+        for action_index in range(actions.shape[1]):
+            valid_rows = mask[:, action_index]
+            if not bool(valid_rows.any().item()):
+                continue
+            counts = pending_mask.long().sum(dim=-1)
+            if bool(torch.any(valid_rows & (counts >= self.chunk_size)).item()):
+                raise RuntimeError("pending action-history chunk overflow")
+            next_actions = pending_actions.clone()
+            next_mask = pending_mask.clone()
+            rows = torch.nonzero(valid_rows, as_tuple=False).flatten()
+            next_actions[rows, counts[rows]] = actions[rows, action_index]
+            next_mask[rows, counts[rows]] = True
+            pending_actions, pending_mask = next_actions, next_mask
+
+            full_rows = pending_mask.all(dim=-1)
+            if bool(full_rows.any().item()):
+                encoded = self.encode_action_chunk(pending_actions, pending_mask)
+                candidate_output, candidate_memory = self.memory_backend.step(encoded, memory)
+                memory = _merge_memory_rows(memory, candidate_memory, full_rows)
+                committed_output = torch.where(
+                    full_rows[:, None], candidate_output.to(committed_output.dtype), committed_output
+                )
+                committed_chunks = committed_chunks + full_rows.long()
+                pending_actions = torch.where(
+                    full_rows[:, None, None], torch.zeros_like(pending_actions), pending_actions
+                )
+                pending_mask = torch.where(
+                    full_rows[:, None], torch.zeros_like(pending_mask), pending_mask
+                )
+                commit_count += int(full_rows.long().sum().item())
+
+        partial_rows = pending_mask.any(dim=-1)
+        memory_output = committed_output
+        if bool(partial_rows.any().item()):
+            encoded = self.encode_action_chunk(pending_actions, pending_mask)
+            partial_output, _ = self.memory_backend.step(encoded, memory)
+            memory_output = torch.where(
+                partial_rows[:, None], partial_output.to(memory_output.dtype), memory_output
+            )
+        has_history = partial_rows | (committed_chunks > 0)
+        empty = self.empty_history.to(device=memory_output.device, dtype=memory_output.dtype)[None]
+        memory_output = torch.where(has_history[:, None], memory_output, empty)
+        memory_token = self.memory_token_projection(
+            memory_output.to(dtype=self.memory_token_projection.weight.dtype)
+        ).unsqueeze(1)
+        next_history = ActionHistoryState(
+            memory=memory,
+            committed_output=committed_output,
+            committed_chunks=committed_chunks,
+            pending_actions=pending_actions,
+            pending_mask=pending_mask,
+        )
+        history_actions = committed_chunks * self.chunk_size + pending_mask.long().sum(dim=-1)
+        return memory_token, next_history, {
+            "memory_commits": commit_count,
+            "history_actions": int(history_actions.sum().item()),
+            "pending_actions": int(pending_mask.long().sum().item()),
+        }
+
+    def progress_prefix_from_cache(
+        self, prefix_cache: object, prefix_mask: torch.BoolTensor
+    ) -> tuple[PrefixKVView, torch.BoolTensor]:
+        if prefix_mask.ndim != 2 or prefix_mask.dtype is not torch.bool:
+            raise ValueError("prefix_mask must have shape [batch, prefix] and bool dtype")
+        if prefix_mask.shape[1] == 0:
+            return self._empty_progress_prefix(prefix_mask.shape[0], prefix_mask.device), prefix_mask
+        return PrefixKVView.from_cache(prefix_cache, self.progress_layer_indices, prefix_mask), prefix_mask
 
     def forward_progress(
         self,
@@ -66,46 +188,84 @@ class FutureMambaPluginPytorch(nn.Module):
         noisy_actions: torch.Tensor,
         timestep: torch.Tensor,
     ) -> torch.Tensor:
-        return self.progress_expert(prefix_cache, prefix_mask, memory_token, noisy_actions, timestep)
+        return self.progress_expert(
+            prefix_cache, prefix_mask, memory_token, noisy_actions, timestep
+        )
 
-    def memory_dependency_diagnostics(
+    def _empty_progress_prefix(self, batch_size: int, device: torch.device) -> PrefixKVView:
+        dtype = self.memory_token_projection.weight.dtype
+        layers = tuple(
+            (
+                torch.empty(
+                    batch_size,
+                    self.progress_num_key_value_heads,
+                    0,
+                    self.progress_head_dim,
+                    dtype=dtype,
+                    device=device,
+                ),
+                torch.empty(
+                    batch_size,
+                    self.progress_num_key_value_heads,
+                    0,
+                    self.progress_head_dim,
+                    dtype=dtype,
+                    device=device,
+                ),
+            )
+            for _ in self.progress_layer_indices
+        )
+        return PrefixKVView(
+            layers=layers,
+            valid_lengths=torch.zeros(batch_size, dtype=torch.long, device=device),
+        )
+
+    def _validate_chunk(self, actions: torch.Tensor, mask: torch.Tensor) -> None:
+        expected = (actions.shape[0], self.chunk_size, self.action_dim)
+        if actions.ndim != 3 or tuple(actions.shape) != expected:
+            raise ValueError(f"action-history chunk must have shape {expected}, got {tuple(actions.shape)}")
+        if mask.shape != actions.shape[:2] or mask.dtype is not torch.bool:
+            raise ValueError("action-history mask shape or dtype is invalid")
+        counts = mask.long().sum(dim=-1)
+        expected_mask = torch.arange(self.chunk_size, device=mask.device)[None] < counts[:, None]
+        if not torch.equal(mask, expected_mask):
+            raise ValueError("action-history mask must be a right-padded prefix")
+
+    def _validate_history(self, history: ActionHistoryState) -> None:
+        if not isinstance(history, ActionHistoryState):
+            raise TypeError("history must be ActionHistoryState")
+        batch = history.memory.batch_size
+        if history.committed_output.shape != (batch, self.memory_width):
+            raise ValueError("committed_output shape mismatch")
+        if history.committed_chunks.shape != (batch,) or history.committed_chunks.dtype is not torch.long:
+            raise ValueError("committed_chunks shape or dtype mismatch")
+        self._validate_chunk(history.pending_actions, history.pending_mask)
+        if history.pending_actions.shape[0] != batch:
+            raise ValueError("pending history batch mismatch")
+
+    def _validate_executed_actions(
         self,
-        prefix_cache: PrefixKVView,
-        prefix_mask: torch.BoolTensor,
-        memory_token: torch.Tensor,
-        noisy_actions: torch.Tensor,
-        timestep: torch.Tensor,
-    ) -> dict[str, float]:
-        """Measure early-velocity sensitivity while changing only the Memory Token."""
-        with torch.no_grad():
-            memory_velocity = self.forward_progress(
-                prefix_cache, prefix_mask, memory_token, noisy_actions, timestep
+        actions: torch.Tensor,
+        mask: torch.Tensor,
+        history: ActionHistoryState,
+    ) -> None:
+        if actions.ndim != 3 or actions.shape[0] != history.memory.batch_size:
+            raise ValueError("executed_actions must have shape [batch, time, action_dim]")
+        if actions.shape[1] > self.chunk_size or actions.shape[2] != self.action_dim:
+            raise ValueError(
+                f"executed_actions must fit [batch, <= {self.chunk_size}, {self.action_dim}], got {tuple(actions.shape)}"
             )
-            zero_velocity = self.forward_progress(
-                prefix_cache, prefix_mask, torch.zeros_like(memory_token), noisy_actions, timestep
-            )
-            delta = memory_velocity - zero_velocity
-            memory_norm = torch.sqrt(torch.mean(torch.square(memory_token.float())))
-            delta_norm = torch.sqrt(torch.mean(torch.square(delta.float())))
-            memory_flat = memory_velocity.float().reshape(memory_velocity.shape[0], -1)
-            zero_flat = zero_velocity.float().reshape(zero_velocity.shape[0], -1)
-            denominator = torch.linalg.vector_norm(memory_flat, dim=-1) * torch.linalg.vector_norm(
-                zero_flat, dim=-1
-            )
-            cosine = torch.where(
-                denominator > 0,
-                torch.sum(memory_flat * zero_flat, dim=-1) / denominator,
-                torch.zeros_like(denominator),
-            ).mean()
-        return {
-            "memory_token_rms": float(memory_norm.cpu().item()),
-            "memory_velocity_delta_rms": float(delta_norm.cpu().item()),
-            "memory_velocity_cosine_to_zero": float(cosine.cpu().item()),
-        }
-
+        if mask.shape != actions.shape[:2] or mask.dtype is not torch.bool:
+            raise ValueError("executed_action_mask shape or dtype is invalid")
+        counts = mask.long().sum(dim=-1)
+        expected = torch.arange(actions.shape[1], device=mask.device)[None] < counts[:, None]
+        if not torch.equal(mask, expected):
+            raise ValueError("executed_action_mask must be a right-padded prefix")
 
 
 class FutureMambaPytorch(nn.Module):
+    """Frozen visual VLA/Action Expert with PE-to-AE denoising handoff."""
+
     def __init__(
         self,
         config,
@@ -125,7 +285,6 @@ class FutureMambaPytorch(nn.Module):
         self.base.eval()
 
     def initialize_progress_from_action_expert(self) -> None:
-        """Initialize the trainable Progress Expert from the frozen Action Expert."""
         expert = self.base.paligemma_with_expert.gemma_expert.model
         self.futuremamba.progress_expert.initialize_from_action_expert(
             action_layers=expert.layers,
@@ -150,75 +309,76 @@ class FutureMambaPytorch(nn.Module):
             digest.update(name.encode("utf-8"))
             digest.update(str(tensor.dtype).encode("utf-8"))
             digest.update(str(tuple(tensor.shape)).encode("utf-8"))
-            raw_tensor = tensor.detach().cpu().contiguous().view(torch.uint8)
-            digest.update(raw_tensor.numpy().tobytes())
+            digest.update(tensor.detach().cpu().contiguous().view(torch.uint8).numpy().tobytes())
         return digest.hexdigest()
 
-    def initial_memory_state(self, batch_size: int, device: torch.device, dtype: torch.dtype) -> MemorySnapshot:
-        return self.futuremamba.initial_memory_state(batch_size, device, dtype)
+    def initial_history_state(
+        self, batch_size: int, device: torch.device, dtype: torch.dtype
+    ) -> ActionHistoryState:
+        return self.futuremamba.initial_history_state(batch_size, device, dtype)
 
     def sample_actions_with_memory(
         self,
         observation,
-        memory_state: MemorySnapshot,
+        history: ActionHistoryState,
+        executed_actions: torch.Tensor,
+        executed_action_mask: torch.BoolTensor,
         noise: torch.Tensor | None = None,
         num_steps: int | None = None,
         handoff_ratio: float | None = None,
-    ) -> tuple[torch.Tensor, MemorySnapshot, dict[str, int]]:
+    ) -> tuple[torch.Tensor, ActionHistoryState, dict[str, int]]:
         num_steps = int(self.config.num_denoise_steps if num_steps is None else num_steps)
         ratio = float(self.config.handoff_ratio if handoff_ratio is None else handoff_ratio)
-        self._validate_sampling_inputs(observation, memory_state, noise, num_steps, ratio)
-        device = noise.device if noise is not None else observation.state.device
+        self._validate_sampling_inputs(
+            observation, history, executed_actions, executed_action_mask, noise, num_steps, ratio
+        )
+        device = observation.state.device
         batch_size = int(observation.state.shape[0])
         if noise is None:
-            noise = self.base.sample_noise((batch_size, int(self.config.action_horizon), int(self.config.action_dim)), device)
+            noise = self.base.sample_noise(
+                (batch_size, int(self.config.action_horizon), int(self.config.action_dim)), device
+            )
+        memory_token, next_history, history_diagnostics = self.futuremamba.advance_history(
+            history, executed_actions, executed_action_mask
+        )
 
         with torch.no_grad():
             *_, processed_state = self.base._preprocess_observation(observation, train=False)
-            frozen = self._detached_frozen_prefix(self.base.extract_prefix_context(observation, train=False))
-            last_vlm = self.base.last_valid_prefix(frozen).detach()
-            memory_token, next_memory_state = self.futuremamba.compute_memory_token(last_vlm, memory_state)
-            prefix_cache = PrefixKVView.from_cache(
-                frozen.kv_cache, self.futuremamba.progress_layer_indices, frozen.pad_mask
+            frozen = self._detached_frozen_prefix(
+                self.base.extract_prefix_context(observation, train=False)
             )
-
+            prefix_cache, progress_prefix_mask = self.futuremamba.progress_prefix_from_cache(
+                frozen.kv_cache, frozen.pad_mask
+            )
             dt = torch.tensor(-1.0 / num_steps, dtype=torch.float32, device=device)
             handoff_steps = _handoff_steps(ratio, num_steps)
             x_t = noise
             progress_calls = 0
             action_calls = 0
             for step in range(num_steps):
-                timestep = torch.full((batch_size,), 1.0 + step * float(dt.item()), dtype=torch.float32, device=device)
+                timestep = torch.full(
+                    (batch_size,),
+                    1.0 + step * float(dt.item()),
+                    dtype=torch.float32,
+                    device=device,
+                )
                 if step < handoff_steps:
                     velocity = self.futuremamba.forward_progress(
-                        prefix_cache, frozen.pad_mask, memory_token, x_t, timestep
+                        prefix_cache, progress_prefix_mask, memory_token, x_t, timestep
                     )
                     progress_calls += 1
                 else:
-                    velocity = self.base.action_expert_velocity(processed_state, frozen.pad_mask, frozen.kv_cache, x_t, timestep)
+                    velocity = self.base.action_expert_velocity(
+                        processed_state, frozen.pad_mask, frozen.kv_cache, x_t, timestep
+                    )
                     action_calls += 1
-                x_t = x_t + dt * velocity
-        diagnostics = {
+                x_t = x_t + dt.to(dtype=x_t.dtype) * velocity
+        return x_t, next_history, {
             "progress_calls": progress_calls,
             "action_calls": action_calls,
             "handoff_steps": handoff_steps,
+            **history_diagnostics,
         }
-        return x_t, next_memory_state, diagnostics
-
-    @torch.no_grad()
-    def update_memory_with_observation(
-        self, observation, memory_state: MemorySnapshot
-    ) -> MemorySnapshot:
-        """Advance recurrent memory from one observation without running the Progress Expert."""
-        batch_size = int(observation.state.shape[0])
-        if not isinstance(memory_state, MemorySnapshot) or memory_state.batch_size != batch_size:
-            raise ValueError("memory-only update state does not match observation batch")
-        frozen = self._detached_frozen_prefix(
-            self.base.extract_prefix_context(observation, train=False)
-        )
-        last_vlm = self.base.last_valid_prefix(frozen).detach()
-        _, next_memory_state = self.futuremamba.compute_memory_token(last_vlm, memory_state)
-        return next_memory_state
 
     def compute_episode_loss(
         self,
@@ -234,7 +394,6 @@ class FutureMambaPytorch(nn.Module):
         batch = _episode_loader.episode_batch_to_torch(batch, device)
         actions = batch.actions
         batch_size, num_queries = actions.shape[:2]
-        device = actions.device
         dtype = actions.dtype
         if noise is None:
             noise = self.base.sample_noise(tuple(actions.shape), device)
@@ -242,284 +401,128 @@ class FutureMambaPytorch(nn.Module):
             noise = noise.to(device=device, dtype=dtype)
         if tuple(noise.shape) != tuple(actions.shape):
             raise ValueError(f"noise must have shape {tuple(actions.shape)}, got {tuple(noise.shape)}")
-        handoff_steps = _handoff_steps(float(getattr(self.config, "handoff_ratio", 0.0)), int(self.config.num_denoise_steps))
+        handoff_steps = _handoff_steps(
+            float(self.config.handoff_ratio), int(self.config.num_denoise_steps)
+        )
         if time is None:
-            time = self._sample_high_noise_time((batch_size, num_queries), handoff_steps=handoff_steps, device=device)
+            time = self._sample_high_noise_time(
+                (batch_size, num_queries), handoff_steps=handoff_steps, device=device
+            )
         else:
             time = time.to(device=device, dtype=torch.float32)
         if tuple(time.shape) != (batch_size, num_queries):
             raise ValueError(f"time must have shape {(batch_size, num_queries)}, got {tuple(time.shape)}")
 
-        query_mask = batch.query_mask
         train_query_mask = batch.train_query_mask
         if train_query_mask is None:
             raise ValueError("train_query_mask must be materialized before computing episode loss")
         valid_action_mask = batch.action_mask & train_query_mask[:, :, None]
-        safe_actions = torch.where(valid_action_mask[:, :, :, None], actions, torch.zeros_like(actions))
-        safe_noise = torch.where(valid_action_mask[:, :, :, None], noise, torch.zeros_like(noise))
-        x_t = time[:, :, None, None] * safe_noise + (1.0 - time[:, :, None, None]) * safe_actions
+        safe_actions = torch.where(valid_action_mask[..., None], actions, torch.zeros_like(actions))
+        safe_noise = torch.where(valid_action_mask[..., None], noise, torch.zeros_like(noise))
+        x_t = time[..., None, None] * safe_noise + (1.0 - time[..., None, None]) * safe_actions
         target_velocity = safe_noise - safe_actions
-
-        flow_error = torch.zeros(batch_size, num_queries, int(self.config.action_horizon), dtype=dtype, device=device)
-        terminal_error = torch.zeros((), dtype=dtype, device=device)
-        handoff_error = torch.zeros((), dtype=dtype, device=device)
-        boundary_error = torch.zeros((), dtype=dtype, device=device)
-        terminal_weight = float(getattr(self.config, "terminal_loss_weight", 0.0))
-        handoff_weight = float(getattr(self.config, "handoff_loss_weight", 0.0))
-        boundary_weight = float(getattr(self.config, "boundary_loss_weight", 0.0))
-        conditioning_cache = batch.conditioning_cache
-        if conditioning_cache is not None and (terminal_weight or handoff_weight or boundary_weight):
-            raise ValueError("conditioning cache training currently supports flow loss only")
-        if conditioning_cache is not None:
-            return self._compute_cached_flow_loss(
-                batch,
-                safe_actions=safe_actions,
-                safe_noise=safe_noise,
-                x_t=x_t,
-                target_velocity=target_velocity,
-                time=time,
-            )
-        terminal_error_steps = torch.zeros_like(flow_error)
-        handoff_error_steps = torch.zeros_like(flow_error)
-        boundary_error_steps = torch.zeros_like(flow_error)
-        terminal_episode_limit = max(
-            1,
-            int(math.ceil(batch_size * float(getattr(self.config, "terminal_loss_batch_fraction", 1.0)))),
+        flow_error = torch.zeros(
+            batch_size, num_queries, int(self.config.action_horizon), dtype=dtype, device=device
         )
-        terminal_query_mask = torch.zeros_like(train_query_mask)
-        terminal_query_limit = getattr(self.config, "terminal_loss_queries_per_episode", None)
-        if terminal_weight > 0.0:
-            for episode_index in range(terminal_episode_limit):
-                eligible_queries = torch.nonzero(train_query_mask[episode_index], as_tuple=False).flatten()
-                if terminal_query_limit is not None and eligible_queries.numel() > terminal_query_limit:
-                    permutation = torch.randperm(eligible_queries.numel(), device=eligible_queries.device)
-                    eligible_queries = eligible_queries[permutation[:terminal_query_limit]]
-                terminal_query_mask[episode_index, eligible_queries] = True
 
-
-        prefix_microbatch_size = int(getattr(self.config, "frozen_prefix_microbatch_size", 1))
+        history_tokens: list[torch.Tensor] = []
         for episode_index in range(batch_size):
-            valid_queries = int(query_mask[episode_index].long().sum().item())
-            memory_state = self.initial_memory_state(1, device, dtype)
-            for query_start in range(0, valid_queries, prefix_microbatch_size):
-                query_stop = min(query_start + prefix_microbatch_size, valid_queries)
-                observation_batch = _slice_episode_observation_range(
-                    batch.observation, episode_index, query_start, query_stop
-                )
-                if conditioning_cache is None:
+            valid_queries = int(batch.query_mask[episode_index].long().sum().item())
+            history = self.initial_history_state(1, device, next(self.futuremamba.parameters()).dtype)
+            episode_tokens = []
+            for query_index in range(valid_queries):
+                if bool(batch.reset_mask[episode_index, query_index].item()):
+                    history = self.initial_history_state(
+                        1, device, next(self.futuremamba.parameters()).dtype
+                    )
+                if bool(train_query_mask[episode_index, query_index].item()):
+                    token, history, _ = self.futuremamba.advance_history(
+                        history,
+                        batch.executed_actions[episode_index, query_index : query_index + 1],
+                        batch.executed_action_mask[episode_index, query_index : query_index + 1],
+                    )
+                else:
                     with torch.no_grad():
-                        *_, processed_states = self.base._preprocess_observation(observation_batch, train=train)
-                        frozen_batch = self._detached_frozen_prefix(
+                        token, history, _ = self.futuremamba.advance_history(
+                            history,
+                            batch.executed_actions[episode_index, query_index : query_index + 1],
+                            batch.executed_action_mask[episode_index, query_index : query_index + 1],
+                        )
+                    history = _detach_history(history)
+                episode_tokens.append(token)
+            if valid_queries < num_queries:
+                zero = torch.zeros(
+                    1,
+                    1,
+                    self.futuremamba.action_expert_width,
+                    dtype=episode_tokens[0].dtype,
+                    device=device,
+                )
+                episode_tokens.extend([zero] * (num_queries - valid_queries))
+            history_tokens.append(torch.cat(episode_tokens, dim=0))
+        memory_tokens = torch.stack(history_tokens, dim=0)
+
+        if batch.conditioning_cache is not None:
+            cache = batch.conditioning_cache
+            prefix_microbatch_size = int(self.config.frozen_prefix_microbatch_size)
+            for episode_index in range(batch_size):
+                valid_queries = int(batch.query_mask[episode_index].long().sum().item())
+                for query_start in range(0, valid_queries, prefix_microbatch_size):
+                    query_stop = min(query_start + prefix_microbatch_size, valid_queries)
+                    selected_mask = train_query_mask[episode_index, query_start:query_stop]
+                    if not bool(selected_mask.any().item()):
+                        continue
+                    local_indices = torch.nonzero(selected_mask, as_tuple=False).flatten()
+                    query_indices = query_start + local_indices
+                    prefix_mask = cache["prefix_mask"][episode_index, query_indices].to(torch.bool)
+                    keys = cache["action_expert_keys"][episode_index, query_indices]
+                    values = cache["action_expert_values"][episode_index, query_indices]
+                    layers = tuple((keys[:, layer], values[:, layer]) for layer in range(keys.shape[1]))
+                    prefix_cache = PrefixKVView.from_layers(layers, prefix_mask)
+                    predicted = self.futuremamba.forward_progress(
+                        prefix_cache,
+                        prefix_mask,
+                        memory_tokens[episode_index, query_indices],
+                        x_t[episode_index, query_indices],
+                        time[episode_index, query_indices],
+                    )
+                    flow_error[episode_index, query_indices] = torch.mean(
+                        torch.square(predicted - target_velocity[episode_index, query_indices]),
+                        dim=-1,
+                    )
+        else:
+            prefix_microbatch_size = int(self.config.frozen_prefix_microbatch_size)
+            for episode_index in range(batch_size):
+                valid_queries = int(batch.query_mask[episode_index].long().sum().item())
+                for query_start in range(0, valid_queries, prefix_microbatch_size):
+                    query_stop = min(query_start + prefix_microbatch_size, valid_queries)
+                    observation_batch = _slice_episode_observation_range(
+                        batch.observation, episode_index, query_start, query_stop
+                    )
+                    with torch.no_grad():
+                        frozen = self._detached_frozen_prefix(
                             self.base.encode_frozen_prefix(observation_batch, train=train)
                         )
-                        last_vlm_batch = self.base.last_valid_prefix(frozen_batch).detach()
-                        prefix_cache_batch = PrefixKVView.from_cache(
-                            frozen_batch.kv_cache,
-                            self.futuremamba.progress_layer_indices,
-                            frozen_batch.pad_mask,
+                        prefix_cache, prefix_mask = self.futuremamba.progress_prefix_from_cache(
+                            frozen.kv_cache, frozen.pad_mask
                         )
-                for local_index, query_index in enumerate(range(query_start, query_stop)):
-                    if bool(batch.reset_mask[episode_index, query_index].item()):
-                        memory_state = self.initial_memory_state(1, device, dtype)
-                    if conditioning_cache is None:
-                        processed_state = processed_states[local_index : local_index + 1]
-                        frozen = FrozenPrefix(
-                            hidden=frozen_batch.hidden[local_index : local_index + 1],
-                            pad_mask=frozen_batch.pad_mask[local_index : local_index + 1],
-                            kv_cache=slice_cache_batch(frozen_batch.kv_cache, local_index),
-                        )
-                        last_vlm = last_vlm_batch[local_index : local_index + 1]
-                        prefix_cache = prefix_cache_batch.batch_slice(local_index)
-                    else:
-                        cache_index = query_start + local_index
-                        last_vlm = conditioning_cache["last_valid_hidden"][episode_index, cache_index : cache_index + 1]
-                        prefix_mask = conditioning_cache["prefix_mask"][episode_index, cache_index : cache_index + 1].to(torch.bool)
-                        keys = conditioning_cache["action_expert_keys"][episode_index, cache_index : cache_index + 1]
-                        values = conditioning_cache["action_expert_values"][episode_index, cache_index : cache_index + 1]
-                        layers = tuple((keys[:, layer], values[:, layer]) for layer in range(keys.shape[1]))
-                        prefix_cache = PrefixKVView.from_layers(layers, prefix_mask)
-                    if bool(train_query_mask[episode_index, query_index].item()):
-                        memory_token, memory_state = self.futuremamba.compute_memory_token(last_vlm, memory_state)
-                    else:
-                        with torch.no_grad():
-                            _, memory_state = self.futuremamba.compute_memory_token(last_vlm, memory_state)
-                        continue
-                    current_x = x_t[episode_index, query_index : query_index + 1]
-                    current_time = time[episode_index, query_index : query_index + 1]
-                    pred_velocity = self.futuremamba.forward_progress(
-                        prefix_cache, frozen.pad_mask, memory_token, current_x, current_time
+                    predicted = self.futuremamba.forward_progress(
+                        prefix_cache,
+                        prefix_mask,
+                        memory_tokens[episode_index, query_start:query_stop],
+                        x_t[episode_index, query_start:query_stop],
+                        time[episode_index, query_start:query_stop],
                     )
-                    flow_error[episode_index, query_index] = torch.mean(
-                        torch.square(pred_velocity - target_velocity[episode_index, query_index : query_index + 1]),
+                    flow_error[episode_index, query_start:query_stop] = torch.mean(
+                        torch.square(
+                            predicted - target_velocity[episode_index, query_start:query_stop]
+                        ),
                         dim=-1,
-                    ).squeeze(0)
+                    )
 
-                    terminal_selected = bool(terminal_query_mask[episode_index, query_index].item())
-                    if handoff_steps > 0 and (
-                        (terminal_weight > 0.0 and terminal_selected)
-                        or handoff_weight > 0.0
-                        or boundary_weight > 0.0
-                    ):
-                        boundary_state = safe_noise[episode_index, query_index : query_index + 1]
-                        dt = torch.tensor(
-                            -1.0 / int(self.config.num_denoise_steps), dtype=torch.float32, device=device
-                        )
-                        for step in range(handoff_steps):
-                            step_time = torch.full(
-                                (1,), 1.0 + step * float(dt.item()), dtype=torch.float32, device=device
-                            )
-                            boundary_state = boundary_state + dt.to(
-                                dtype=boundary_state.dtype
-                            ) * self.futuremamba.forward_progress(
-                                prefix_cache, frozen.pad_mask, memory_token, boundary_state, step_time
-                            )
-                        boundary_time_value = 1.0 - handoff_steps / int(self.config.num_denoise_steps)
-                        boundary_time = torch.full(
-                            (1,), boundary_time_value, dtype=torch.float32, device=device
-                        )
-                        if terminal_weight > 0.0 and terminal_selected:
-                            terminal_state = boundary_state
-                            checkpoint_action_expert = bool(
-                                getattr(self.config, "action_expert_gradient_checkpointing", False)
-                            )
-                            for step in range(handoff_steps, int(self.config.num_denoise_steps)):
-                                step_time = torch.full(
-                                    (1,), 1.0 + step * float(dt.item()), dtype=torch.float32, device=device
-                                )
-                                if checkpoint_action_expert:
-                                    terminal_velocity = torch.utils.checkpoint.checkpoint(
-                                        lambda current: self.base.denoise_step(
-                                            processed_state,
-                                            frozen.pad_mask,
-                                            frozen.kv_cache,
-                                            current,
-                                            step_time,
-                                        ),
-                                        terminal_state,
-                                        use_reentrant=False,
-                                        preserve_rng_state=False,
-                                    )
-                                else:
-                                    terminal_velocity = self.base.denoise_step(
-                                        processed_state,
-                                        frozen.pad_mask,
-                                        frozen.kv_cache,
-                                        terminal_state,
-                                        step_time,
-                                    )
-                                terminal_state = terminal_state + dt.to(
-                                    dtype=terminal_state.dtype
-                                ) * terminal_velocity
-                            terminal_error_steps[episode_index, query_index] = torch.mean(
-                                torch.square(
-                                    terminal_state - safe_actions[episode_index, query_index : query_index + 1]
-                                ),
-                                dim=-1,
-                            ).squeeze(0)
-                        if handoff_weight > 0.0:
-                            target_boundary = (
-                                boundary_time[:, None, None].to(dtype=dtype)
-                                * safe_noise[episode_index, query_index : query_index + 1]
-                                + (1.0 - boundary_time[:, None, None].to(dtype=dtype))
-                                * safe_actions[episode_index, query_index : query_index + 1]
-                            )
-                            handoff_error_steps[episode_index, query_index] = torch.mean(
-                                torch.square(boundary_state - target_boundary), dim=-1
-                            ).squeeze(0)
-                        if boundary_weight > 0.0:
-                            detached_boundary = boundary_state.detach()
-                            progress_boundary = self.futuremamba.forward_progress(
-                                prefix_cache,
-                                frozen.pad_mask,
-                                memory_token,
-                                detached_boundary,
-                                boundary_time,
-                            )
-                            action_boundary = self.base.denoise_step(
-                                processed_state,
-                                frozen.pad_mask,
-                                frozen.kv_cache,
-                                detached_boundary,
-                                boundary_time,
-                            ).detach()
-                            boundary_error_steps[episode_index, query_index] = torch.mean(
-                                torch.square(progress_boundary - action_boundary), dim=-1
-                            ).squeeze(0)
-
-        flow_loss = _mean_masked_action_error(flow_error, batch.action_mask, train_query_mask)
-        if terminal_weight > 0.0:
-            terminal_error = _mean_masked_action_error(
-                terminal_error_steps[:terminal_episode_limit],
-                batch.action_mask[:terminal_episode_limit],
-                terminal_query_mask[:terminal_episode_limit],
-            )
-        if handoff_weight > 0.0:
-            handoff_error = _mean_masked_action_error(handoff_error_steps, batch.action_mask, train_query_mask)
-        if boundary_weight > 0.0:
-            boundary_error = _mean_masked_action_error(boundary_error_steps, batch.action_mask, train_query_mask)
-        terminal_loss = terminal_error * torch.as_tensor(terminal_weight, dtype=dtype, device=device)
-        handoff_loss = handoff_error * torch.as_tensor(handoff_weight, dtype=dtype, device=device)
-        boundary_loss = boundary_error * torch.as_tensor(boundary_weight, dtype=dtype, device=device)
-        loss = flow_loss + terminal_loss + handoff_loss + boundary_loss
-        sampled_time = time[train_query_mask]
-        return {
-            "loss": loss,
-            "flow_loss": flow_loss,
-            "terminal_loss": terminal_loss,
-            "terminal_error": terminal_error,
-            "handoff_loss": handoff_loss,
-            "handoff_error": handoff_error,
-            "boundary_loss": boundary_loss,
-            "boundary_error": boundary_error,
-            "sample_time_mean": sampled_time.mean(),
-            "sample_time_min": sampled_time.min(),
-            "sample_time_max": sampled_time.max(),
-        }
-
-    def _compute_cached_flow_loss(
-        self,
-        batch,
-        *,
-        safe_actions: torch.Tensor,
-        safe_noise: torch.Tensor,
-        x_t: torch.Tensor,
-        target_velocity: torch.Tensor,
-        time: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
-        cache = batch.conditioning_cache
-        assert cache is not None
-        query_mask = batch.query_mask
-        train_query_mask = batch.train_query_mask
-        if train_query_mask is None:
-            raise ValueError("cached flow loss requires train_query_mask")
-        last_hidden = cache["last_valid_hidden"].to(dtype=self.futuremamba.vlm_memory_in_proj.weight.dtype)
-        memory_inputs = self.futuremamba.vlm_memory_in_proj(last_hidden)
-        memory_outputs, _ = self.futuremamba.memory_backend.forward_sequence(memory_inputs, query_mask=query_mask)
-        memory_tokens = self.futuremamba.memory_token_proj(
-            memory_outputs.to(dtype=self.futuremamba.memory_token_proj.weight.dtype)
-        ).unsqueeze(2)
-
-        selected = torch.nonzero(train_query_mask, as_tuple=False)
-        batch_indices = selected[:, 0]
-        query_indices = selected[:, 1]
-        prefix_mask = cache["prefix_mask"][batch_indices, query_indices].to(torch.bool)
-        keys = cache["action_expert_keys"][batch_indices, query_indices]
-        values = cache["action_expert_values"][batch_indices, query_indices]
-        layers = tuple((keys[:, layer], values[:, layer]) for layer in range(keys.shape[1]))
-        prefix_cache = PrefixKVView.from_layers(layers, prefix_mask)
-        predicted = self.futuremamba.forward_progress(
-            prefix_cache,
-            prefix_mask,
-            memory_tokens[batch_indices, query_indices],
-            x_t[batch_indices, query_indices],
-            time[batch_indices, query_indices],
+        flow_loss = _mean_masked_action_error(
+            flow_error, batch.action_mask, train_query_mask
         )
-        error = torch.mean(
-            torch.square(predicted - target_velocity[batch_indices, query_indices]),
-            dim=-1,
-        )
-        action_mask = batch.action_mask[batch_indices, query_indices]
-        flow_loss = (error * action_mask).sum() / action_mask.sum().clamp_min(1)
         zero = torch.zeros((), dtype=flow_loss.dtype, device=flow_loss.device)
         sampled_time = time[train_query_mask]
         return {
@@ -536,76 +539,16 @@ class FutureMambaPytorch(nn.Module):
             "sample_time_max": sampled_time.max(),
         }
 
-    @torch.no_grad()
-    def compute_cached_terminal_monitor_loss(self, batch) -> torch.Tensor:
-        """Measure hybrid terminal MSE without adding it to the optimized loss."""
-        from openpi.training import episode_data_loader as _episode_loader
-
-        device = batch.actions.device if torch.is_tensor(batch.actions) else torch.device("cpu")
-        batch = _episode_loader.episode_batch_to_torch(batch, device)
-        observation_torch = _episode_loader._observation_to_torch(batch.observation, device)
-        cache = batch.conditioning_cache
-        if cache is None:
-            raise ValueError("terminal monitoring requires the conditioning cache")
-        query_mask = batch.query_mask
-        last_hidden = cache["last_valid_hidden"].to(dtype=self.futuremamba.vlm_memory_in_proj.weight.dtype)
-        memory_inputs = self.futuremamba.vlm_memory_in_proj(last_hidden)
-        memory_outputs, _ = self.futuremamba.memory_backend.forward_sequence(
-            memory_inputs, query_mask=query_mask
-        )
-        memory_tokens = self.futuremamba.memory_token_proj(
-            memory_outputs.to(dtype=self.futuremamba.memory_token_proj.weight.dtype)
-        ).unsqueeze(2)
-        num_steps = int(self.config.num_denoise_steps)
-        handoff_steps = _handoff_steps(float(self.config.handoff_ratio), num_steps)
-        dt = torch.tensor(-1.0 / num_steps, dtype=torch.float32, device=device)
-        errors = []
-        for episode_index in range(int(query_mask.shape[0])):
-            valid_queries = torch.nonzero(query_mask[episode_index], as_tuple=False).flatten()
-            if valid_queries.numel() == 0:
-                continue
-            query_index = int(valid_queries[0].item())
-            observation = _slice_episode_observation(observation_torch, episode_index, query_index)
-            *_, processed_state = self.base._preprocess_observation(observation, train=False)
-            frozen = self.base.encode_frozen_prefix(observation, train=False)
-            prefix_cache = PrefixKVView.from_cache(
-                frozen.kv_cache, self.futuremamba.progress_layer_indices, frozen.pad_mask
-            )
-            memory_token = memory_tokens[episode_index : episode_index + 1, query_index]
-            x_t = self.base.sample_noise(
-                (1, int(self.config.action_horizon), int(self.config.action_dim)), device
-            )
-            for step in range(num_steps):
-                timestep = torch.full(
-                    (1,), 1.0 + step * float(dt.item()), dtype=torch.float32, device=device
-                )
-                if step < handoff_steps:
-                    velocity = self.futuremamba.forward_progress(
-                        prefix_cache, frozen.pad_mask, memory_token, x_t, timestep
-                    )
-                else:
-                    velocity = self.base.denoise_step(
-                        processed_state, frozen.pad_mask, frozen.kv_cache, x_t, timestep
-                    )
-                x_t = x_t + dt.to(dtype=x_t.dtype) * velocity
-            target = batch.actions[episode_index : episode_index + 1, query_index]
-            per_step = torch.mean(torch.square(x_t - target), dim=-1)
-            action_mask = batch.action_mask[episode_index : episode_index + 1, query_index]
-            weights = action_mask.to(per_step.dtype)
-            errors.append((per_step * weights).sum() / weights.sum().clamp_min(1.0))
-        if not errors:
-            raise ValueError("terminal monitor batch contains no valid query")
-        return torch.stack(errors).mean()
-
-    def _sample_high_noise_time(self, shape: tuple[int, ...], *, handoff_steps: int, device: torch.device) -> torch.Tensor:
-        lower = 1.0 - (float(handoff_steps) / float(self.config.num_denoise_steps))
-        lower = min(max(lower, 0.0), 1.0)
+    def _sample_high_noise_time(
+        self, shape: tuple[int, ...], *, handoff_steps: int, device: torch.device
+    ) -> torch.Tensor:
+        lower = 1.0 - float(handoff_steps) / float(self.config.num_denoise_steps)
         alpha = torch.as_tensor(1.5, dtype=torch.float32, device=device)
         beta = torch.as_tensor(1.0, dtype=torch.float32, device=device)
-        sample = torch.distributions.Beta(alpha, beta).sample(shape)
-        return lower + (1.0 - lower) * sample
+        return lower + (1.0 - lower) * torch.distributions.Beta(alpha, beta).sample(shape)
 
-    def _detached_frozen_prefix(self, frozen: FrozenPrefix) -> FrozenPrefix:
+    @staticmethod
+    def _detached_frozen_prefix(frozen: FrozenPrefix) -> FrozenPrefix:
         return FrozenPrefix(
             hidden=frozen.hidden.detach(),
             pad_mask=frozen.pad_mask.detach(),
@@ -615,7 +558,9 @@ class FutureMambaPytorch(nn.Module):
     def _validate_sampling_inputs(
         self,
         observation,
-        memory_state: MemorySnapshot,
+        history: ActionHistoryState,
+        executed_actions: torch.Tensor,
+        executed_action_mask: torch.Tensor,
         noise: torch.Tensor | None,
         num_steps: int,
         handoff_ratio: float,
@@ -624,14 +569,82 @@ class FutureMambaPytorch(nn.Module):
             raise ValueError(f"handoff_ratio must be in [0, 1], got {handoff_ratio}")
         if num_steps <= 0:
             raise ValueError(f"num_steps must be positive, got {num_steps}")
-        if not isinstance(memory_state, MemorySnapshot):
-            raise ValueError("memory_state must be a MemorySnapshot")
         batch_size = int(observation.state.shape[0])
-        expected_action_shape = (batch_size, int(self.config.action_horizon), int(self.config.action_dim))
-        if noise is not None and tuple(noise.shape) != expected_action_shape:
-            raise ValueError(f"noise must have shape {expected_action_shape}, got {tuple(noise.shape)}")
-        if memory_state.batch_size != batch_size:
-            raise ValueError("memory_state batch must match observation")
+        if history.memory.batch_size != batch_size:
+            raise ValueError("history batch must match observation")
+        expected = (batch_size, int(self.config.action_horizon), int(self.config.action_dim))
+        if noise is not None and tuple(noise.shape) != expected:
+            raise ValueError(f"noise must have shape {expected}, got {tuple(noise.shape)}")
+        if executed_actions.shape[0] != batch_size or executed_action_mask.shape != executed_actions.shape[:2]:
+            raise ValueError("executed action batch must match observation")
+
+
+def _detach_history(history: ActionHistoryState) -> ActionHistoryState:
+    return ActionHistoryState(
+        memory=MemorySnapshot(
+            history.memory.backend_id,
+            history.memory.state_schema_version,
+            history.memory.batch_size,
+            tuple(tuple(t.detach() for t in layer) for layer in history.memory.layers),
+        ),
+        committed_output=history.committed_output.detach(),
+        committed_chunks=history.committed_chunks.detach(),
+        pending_actions=history.pending_actions.detach(),
+        pending_mask=history.pending_mask.detach(),
+    )
+
+
+def _merge_memory_rows(
+    previous: MemorySnapshot, candidate: MemorySnapshot, update_mask: torch.BoolTensor
+) -> MemorySnapshot:
+    layers = []
+    for previous_layer, candidate_layer in zip(previous.layers, candidate.layers, strict=True):
+        tensors = []
+        for previous_tensor, candidate_tensor in zip(previous_layer, candidate_layer, strict=True):
+            view = update_mask.reshape(update_mask.shape[0], *([1] * (previous_tensor.ndim - 1)))
+            tensors.append(torch.where(view, candidate_tensor, previous_tensor))
+        layers.append(tuple(tensors))
+    return MemorySnapshot(previous.backend_id, previous.state_schema_version, previous.batch_size, tuple(layers))
+
+
+def _handoff_steps(ratio: float, num_steps: int) -> int:
+    return max(0, min(num_steps, int(math.ceil(ratio * num_steps))))
+
+
+def _mean_masked_action_error(
+    error: torch.Tensor, action_mask: torch.Tensor, query_mask: torch.Tensor
+) -> torch.Tensor:
+    action_weights = action_mask.to(dtype=error.dtype)
+    query_error = torch.where(action_mask, error, torch.zeros_like(error)).sum(dim=-1)
+    query_error = query_error / action_weights.sum(dim=-1).clamp_min(1.0)
+    query_weights = query_mask.to(dtype=error.dtype)
+    episode_error = (query_error * query_weights).sum(dim=-1) / query_weights.sum(dim=-1).clamp_min(1.0)
+    return episode_error.mean()
+
+
+def _slice_episode_observation_range(
+    observation: Any, batch_index: int, query_start: int, query_stop: int
+) -> Any:
+    if observation is None:
+        return None
+    if isinstance(observation, Mapping):
+        return {
+            key: _slice_episode_observation_range(value, batch_index, query_start, query_stop)
+            for key, value in observation.items()
+        }
+    if hasattr(observation, "__dataclass_fields__"):
+        return dataclasses.replace(
+            observation,
+            **{
+                field.name: _slice_episode_observation_range(
+                    getattr(observation, field.name), batch_index, query_start, query_stop
+                )
+                for field in dataclasses.fields(observation)
+            },
+        )
+    if torch.is_tensor(observation):
+        return observation[batch_index, query_start:query_stop]
+    return observation
 
 
 def _action_expert_width(config, fallback: int) -> int:
@@ -640,12 +653,17 @@ def _action_expert_width(config, fallback: int) -> int:
     except (KeyError, AttributeError):
         return fallback
 
-def _vlm_width(config, fallback: int) -> int:
-    configured = getattr(config, "vlm_width", None)
-    if configured is not None:
-        return int(configured)
+
+def _action_expert_num_key_value_heads(config, fallback: int) -> int:
     try:
-        return int(_gemma.get_config(config.paligemma_variant).width)
+        return int(_gemma.get_config(config.action_expert_variant).num_kv_heads)
+    except (KeyError, AttributeError):
+        return fallback
+
+
+def _action_expert_head_dim(config, fallback: int) -> int:
+    try:
+        return int(_gemma.get_config(config.action_expert_variant).head_dim)
     except (KeyError, AttributeError):
         return fallback
 
@@ -672,69 +690,5 @@ def _make_memory_backend(config) -> nn.Module:
     if backend == "mamba2":
         return Mamba2MemoryBackend(config.memory)
     if backend == "mamba3_siso":
-        raise NotImplementedError("memory_backend 'mamba3_siso' has no PyTorch MemoryBackend implementation")
+        raise NotImplementedError("memory_backend 'mamba3_siso' has no PyTorch implementation")
     raise ValueError(f"unknown memory_backend {backend!r}")
-
-
-
-
-def _handoff_steps(ratio: float, num_steps: int) -> int:
-    return max(0, min(num_steps, int(math.ceil(ratio * num_steps))))
-
-
-def _mean_masked_action_error(error: torch.Tensor, action_mask: torch.Tensor, query_mask: torch.Tensor) -> torch.Tensor:
-    action_weights = action_mask.to(dtype=error.dtype)
-    query_error = torch.where(action_mask, error, torch.zeros_like(error)).sum(dim=-1) / action_weights.sum(dim=-1).clamp_min(1.0)
-    query_weights = query_mask.to(dtype=error.dtype)
-    episode_error = (query_error * query_weights).sum(dim=-1) / query_weights.sum(dim=-1).clamp_min(1.0)
-    return episode_error.mean()
-
-
-
-
-def _slice_episode_observation(observation: Any, batch_index: int, query_index: int) -> Any:
-    if observation is None:
-        return None
-    if isinstance(observation, Mapping):
-        return {key: _slice_episode_observation(value, batch_index, query_index) for key, value in observation.items()}
-    if hasattr(observation, "__dataclass_fields__"):
-        import dataclasses
-
-        return dataclasses.replace(
-            observation,
-            **{
-                field.name: _slice_episode_observation(getattr(observation, field.name), batch_index, query_index)
-                for field in dataclasses.fields(observation)
-            },
-        )
-    if torch.is_tensor(observation):
-        return observation[batch_index : batch_index + 1, query_index]
-    return observation
-
-
-
-def _slice_episode_observation_range(
-    observation: Any, batch_index: int, query_start: int, query_stop: int
-) -> Any:
-    if observation is None:
-        return None
-    if isinstance(observation, Mapping):
-        return {
-            key: _slice_episode_observation_range(value, batch_index, query_start, query_stop)
-            for key, value in observation.items()
-        }
-    if hasattr(observation, "__dataclass_fields__"):
-        import dataclasses
-
-        return dataclasses.replace(
-            observation,
-            **{
-                field.name: _slice_episode_observation_range(
-                    getattr(observation, field.name), batch_index, query_start, query_stop
-                )
-                for field in dataclasses.fields(observation)
-            },
-        )
-    if torch.is_tensor(observation):
-        return observation[batch_index, query_start:query_stop]
-    return observation

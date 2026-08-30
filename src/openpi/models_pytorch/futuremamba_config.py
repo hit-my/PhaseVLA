@@ -1,4 +1,5 @@
 import dataclasses
+import math
 from typing import Literal
 
 from typing_extensions import override
@@ -41,29 +42,38 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
     memory_backend: MemoryBackend = "mamba2"
     progress_depth: int = 6
     progress_layer_mapping: tuple[int, ...] | None = None
-    handoff_ratio: float = 0.2
+    handoff_ratio: float = 0.4
     num_denoise_steps: int = 10
-    execution_horizon: int = 16
-    terminal_loss_weight: float = 1.0
+    execution_horizon: int = 20
+    action_history_chunk_size: int = 20
+    memory_input_source: Literal["executed_actions"] = "executed_actions"
+    action_history_encoding: Literal["masked_flat_projection"] = "masked_flat_projection"
+    terminal_loss_weight: float = 0.0
     handoff_loss_weight: float = 0.0
     boundary_loss_weight: float = 0.0
     action_expert_gradient_checkpointing: bool = False
     terminal_loss_batch_fraction: float = 1.0
     terminal_loss_queries_per_episode: int | None = None
     frozen_prefix_microbatch_size: int = 2
-
-    # Training checkpoint identity and runtime provenance. These remain explicit so
-    schema_version: int = 3
+    progress_use_prefix_kv: bool = True
+    progress_prefix_kv_dropout: float = 0.0
+    schema_version: int = 5
+    architecture: Literal["action_history_mamba_pe_ae_handoff"] = "action_history_mamba_pe_ae_handoff"
     base_checkpoint_uri: str | None = None
     base_checkpoint_checksum: str | None = None
     base_assets_checksum: str | None = None
+    assets_uri: str | None = None
+    dataset_uri: str | None = None
+    dataset_checksum: str | None = None
+    task_name: str | None = None
     robomme_policy_commit: str | None = None
     robomme_benchmark_commit: str | None = None
     robomme_dataset_checksum: str | None = None
     robomme_task_suite: str | None = None
     train_seed: int | None = None
     mamba_repo_commit: str = MAMBA_REPO_COMMIT
-    memory_state_schema_version: int = 1
+    memory_state_schema_version: int = 2
+    history_state_schema_version: int = 1
     state_dtypes: dict[str, str] = dataclasses.field(default_factory=dict)
     kernel_mode: KernelMode = "fallback"
     torch_version: str | None = None
@@ -86,8 +96,6 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
             raise ValueError(f"kernel_mode must be one of {sorted(_KERNEL_MODES)}, got {self.kernel_mode!r}")
         if not 0 <= self.handoff_ratio <= 1:
             raise ValueError(f"handoff_ratio must be in [0, 1], got {self.handoff_ratio}")
-        if self.num_denoise_steps <= 0:
-            raise ValueError(f"num_denoise_steps must be positive, got {self.num_denoise_steps}")
         if self.execution_horizon <= 0 or self.execution_horizon > self.action_horizon:
             raise ValueError(
                 f"execution_horizon must be positive and <= action_horizon ({self.action_horizon}), "
@@ -111,10 +119,29 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
                 "terminal_loss_queries_per_episode must be positive or None, "
                 f"got {self.terminal_loss_queries_per_episode}"
             )
+        if self.memory_input_source != "executed_actions":
+            raise ValueError(f"memory_input_source must be 'executed_actions', got {self.memory_input_source!r}")
+        if self.action_history_encoding != "masked_flat_projection":
+            raise ValueError(
+                "action_history_encoding must be 'masked_flat_projection', "
+                f"got {self.action_history_encoding!r}"
+            )
+        if self.action_history_chunk_size <= 0:
+            raise ValueError(
+                f"action_history_chunk_size must be positive, got {self.action_history_chunk_size}"
+            )
+        if self.num_denoise_steps <= 0:
+            raise ValueError(f"num_denoise_steps must be positive, got {self.num_denoise_steps}")
         if self.frozen_prefix_microbatch_size <= 0:
             raise ValueError(
-                "frozen_prefix_microbatch_size must be positive, "
-                f"got {self.frozen_prefix_microbatch_size}"
+                f"frozen_prefix_microbatch_size must be positive, got {self.frozen_prefix_microbatch_size}"
+            )
+        if not isinstance(self.progress_use_prefix_kv, bool):
+            raise ValueError("progress_use_prefix_kv must be bool")
+        if not 0.0 <= self.progress_prefix_kv_dropout <= 1.0:
+            raise ValueError(
+                "progress_prefix_kv_dropout must be in [0, 1], "
+                f"got {self.progress_prefix_kv_dropout}"
             )
         action_expert_config = _gemma.get_config(self.action_expert_variant)
         if self.progress_depth <= 0 or self.progress_depth > action_expert_config.depth:
@@ -170,35 +197,44 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
         return tuple(round(index * (action_depth - 1) / (self.progress_depth - 1)) for index in range(self.progress_depth))
 
     def checkpoint_metadata(self) -> dict[str, object]:
-        """Return the complete Stage B metadata identity contract."""
         return {
             "schema_version": self.schema_version,
+            "architecture": self.architecture,
             "base_checkpoint_uri": self.base_checkpoint_uri,
             "base_checkpoint_checksum": self.base_checkpoint_checksum,
             "base_assets_checksum": self.base_assets_checksum,
-            "robomme_policy_commit": self.robomme_policy_commit,
-            "robomme_benchmark_commit": self.robomme_benchmark_commit,
-            "robomme_dataset_checksum": self.robomme_dataset_checksum,
-            "robomme_task_suite": self.robomme_task_suite,
+            "assets_uri": self.assets_uri,
+            "dataset_uri": self.dataset_uri,
+            "dataset_checksum": self.dataset_checksum,
+            "task_name": self.task_name,
             "train_seed": self.train_seed,
             "mamba_repo_commit": self.mamba_repo_commit,
             "memory_backend": self.memory_backend,
             "memory_state_schema_version": self.memory_state_schema_version,
+            "history_state_schema_version": self.history_state_schema_version,
             "memory_config": dataclasses.asdict(self.memory),
             "progress_depth": self.progress_depth,
             "progress_layer_mapping": list(self.resolved_progress_layer_indices),
             "handoff_ratio": self.handoff_ratio,
+            "denoising_order": "progress_expert_then_action_expert",
             "num_denoise_steps": self.num_denoise_steps,
+            "progress_denoise_steps": math.ceil(self.handoff_ratio * self.num_denoise_steps),
             "prediction_horizon": self.action_horizon,
             "execution_horizon": self.execution_horizon,
+            "memory_input_source": self.memory_input_source,
+            "action_history_encoding": self.action_history_encoding,
+            "action_history_chunk_size": self.action_history_chunk_size,
+            "training_query_stride": 1,
+            "memory_update_timing": "append_previous_executed_actions_before_current_query",
+            "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+            "empty_history_behavior": "learned_token_without_state_update",
+            "uses_vlm_hidden_for_memory": False,
+            "uses_prefix_kv_for_progress": self.progress_use_prefix_kv,
             "loss_weights": {
                 "terminal": self.terminal_loss_weight,
                 "handoff": self.handoff_loss_weight,
                 "boundary": self.boundary_loss_weight,
             },
-            "action_expert_gradient_checkpointing": self.action_expert_gradient_checkpointing,
-            "terminal_loss_batch_fraction": self.terminal_loss_batch_fraction,
-            "terminal_loss_queries_per_episode": self.terminal_loss_queries_per_episode,
             "frozen_prefix_microbatch_size": self.frozen_prefix_microbatch_size,
             "training_dtype": self.dtype,
             "state_dtypes": dict(self.state_dtypes),

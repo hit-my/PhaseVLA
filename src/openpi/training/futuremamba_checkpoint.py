@@ -16,29 +16,39 @@ from torch import nn
 
 _METADATA_FIELDS = (
     "schema_version",
+    "architecture",
     "base_checkpoint_uri",
     "base_checkpoint_checksum",
     "base_assets_checksum",
-    "robomme_policy_commit",
-    "robomme_benchmark_commit",
-    "robomme_dataset_checksum",
-    "robomme_task_suite",
+    "assets_uri",
+    "dataset_uri",
+    "dataset_checksum",
+    "task_name",
     "train_seed",
     "mamba_repo_commit",
     "memory_backend",
     "memory_state_schema_version",
+    "history_state_schema_version",
     "memory_config",
     "progress_depth",
     "progress_layer_mapping",
     "handoff_ratio",
+    "denoising_order",
     "num_denoise_steps",
+    "progress_denoise_steps",
     "prediction_horizon",
     "execution_horizon",
-    "action_expert_gradient_checkpointing",
-    "terminal_loss_batch_fraction",
-    "terminal_loss_queries_per_episode",
-    "frozen_prefix_microbatch_size",
+    "memory_input_source",
+    "action_history_encoding",
+    "action_history_chunk_size",
+    "training_query_stride",
+    "memory_update_timing",
+    "partial_chunk_behavior",
+    "empty_history_behavior",
+    "uses_vlm_hidden_for_memory",
+    "uses_prefix_kv_for_progress",
     "loss_weights",
+    "frozen_prefix_microbatch_size",
     "training_dtype",
     "state_dtypes",
     "kernel_mode",
@@ -81,12 +91,13 @@ def save_futuremamba_checkpoint(
     if data_iterator_step < 0:
         raise ValueError("data_iterator_step must be non-negative")
     normalized = _validate_metadata(metadata)
-    actual_base_checksum = _base_checksum(model)
-    if normalized["base_checkpoint_checksum"] != actual_base_checksum:
-        raise ValueError(
-            "base_checkpoint_checksum mismatch before save: "
-            f"metadata={normalized['base_checkpoint_checksum']!r}, model={actual_base_checksum!r}"
-        )
+    if hasattr(model, "base_checksum"):
+        actual_base_checksum = model.base_checksum()
+        if normalized["base_checkpoint_checksum"] != actual_base_checksum:
+            raise ValueError(
+                "base_checkpoint_checksum mismatch before save: "
+                f"metadata={normalized['base_checkpoint_checksum']!r}, model={actual_base_checksum!r}"
+            )
     plugin_state = _plugin_state_for_save(model)
     if not plugin_state:
         raise ValueError("FutureMamba plugin has no parameters or buffers")
@@ -138,12 +149,13 @@ def load_futuremamba_checkpoint(
                 f"FutureMamba checkpoint identity mismatch for {field}: "
                 f"expected {expected[field]!r}, got {saved_identity[field]!r}"
             )
-    actual_base_checksum = _base_checksum(model)
-    if expected["base_checkpoint_checksum"] != actual_base_checksum:
-        raise ValueError(
-            "base_checkpoint_checksum mismatch for current model: "
-            f"expected {expected['base_checkpoint_checksum']!r}, got {actual_base_checksum!r}"
-        )
+    if hasattr(model, "base_checksum"):
+        actual_base_checksum = model.base_checksum()
+        if expected["base_checkpoint_checksum"] != actual_base_checksum:
+            raise ValueError(
+                "base_checkpoint_checksum mismatch for current model: "
+                f"expected {expected['base_checkpoint_checksum']!r}, got {actual_base_checksum!r}"
+            )
 
     device = _model_device(model) if map_location is None else torch.device(map_location)
     try:

@@ -30,6 +30,8 @@ class _TinyConfig:
     num_denoise_steps: int = 10
     pytorch_compile_mode: str | None = None
     frozen_prefix_microbatch_size: int = 2
+    progress_use_prefix_kv: bool = True
+    progress_prefix_kv_dropout: float = 0.0
 
     @property
     def resolved_progress_layer_indices(self) -> tuple[int, ...]:
@@ -64,6 +66,7 @@ class _TinyBase(nn.Module):
         self.prefix_calls = 0
         self.denoise_calls = 0
         self.last_denoise_inputs = []
+        self.last_frozen_prefix = None
     def _preprocess_observation(self, observation, *, train: bool = False):
         del train
         return [], [], None, None, observation.state + 100.0
@@ -90,7 +93,8 @@ class _TinyBase(nn.Module):
             )
             for layer_idx in range(2)
         )
-        return FrozenPrefix(hidden=hidden, pad_mask=pad_mask, kv_cache=cache)
+        self.last_frozen_prefix = FrozenPrefix(hidden=hidden, pad_mask=pad_mask, kv_cache=cache)
+        return self.last_frozen_prefix
 
     def last_valid_prefix(self, frozen):
         positions = torch.arange(frozen.pad_mask.shape[1]).expand_as(frozen.pad_mask).masked_fill(~frozen.pad_mask, -1)
@@ -134,6 +138,7 @@ class _RecordingMemoryBackend(nn.Module):
         self.config = config
         self.calls = []
         self.scale = nn.Parameter(torch.tensor(1.0))
+        self.sequence_calls = []
 
     def initial_state(self, batch_size: int, *, device: torch.device, dtype: torch.dtype):
         return MemorySnapshot(self.backend_id, self.state_schema_version, batch_size, ((torch.zeros(batch_size, 1, device=device, dtype=dtype),),))
@@ -142,6 +147,10 @@ class _RecordingMemoryBackend(nn.Module):
         self.calls.append((x.detach().clone(), state))
         layer = state.layers[0][0] + 1
         return x * self.scale + 0.5, MemorySnapshot(state.backend_id, state.state_schema_version, state.batch_size, ((layer,),))
+
+    def forward_sequence(self, x: torch.Tensor, *, query_mask: torch.BoolTensor):
+        self.sequence_calls.append((x.detach().clone(), query_mask.detach().clone()))
+        return x * self.scale + 0.5, None
 
 
 class _TraceProgress(nn.Module):
@@ -246,7 +255,7 @@ class _SecondQueryTokenProgress(nn.Module):
         return memory_token[:, :, : noisy_actions.shape[-1]].expand_as(noisy_actions)
 
 
-def _torch_episode_batch(actions, *, action_mask=None, executed_actions=None, executed_action_mask=None, query_mask=None, reset_mask=None, train_query_mask=None, state=None):
+def _torch_episode_batch(actions, *, action_mask=None, executed_actions=None, executed_action_mask=None, query_mask=None, reset_mask=None, train_query_mask=None, state=None, conditioning_cache=None):
     from openpi.training import episode_data_loader as _episode_loader
 
     batch_size, num_queries, action_horizon, action_dim = actions.shape
@@ -273,6 +282,7 @@ def _torch_episode_batch(actions, *, action_mask=None, executed_actions=None, ex
         reset_mask=reset_mask,
         episode_index=torch.arange(batch_size, dtype=torch.int64, device=actions.device),
         train_query_mask=train_query_mask,
+        conditioning_cache=conditioning_cache,
     )
 
 
@@ -702,6 +712,256 @@ def test_compute_episode_loss_encodes_frozen_prefixes_in_microbatches():
     assert len(progress.calls) == 4
 
 
+
+def test_training_prefix_dropout_extremes_drop_or_keep_whole_query_samples():
+    frozen = _TinyBase().encode_frozen_prefix(_Observation(state=torch.ones(2, 2)))
+
+    keep_plugin = _make_plugin(config=_TinyConfig(progress_prefix_kv_dropout=0.0))
+    keep_plugin.train(True)
+    keep_cache, keep_mask = keep_plugin.progress_prefix_from_cache(frozen.kv_cache, frozen.pad_mask, train=True)
+
+    assert torch.equal(keep_mask, frozen.pad_mask)
+    torch.testing.assert_close(keep_cache.valid_lengths, torch.tensor([2, 2]))
+
+    drop_plugin = _make_plugin(config=_TinyConfig(progress_prefix_kv_dropout=1.0))
+    drop_plugin.train(True)
+    drop_cache, drop_mask = drop_plugin.progress_prefix_from_cache(frozen.kv_cache, frozen.pad_mask, train=True)
+
+    assert not drop_mask.any()
+    torch.testing.assert_close(drop_cache.valid_lengths, torch.tensor([0, 0]))
+    assert all(key.shape[2] == 0 and value.shape[2] == 0 for key, value in drop_cache.layers)
+
+    drop_plugin.eval()
+    eval_cache, eval_mask = drop_plugin.progress_prefix_from_cache(frozen.kv_cache, frozen.pad_mask, train=True)
+
+    assert torch.equal(eval_mask, frozen.pad_mask)
+    torch.testing.assert_close(eval_cache.valid_lengths, torch.tensor([2, 2]))
+
+
+def test_training_prefix_dropout_uses_one_bernoulli_per_query_sample(monkeypatch):
+    import openpi.models_pytorch.futuremamba as futuremamba
+
+    config = _TinyConfig(progress_prefix_kv_dropout=0.3)
+    plugin = _make_plugin(config=config)
+    plugin.train(True)
+    frozen = _TinyBase(config).encode_frozen_prefix(_Observation(state=torch.ones(2, 2)))
+
+    def fake_rand(shape, *, device=None):
+        assert tuple(shape) == (2,)
+        return torch.tensor([0.0, 1.0], device=device)
+
+    monkeypatch.setattr(futuremamba.torch, "rand", fake_rand)
+
+    prefix_cache, progress_mask = plugin.progress_prefix_from_cache(frozen.kv_cache, frozen.pad_mask, train=True)
+
+    assert not progress_mask[0].any()
+    assert torch.equal(progress_mask[1], frozen.pad_mask[1])
+    torch.testing.assert_close(prefix_cache.valid_lengths, torch.tensor([0, 2]))
+    for key, value in prefix_cache.layers:
+        assert key.shape[2] == 2
+        assert value.shape[2] == 2
+        torch.testing.assert_close(key[0], torch.zeros_like(key[0]))
+        torch.testing.assert_close(value[0], torch.zeros_like(value[0]))
+
+
+def test_sample_actions_never_applies_prefix_dropout_at_inference():
+    config = _TinyConfig(progress_prefix_kv_dropout=1.0, handoff_ratio=1.0, num_denoise_steps=1)
+    progress = _TraceProgress(config)
+    model = _make_model(config=config, progress=progress)
+    model.train(True)
+    observation = _Observation(state=torch.tensor([[1.0, 2.0]]))
+    state = model.initial_memory_state(1, torch.device("cpu"), torch.float32)
+
+    model.sample_actions_with_memory(
+        observation,
+        state,
+        noise=torch.zeros(1, 3, 2),
+        num_steps=1,
+        handoff_ratio=1.0,
+    )
+
+    assert len(progress.calls) == 1
+    assert torch.equal(progress.calls[0]["prefix_mask"], model.base.last_frozen_prefix.pad_mask)
+    torch.testing.assert_close(progress.calls[0]["prefix_cache"].valid_lengths, torch.tensor([2]))
+    assert progress.calls[0]["memory_token"].shape == (1, 1, model.futuremamba.action_expert_width)
+
+
+class _UnreadablePrefixCache:
+    def __iter__(self):
+        raise AssertionError("Progress Expert must not read prefix KV when progress_use_prefix_kv=False")
+
+    def __len__(self):
+        raise AssertionError("Progress Expert must not read prefix KV when progress_use_prefix_kv=False")
+
+    def __getitem__(self, index):
+        del index
+        raise AssertionError("Progress Expert must not read prefix KV when progress_use_prefix_kv=False")
+
+
+class _UnreadablePrefixBase(_TinyBase):
+    def encode_frozen_prefix(self, observation, *, train: bool = False):
+        from openpi.models_pytorch.pi0_pytorch import FrozenPrefix
+
+        frozen = super().encode_frozen_prefix(observation, train=train)
+        return FrozenPrefix(hidden=frozen.hidden, pad_mask=frozen.pad_mask, kv_cache=_UnreadablePrefixCache())
+
+
+def test_permanent_prefix_disable_sampling_excludes_prefix_kv_and_keeps_memory_token():
+    config = _TinyConfig(progress_use_prefix_kv=False, handoff_ratio=1.0, num_denoise_steps=2)
+    progress = _TraceProgress(config)
+    model = _make_model(config=config, base=_UnreadablePrefixBase(config), progress=progress)
+    observation = _Observation(state=torch.tensor([[1.0, 2.0]]))
+    state = model.initial_memory_state(1, torch.device("cpu"), torch.float32)
+
+    actions, _, diagnostics = model.sample_actions_with_memory(
+        observation,
+        state,
+        noise=torch.zeros(1, 3, 2),
+        num_steps=2,
+        handoff_ratio=1.0,
+    )
+
+    assert torch.isfinite(actions).all()
+    assert diagnostics == {"progress_calls": 2, "action_calls": 0, "handoff_steps": 2}
+    assert len(progress.calls) == 2
+    for call in progress.calls:
+        assert call["prefix_mask"].shape == (1, 0)
+        assert call["prefix_cache"].valid_lengths.tolist() == [0]
+        assert all(key.shape[2] == 0 and value.shape[2] == 0 for key, value in call["prefix_cache"].layers)
+        assert call["memory_token"].shape == (1, 1, model.futuremamba.action_expert_width)
+
+
+@pytest.mark.parametrize("module_training, train_arg", [(True, True), (False, False)])
+def test_permanent_prefix_disable_episode_loss_train_and_eval_excludes_prefix_kv(module_training, train_arg):
+    config = _TinyConfig(progress_use_prefix_kv=False)
+    progress = _TraceProgress(config)
+    model = _make_model(config=config, base=_UnreadablePrefixBase(config), progress=progress)
+    model.train(module_training)
+    actions = torch.zeros(1, 1, 3, 2)
+
+    outputs = model.compute_episode_loss(
+        _torch_episode_batch(actions),
+        noise=torch.zeros_like(actions),
+        time=torch.full((1, 1), 0.5),
+        train=train_arg,
+    )
+
+    assert torch.isfinite(outputs["flow_loss"])
+    assert len(progress.calls) == 1
+    call = progress.calls[0]
+    assert call["prefix_mask"].shape == (1, 0)
+    assert call["prefix_cache"].valid_lengths.tolist() == [0]
+    assert all(key.shape[2] == 0 and value.shape[2] == 0 for key, value in call["prefix_cache"].layers)
+    assert call["memory_token"].shape == (1, 1, model.futuremamba.action_expert_width)
+
+
+def test_cached_flow_permanent_prefix_disable_excludes_cached_prefix_kv_and_keeps_memory_token():
+    config = _TinyConfig(progress_use_prefix_kv=False)
+    memory = _RecordingMemoryBackend(config.memory)
+    progress = _TraceProgress(config)
+    model = _make_model(config=config, memory_backend=memory, progress=progress)
+    actions = torch.zeros(1, 2, 3, 2)
+    conditioning_cache = {
+        "last_valid_hidden": torch.ones(1, 2, 4),
+        "prefix_mask": torch.ones(1, 2, 3, dtype=torch.bool),
+        "action_expert_keys": torch.full((1, 2, 2, 1, 3, 2), 123.0),
+        "action_expert_values": torch.full((1, 2, 2, 1, 3, 2), 456.0),
+    }
+
+    outputs = model.compute_episode_loss(
+        _torch_episode_batch(actions, conditioning_cache=conditioning_cache),
+        noise=torch.zeros_like(actions),
+        time=torch.full((1, 2), 0.5),
+    )
+
+    assert torch.isfinite(outputs["flow_loss"])
+    assert len(memory.sequence_calls) == 1
+    assert len(progress.calls) == 1
+    call = progress.calls[0]
+    assert call["prefix_mask"].shape == (2, 0)
+    assert call["prefix_cache"].valid_lengths.tolist() == [0, 0]
+    assert all(key.shape[2] == 0 and value.shape[2] == 0 for key, value in call["prefix_cache"].layers)
+    assert call["memory_token"].shape == (2, 1, model.futuremamba.action_expert_width)
+
+
+class _UnreadableConditioningCache:
+    def __init__(self, last_valid_hidden: torch.Tensor) -> None:
+        self.last_valid_hidden = last_valid_hidden
+
+    def __getitem__(self, key: str):
+        if key == "last_valid_hidden":
+            return self.last_valid_hidden
+        raise AssertionError("Progress Expert must not read cached prefix KV when progress_use_prefix_kv=False")
+
+
+def test_cached_flow_permanent_prefix_disable_never_indexes_cached_prefix_kv():
+    from types import SimpleNamespace
+
+    config = _TinyConfig(progress_use_prefix_kv=False)
+    progress = _TraceProgress(config)
+    model = _make_model(config=config, memory_backend=_RecordingMemoryBackend(config.memory), progress=progress)
+    actions = torch.zeros(1, 2, 3, 2)
+    batch = SimpleNamespace(
+        conditioning_cache=_UnreadableConditioningCache(torch.ones(1, 2, 4)),
+        query_mask=torch.ones(1, 2, dtype=torch.bool),
+        train_query_mask=torch.ones(1, 2, dtype=torch.bool),
+        action_mask=torch.ones(1, 2, 3, dtype=torch.bool),
+    )
+
+    outputs = model._compute_cached_flow_loss(
+        batch,
+        safe_actions=actions,
+        safe_noise=torch.zeros_like(actions),
+        x_t=torch.zeros_like(actions),
+        target_velocity=torch.zeros_like(actions),
+        time=torch.full((1, 2), 0.5),
+        train=True,
+    )
+
+    assert torch.isfinite(outputs["flow_loss"])
+    assert len(progress.calls) == 1
+    assert progress.calls[0]["prefix_mask"].shape == (2, 0)
+
+
+def test_progress_expert_empty_prefix_attention_keeps_memory_visible_and_finite(monkeypatch):
+    from types import SimpleNamespace
+
+    import openpi.models_pytorch.progress_expert as progress_expert
+
+    tiny_gemma = SimpleNamespace(
+        width=8,
+        depth=1,
+        mlp_dim=16,
+        num_heads=2,
+        num_kv_heads=1,
+        head_dim=4,
+    )
+    monkeypatch.setattr(progress_expert._gemma, "get_config", lambda variant: tiny_gemma)
+    config = SimpleNamespace(
+        action_horizon=3,
+        action_dim=2,
+        action_expert_variant="tiny",
+        dtype="float32",
+        progress_depth=1,
+        progress_layer_mapping=None,
+    )
+    expert = progress_expert.ProgressExpertPytorch(config)
+    prefix_cache = PrefixKVView(
+        layers=((torch.empty(2, 1, 0, 4), torch.empty(2, 1, 0, 4)),),
+        valid_lengths=torch.zeros(2, dtype=torch.long),
+    )
+
+    velocities = expert(
+        prefix_cache,
+        torch.zeros(2, 0, dtype=torch.bool),
+        torch.randn(2, 1, 8),
+        torch.randn(2, 3, 2),
+        torch.tensor([0.25, 0.75]),
+    )
+
+    assert velocities.shape == (2, 3, 2)
+    assert torch.isfinite(velocities).all()
+    assert expert.last_attention_shapes == [(3, 4)]
 
 
 def test_terminal_loss_backpropagates_through_frozen_action_expert_to_progress():

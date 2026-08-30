@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 import dataclasses
 import hashlib
 import time
@@ -13,6 +13,7 @@ from typing_extensions import override
 
 from openpi import transforms as _transforms
 from openpi.models import model as _model
+from openpi.models_pytorch.futuremamba import ActionHistoryState
 from openpi.models_pytorch.mamba_memory import MemorySnapshot
 from openpi_client import base_policy as _base_policy
 
@@ -21,13 +22,15 @@ from openpi_client import base_policy as _base_policy
 class FutureMambaPolicyState:
     backend_id: str
     state_schema_version: int
-    memory: MemorySnapshot
+    history: ActionHistoryState
     episode_count: int
     query_count: int
     client_id: str
 
 
 class FutureMambaPolicy(_base_policy.BasePolicy):
+    """Visual PE-to-AE handoff policy with recurrent executed-action history."""
+
     def __init__(
         self,
         model: Any,
@@ -42,11 +45,10 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
     ) -> None:
         if not isinstance(model, torch.nn.Module):
             raise TypeError("FutureMambaPolicy requires a PyTorch FutureMamba model")
-        if not hasattr(model, "initial_memory_state") or not hasattr(model, "sample_actions_with_memory"):
-            raise AttributeError("FutureMambaPolicy model must define PyTorch memory initialization and sampling")
-        self._device = torch.device(
-            pytorch_device or (next(model.parameters(), torch.empty(0)).device if any(True for _ in model.parameters()) else "cpu")
-        )
+        if not hasattr(model, "initial_history_state") or not hasattr(model, "sample_actions_with_memory"):
+            raise AttributeError("FutureMambaPolicy model must define history initialization and sampling")
+        first_parameter = next(model.parameters(), None)
+        self._device = torch.device(pytorch_device or ("cpu" if first_parameter is None else first_parameter.device))
         self._model = model.to(self._device)
         self._model.eval()
         self._transforms = tuple(transforms)
@@ -60,12 +62,13 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
         self._sample_actions_with_memory = _sample_actions_with_memory or model.sample_actions_with_memory
         self._episode_count = 0
         self._query_count = 0
-        self._memory_state = self._new_memory_state()
+        self._history = self._new_history()
         self._buffer_diagnostics: list[dict[str, Any]] = []
 
     @override
     def infer(self, obs: dict, *, noise: np.ndarray | None = None) -> dict:  # type: ignore[misc]
         inputs = self._input_transform(dict(obs))
+        executed_actions, executed_mask = self._executed_chunk(inputs)
         inputs.pop("executed_actions", None)
         inputs.pop("executed_action_mask", None)
         batched_inputs = _tree_to_torch_batch(inputs, self._device)
@@ -73,17 +76,19 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
         sample_kwargs = dict(self._sample_kwargs)
         if noise is not None:
             noise_tensor = _as_torch(noise, self._device, torch.float32)
-            sample_kwargs["noise"] = noise_tensor[None, ...] if noise_tensor.ndim == 2 else noise_tensor
+            sample_kwargs["noise"] = noise_tensor[None] if noise_tensor.ndim == 2 else noise_tensor
 
-        start_time = time.monotonic()
+        started = time.monotonic()
         with torch.no_grad():
-            actions, next_memory, diagnostics = self._sample_actions_with_memory(
+            actions, next_history, diagnostics = self._sample_actions_with_memory(
                 observation,
-                self._memory_state,
+                self._history,
+                executed_actions,
+                executed_mask,
                 **sample_kwargs,
             )
-        model_time = time.monotonic() - start_time
-        self._memory_state = self._validate_memory(next_memory, expected_batch=1, device=self._device)
+        elapsed = time.monotonic() - started
+        self._history = self._validate_history(next_history, expected_batch=1, device=self._device)
         self._query_count += 1
 
         outputs = {
@@ -91,31 +96,48 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
             "actions": np.asarray(actions[0].detach().cpu()),
         }
         outputs = self._output_transform(outputs)
-        outputs["handoff_step"] = _handoff_step_diagnostic(diagnostics)
-        outputs["memory_state_bytes"] = _memory_nbytes(self._memory_state)
-        outputs["policy_timing"] = {"infer_ms": model_time * 1000}
+        for key in (
+            "handoff_steps",
+            "progress_calls",
+            "action_calls",
+            "memory_commits",
+            "history_actions",
+            "pending_actions",
+        ):
+            outputs[key if key != "handoff_steps" else "handoff_step"] = int(diagnostics[key])
+        outputs["memory_state_bytes"] = _history_nbytes(self._history)
+        outputs["policy_timing"] = {"infer_ms": elapsed * 1000}
         return outputs
 
-    def update_memory_only(self, obs: dict[str, Any]) -> dict[str, Any]:
-        """Advance Mamba from an intermediate observation without producing actions."""
-        inputs = self._input_transform(dict(obs))
-        inputs.pop("executed_actions", None)
-        inputs.pop("executed_action_mask", None)
-        batched_inputs = _tree_to_torch_batch(inputs, self._device)
-        observation = _model.Observation.from_dict(batched_inputs)
-        with torch.no_grad():
-            next_memory = self._model.update_memory_with_observation(
-                observation, self._memory_state
-            )
-        self._memory_state = self._validate_memory(
-            next_memory, expected_batch=1, device=self._device
+    def _executed_chunk(self, transformed: dict[str, Any]) -> tuple[torch.Tensor, torch.BoolTensor]:
+        chunk_size = int(self._model.config.action_history_chunk_size)
+        action_dim = int(self._model.config.action_dim)
+        raw = np.asarray(
+            transformed.get("executed_actions", np.zeros((0, action_dim), dtype=np.float32)),
+            dtype=np.float32,
         )
-        self._query_count += 1
-        return {
-            "memory_update_finished": True,
-            "memory_state_bytes": _memory_nbytes(self._memory_state),
-            "query_count": self._query_count,
-        }
+        if raw.ndim != 2 or raw.shape[0] > chunk_size or raw.shape[1] > action_dim:
+            raise ValueError(
+                f"executed_actions must fit [<= {chunk_size}, <= {action_dim}], got {raw.shape}"
+            )
+        supplied_mask = transformed.get("executed_action_mask")
+        if supplied_mask is None:
+            mask = np.ones(raw.shape[0], dtype=np.bool_)
+        else:
+            mask = np.asarray(supplied_mask, dtype=np.bool_)
+            if mask.shape != (raw.shape[0],):
+                raise ValueError(
+                    f"executed_action_mask must have shape {(raw.shape[0],)}, got {mask.shape}"
+                )
+        valid_count = int(mask.sum())
+        if not np.array_equal(mask, np.arange(raw.shape[0]) < valid_count):
+            raise ValueError("executed_action_mask must be a right-padded prefix")
+        padded = np.zeros((raw.shape[0], action_dim), dtype=np.float32)
+        padded[:, : raw.shape[1]] = raw
+        return (
+            torch.as_tensor(padded, device=self._device)[None],
+            torch.as_tensor(mask, device=self._device, dtype=torch.bool)[None],
+        )
 
     def add_buffer(self, payload: dict[str, Any]) -> dict[str, Any]:
         diagnostic = _validate_buffer_payload(payload)
@@ -130,15 +152,16 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
     def reset(self) -> None:
         self._episode_count += 1
         self._query_count = 0
-        self._memory_state = self._new_memory_state()
+        self._history = self._new_history()
         self._buffer_diagnostics.clear()
+
     @override
     def snapshot_state(self) -> FutureMambaPolicyState:
-        memory = _snapshot_memory_cpu(self._memory_state)
+        history = _clone_history_to(self._history, torch.device("cpu"))
         return FutureMambaPolicyState(
-            backend_id=memory.backend_id,
-            state_schema_version=memory.state_schema_version,
-            memory=memory,
+            backend_id=history.memory.backend_id,
+            state_schema_version=history.memory.state_schema_version,
+            history=history,
             episode_count=self._episode_count,
             query_count=self._query_count,
             client_id=self._client_id,
@@ -148,22 +171,22 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
     def restore_state(self, state: FutureMambaPolicyState) -> None:
         if not isinstance(state, FutureMambaPolicyState):
             raise TypeError("restore_state requires FutureMambaPolicyState")
-        expected = self._new_memory_state()
-        if state.backend_id != expected.backend_id or state.memory.backend_id != expected.backend_id:
-            raise ValueError("memory state backend mismatch")
-        if state.state_schema_version != expected.state_schema_version or state.memory.state_schema_version != expected.state_schema_version:
-            raise ValueError("memory state schema mismatch")
-        restored = _clone_memory_to(state.memory, self._device)
-        self._memory_state = self._validate_memory(restored, expected_batch=1, device=self._device)
         if state.episode_count < 0 or state.query_count < 0:
             raise ValueError("episode_count and query_count must be non-negative")
-        self._episode_count = state.episode_count
-        self._query_count = state.query_count
+        restored = _clone_history_to(state.history, self._device)
+        restored = self._validate_history(restored, expected_batch=1, device=self._device)
+        if state.backend_id != restored.memory.backend_id:
+            raise ValueError("history backend identity mismatch")
+        if state.state_schema_version != restored.memory.state_schema_version:
+            raise ValueError("history schema identity mismatch")
+        self._history = restored
+        self._episode_count = int(state.episode_count)
+        self._query_count = int(state.query_count)
 
     @override
     def fork(self) -> "FutureMambaPolicy":
         self._next_fork_id += 1
-        return FutureMambaPolicy(
+        fork = FutureMambaPolicy(
             self._model,
             transforms=self._transforms,
             output_transforms=self._output_transforms,
@@ -173,49 +196,53 @@ class FutureMambaPolicy(_base_policy.BasePolicy):
             client_id=f"{self._client_id}:{self._next_fork_id}:{uuid.uuid4().hex}",
             _sample_actions_with_memory=self._sample_actions_with_memory,
         )
+        fork._history = _clone_history_to(self._history, self._device)
+        fork._episode_count = self._episode_count
+        fork._query_count = self._query_count
+        return fork
 
     @property
     def metadata(self) -> dict[str, Any]:
         return self._metadata
 
-    def _new_memory_state(self) -> MemorySnapshot:
-        dtype = next(self._model.futuremamba.parameters(), torch.empty(0, dtype=torch.float32)).dtype
-        memory = self._model.initial_memory_state(1, self._device, dtype)
-        return self._validate_memory(memory, expected_batch=1, device=self._device)
+    def _new_history(self) -> ActionHistoryState:
+        dtype = next(self._model.futuremamba.parameters()).dtype
+        history = self._model.initial_history_state(1, self._device, dtype)
+        return self._validate_history(history, expected_batch=1, device=self._device)
 
-
-    def _validate_memory(self, memory: MemorySnapshot, *, expected_batch: int, device: torch.device) -> MemorySnapshot:
-        if not isinstance(memory, MemorySnapshot):
-            raise TypeError("memory must be MemorySnapshot")
+    def _validate_history(
+        self, history: ActionHistoryState, *, expected_batch: int, device: torch.device
+    ) -> ActionHistoryState:
+        if not isinstance(history, ActionHistoryState):
+            raise TypeError("history must be ActionHistoryState")
         backend = self._model.futuremamba.memory_backend
-        if memory.backend_id != backend.backend_id:
-            raise ValueError("memory state backend mismatch")
-        if memory.state_schema_version != backend.state_schema_version:
-            raise ValueError("memory state schema mismatch")
+        memory = history.memory
+        if memory.backend_id != backend.backend_id or memory.state_schema_version != backend.state_schema_version:
+            raise ValueError("history memory identity mismatch")
         if memory.batch_size != expected_batch:
-            raise ValueError("memory state batch mismatch")
-        expected_dtype = next(self._model.futuremamba.parameters(), torch.empty(0, dtype=torch.float32)).dtype
-        expected = backend.initial_state(expected_batch, device=device, dtype=expected_dtype)
-        if len(memory.layers) != len(expected.layers):
-            raise ValueError("memory state layer shape mismatch")
-        for index, (actual_layer, expected_layer) in enumerate(zip(memory.layers, expected.layers, strict=True)):
-            if len(actual_layer) != len(expected_layer):
-                raise ValueError(f"memory state layer {index} shape mismatch")
-            for actual, reference in zip(actual_layer, expected_layer, strict=True):
-                if actual.shape != reference.shape:
-                    raise ValueError("memory state shape mismatch")
-                if actual.dtype != reference.dtype:
-                    raise ValueError("memory state dtype mismatch")
-                if not _devices_match(actual.device, device):
-                    raise ValueError("memory state device mismatch")
-        return memory
-
-def _devices_match(actual: torch.device, expected: torch.device) -> bool:
-    """Compare devices while honoring an unspecified accelerator index."""
-    if actual.type != expected.type:
-        return False
-    return expected.index is None or actual.index == expected.index
-
+            raise ValueError("history memory batch mismatch")
+        if history.committed_output.shape != (expected_batch, self._model.futuremamba.memory_width):
+            raise ValueError("history committed output shape mismatch")
+        if history.committed_chunks.shape != (expected_batch,):
+            raise ValueError("history committed chunk shape mismatch")
+        if history.pending_actions.shape != (
+            expected_batch,
+            int(self._model.config.action_history_chunk_size),
+            int(self._model.config.action_dim),
+        ):
+            raise ValueError("history pending action shape mismatch")
+        if history.pending_mask.shape != history.pending_actions.shape[:2]:
+            raise ValueError("history pending mask shape mismatch")
+        tensors = [
+            history.committed_output,
+            history.committed_chunks,
+            history.pending_actions,
+            history.pending_mask,
+            *(tensor for layer in memory.layers for tensor in layer),
+        ]
+        if any(tensor.device.type != device.type for tensor in tensors):
+            raise ValueError("history device mismatch")
+        return history
 
 
 def _as_torch(value: Any, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
@@ -223,77 +250,55 @@ def _as_torch(value: Any, device: torch.device, dtype: torch.dtype) -> torch.Ten
 
 
 def _tree_to_torch_batch(value: Any, device: torch.device) -> Any:
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return {key: _tree_to_torch_batch(item, device) for key, item in value.items()}
     if value is None:
         return None
-    array = np.asarray(value)
-    tensor = torch.as_tensor(array, device=device)
+    tensor = torch.as_tensor(np.asarray(value), device=device)
     if tensor.is_floating_point():
         tensor = tensor.to(torch.float32)
-    return tensor[None, ...]
+    return tensor[None]
 
 
-def _snapshot_memory_cpu(memory: MemorySnapshot) -> MemorySnapshot:
-    return MemorySnapshot(
-        memory.backend_id,
-        memory.state_schema_version,
-        memory.batch_size,
-        tuple(tuple(tensor.detach().cpu().clone() for tensor in layer) for layer in memory.layers),
+def _clone_history_to(history: ActionHistoryState, device: torch.device) -> ActionHistoryState:
+    return ActionHistoryState(
+        memory=MemorySnapshot(
+            history.memory.backend_id,
+            history.memory.state_schema_version,
+            history.memory.batch_size,
+            tuple(
+                tuple(tensor.detach().to(device=device).clone() for tensor in layer)
+                for layer in history.memory.layers
+            ),
+        ),
+        committed_output=history.committed_output.detach().to(device=device).clone(),
+        committed_chunks=history.committed_chunks.detach().to(device=device).clone(),
+        pending_actions=history.pending_actions.detach().to(device=device).clone(),
+        pending_mask=history.pending_mask.detach().to(device=device).clone(),
     )
 
 
-def _clone_memory_to(memory: MemorySnapshot, device: torch.device) -> MemorySnapshot:
-    return MemorySnapshot(
-        memory.backend_id,
-        memory.state_schema_version,
-        memory.batch_size,
-        tuple(tuple(tensor.detach().to(device=device).clone() for tensor in layer) for layer in memory.layers),
-    )
-
-
-def _memory_dtype(memory: MemorySnapshot) -> torch.dtype:
-    return memory.layers[0][0].dtype if memory.layers else torch.float32
+def _history_nbytes(history: ActionHistoryState) -> int:
+    tensors = [
+        history.committed_output,
+        history.committed_chunks,
+        history.pending_actions,
+        history.pending_mask,
+        *(tensor for layer in history.memory.layers for tensor in layer),
+    ]
+    return sum(tensor.numel() * tensor.element_size() for tensor in tensors)
 
 
 def _validate_buffer_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(payload, dict) or payload.get("add_buffer") is not True:
-        raise ValueError("RoboMME buffer payload must set add_buffer=true")
-    if "images" not in payload or "state" not in payload or "exec_start_idx" not in payload:
-        raise ValueError("RoboMME buffer payload requires images, state, and exec_start_idx")
-    images = np.asarray(payload["images"])
-    state = np.asarray(payload["state"])
-    if images.ndim < 1 or state.ndim < 1 or images.shape[0] != state.shape[0] or images.shape[0] == 0:
-        raise ValueError("RoboMME buffer images and state must have the same nonzero time dimension")
-    exec_start_idx = int(payload["exec_start_idx"])
-    if exec_start_idx < 0 or exec_start_idx >= images.shape[0]:
-        raise ValueError("RoboMME buffer exec_start_idx must select a buffered frame")
     digest = hashlib.sha256()
-    for name, array in (("images", images), ("state", state)):
-        contiguous = np.ascontiguousarray(array)
-        digest.update(name.encode("utf-8"))
-        digest.update(str(contiguous.dtype).encode("utf-8"))
-        digest.update(str(tuple(contiguous.shape)).encode("utf-8"))
-        digest.update(contiguous.tobytes())
-    digest.update(str(exec_start_idx).encode("utf-8"))
+    for key in sorted(payload):
+        value = np.ascontiguousarray(np.asarray(payload[key]))
+        digest.update(key.encode("utf-8"))
+        digest.update(str(value.dtype).encode("utf-8"))
+        digest.update(str(tuple(value.shape)).encode("utf-8"))
+        digest.update(value.tobytes())
     return {
         "buffer_checksum": digest.hexdigest(),
-        "exec_start_idx": exec_start_idx,
-        "num_frames": int(images.shape[0]),
+        "exec_start_idx": int(payload.get("exec_start_idx", 0)),
+        "num_frames": int(np.asarray(payload.get("state", ())).shape[0]),
     }
-
-
-def _handoff_step_diagnostic(diagnostics: Mapping[str, Any] | None):
-    if not diagnostics:
-        raise ValueError("FutureMamba diagnostics must include handoff_step")
-    value = diagnostics.get("handoff_steps", diagnostics.get("handoff_step"))
-    if value is None:
-        raise ValueError("FutureMamba diagnostics must include handoff_step")
-    if torch.is_tensor(value):
-        return value.detach().cpu().reshape(-1)[0].item()
-    array = np.asarray(value)
-    return array.item() if array.shape == () else array.reshape(-1)[0].item()
-
-
-def _memory_nbytes(memory: MemorySnapshot) -> int:
-    return sum(tensor.numel() * tensor.element_size() for layer in memory.layers for tensor in layer)

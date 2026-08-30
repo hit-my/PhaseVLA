@@ -749,3 +749,52 @@ We will collect common issues and their solutions here. If you encounter an issu
 | Import errors when running examples       | Make sure you've installed all dependencies with `uv sync`. Some examples may have additional requirements listed in their READMEs.                    |
 | Action dimensions mismatch                | Verify your data processing transforms match the expected input/output dimensions of your robot. Check the action space definitions in your policy classes.                                  |
 | Diverging training loss                            | Check the `q01`, `q99`, and `std` values in `norm_stats.json` for your dataset. Certain dimensions that are rarely used can end up with very small `q01`, `q99`, or `std` values, leading to huge states and actions after normalization. You can manually adjust the norm stats as a workaround. |
+
+## Latest LIBERO-Mem ten-task FutureMamba results
+
+This section records the completed ten-task LIBERO-Mem FutureMamba experiment. Large runtime checkpoints, videos, and datasets remain outside Git; compact audited exports are committed under `results/`.
+
+- Completion event: `2026-08-30 00:37:57 UTC`.
+- Protocol: MuJoCo `3.2.2`, fixed stabilized initialization, 10 tasks, 20 episodes per task (episode IDs `0-19`), rollout seed `10001`, FutureMamba train seed `42`, `max_steps=600`, `replan_steps=20`, handoff ratio `0.4`.
+- Conditioning cache: `961/961`; action cache: `961/961`; complete checkpoints: `60/60`; formal evaluations: `60/60`; audited rollouts/videos: `1200/1200` / `1200/1200`; audit violations: `0`.
+
+### Overall success rates
+
+| Method / checkpoint | Successes | Success rate | Wilson 95% CI | Delta vs baseline |
+|---|---:|---:|---:|---:|
+| baseline step-49999 | 162/200 | 81.0% | [75.00-85.83%] | - |
+| FutureMamba step-500 | 166/200 | 83.0% | [77.18-87.57%] | +2.0 pp |
+| FutureMamba step-1000 | 171/200 | 85.5% | [79.95-89.71%] | +4.5 pp |
+| FutureMamba step-1500 | 168/200 | 84.0% | [78.29-88.43%] | +3.0 pp |
+| FutureMamba step-2000 | 177/200 | 88.5% | [83.34-92.21%] | +7.5 pp |
+| FutureMamba step-2500 | 168/200 | 84.0% | [78.29-88.43%] | +3.0 pp |
+| FutureMamba step-3000 | 171/200 | 85.5% | [79.95-89.71%] | +4.5 pp |
+
+The best common checkpoint is FutureMamba step-2000: `177/200 = 88.5%` (`+7.5 pp` vs baseline). The unadjusted paired exact McNemar test is `p=0.023703`; because step-2000 was selected from the six-point sweep, the Bonferroni-adjusted value is `0.142216` and should not be treated as confirmatory significance.
+
+### Per-task success counts
+
+| Task | Baseline | FM-500 | FM-1000 | FM-1500 | FM-2000 | FM-2500 | FM-3000 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| T1 - pick up the bowl and place it back on the plate | 20/20 | 20/20 | 20/20 | 20/20 | 19/20 | 20/20 | 20/20 |
+| T2 - lift the bottle and put it down on the plate | 20/20 | 20/20 | 20/20 | 20/20 | 20/20 | 20/20 | 20/20 |
+| T3 - lift the bowl and place it back on the plate 3 times | 20/20 | 20/20 | 20/20 | 20/20 | 19/20 | 20/20 | 20/20 |
+| T4 - pick up the bottle and put it down the plate 3 times | 19/20 | 20/20 | 20/20 | 20/20 | 20/20 | 19/20 | 20/20 |
+| T5 - lift the bowl and place it back on the plate 5 times | 20/20 | 19/20 | 20/20 | 20/20 | 20/20 | 20/20 | 20/20 |
+| T6 - pick up the bowl and place it on the plate 7 times | 6/20 | 11/20 | 13/20 | 12/20 | 16/20 | 13/20 | 15/20 |
+| T7 - swap the 2 bowls on their plates using the empty plate | 6/20 | 8/20 | 8/20 | 7/20 | 10/20 | 6/20 | 6/20 |
+| T8 - rotate the 3 bowls on their plates from left to right using the empty plate | 11/20 | 8/20 | 10/20 | 9/20 | 14/20 | 10/20 | 10/20 |
+| T9 - put the cream cheese in the nearest basket and place that basket in the center | 20/20 | 20/20 | 20/20 | 20/20 | 19/20 | 20/20 | 20/20 |
+| T10 - put the cream cheese in the nearest basket and place the empty basket in the center | 20/20 | 20/20 | 20/20 | 20/20 | 20/20 | 20/20 | 20/20 |
+
+The clearest gains at step-2000 are T6 (`6/20` to `16/20`, +50 pp), T7 (`6/20` to `10/20`, +20 pp), and T8 (`11/20` to `14/20`, +15 pp). T1-T3, T5, T9, and T10 have 100% baseline success and therefore no success-rate headroom.
+
+### Per-episode completion steps
+
+The complete 1,400-row episode table contains baseline plus all six FutureMamba checkpoints for every task and episode. `completion_steps` is the recorded task step. Unsuccessful rollouts are retained and normally equal the `max_steps=600` timeout.
+
+- `results/libero_mem_all10_summary.csv`: per-method/checkpoint/task success rates and successful-episode completion-step statistics.
+- `results/libero_mem_all10_episode_steps.csv`: every baseline/FutureMamba task, checkpoint, and episode outcome with completion steps.
+- `results/libero_mem_all10_final_audit.json`: machine-readable audit export; source audit SHA256 `sha256:c65b7322b0cf38b7a1de9e213d81eb8a2964eb9adb92aafc7ae0062716d90daf`.
+
+Task order follows authoritative `meta/tasks.jsonl`; these are ten independent task models, not one shared model. Checkpoint selection by the same evaluation set is exploratory and optimistic; use the common step-2000 row for the primary comparison.

@@ -1,0 +1,78 @@
+method,checkpoint,task_id,task,episodes,successes,success_rate,wilson_low,wilson_high,mean_success_completion_steps,median_success_completion_steps
+baseline,49999,0,pick up the bowl and place it back on the plate,20,20,1.0,0.8388748419471806,1.0,141.8,130.0
+baseline,49999,1,lift the bottle and put it down on the plate,20,20,1.0,0.8388748419471806,1.0,172.8,140.0
+baseline,49999,2,lift the bowl and place it back on the plate 3 times,20,20,1.0,0.8388748419471806,1.0,339.95,307.5
+baseline,49999,3,pick up the bottle and put it down the plate 3 times,20,19,0.95,0.763868806553258,0.9911185511992047,318.2631578947368,311
+baseline,49999,4,lift the bowl and place it back on the plate 5 times,20,20,1.0,0.8388748419471806,1.0,388.8,376.0
+baseline,49999,5,pick up the bowl and place it on the plate 7 times,20,6,0.3,0.1454772448676043,0.5189728183535235,552.1666666666666,554.5
+baseline,49999,6,swap the 2 bowls on their plates using the empty plate,20,6,0.3,0.1454772448676043,0.5189728183535235,411.1666666666667,375.5
+baseline,49999,7,rotate the 3 bowls on their plates from left to right using the empty plate,20,11,0.55,0.34208534245034233,0.7418021417443759,533.1818181818181,538
+baseline,49999,8,put the cream cheese in the nearest basket and place that basket in the center,20,20,1.0,0.8388748419471806,1.0,299.15,297.5
+baseline,49999,9,put the cream cheese in the nearest basket and place the empty basket in the center,20,20,1.0,0.8388748419471806,1.0,283.15,285.5
+baseline,49999,all,ALL_TASKS,200,162,0.81,0.7499876129240015,0.8583282847220932,309.9074074074074,297.5
+futuremamba,500,0,pick up the bowl and place it back on the plate,20,20,1.0,0.8388748419471806,1.0,132.4,126.0
+futuremamba,500,1,lift the bottle and put it down on the plate,20,20,1.0,0.8388748419471806,1.0,144.6,132.0
+futuremamba,500,2,lift the bowl and place it back on the plate 3 times,20,20,1.0,0.8388748419471806,1.0,291.55,268.5
+futuremamba,500,3,pick up the bottle and put it down the plate 3 times,20,20,1.0,0.8388748419471806,1.0,296.6,279.0
+futuremamba,500,4,lift the bowl and place it back on the plate 5 times,20,19,0.95,0.763868806553258,0.9911185511992047,375.10526315789474,369
+futuremamba,500,5,pick up the bowl and place it on the plate 7 times,20,11,0.55,0.34208534245034233,0.7418021417443759,554.3636363636364,566
+futuremamba,500,6,swap the 2 bowls on their plates using the empty plate,20,8,0.4,0.21880653237281705,0.6134184992377469,383.75,383.0
+futuremamba,500,7,rotate the 3 bowls on their plates from left to right using the empty plate,20,8,0.4,0.21880653237281705,0.6134184992377469,512.5,512.0
+futuremamba,500,8,put the cream cheese in the nearest basket and place that basket in the center,20,20,1.0,0.8388748419471806,1.0,298.8,300.0
+futuremamba,500,9,put the cream cheese in the nearest basket and place the empty basket in the center,20,20,1.0,0.8388748419471806,1.0,280.55,282.0
+futuremamba,500,all,ALL_TASKS,200,166,0.83,0.7718411637168737,0.8757209208741302,296.8975903614458,288.5
+futuremamba,1000,0,pick up the bowl and place it back on the plate,20,20,1.0,0.8388748419471806,1.0,129.7,126.0
+futuremamba,1000,1,lift the bottle and put it down on the plate,20,20,1.0,0.8388748419471806,1.0,155,128.5
+futuremamba,1000,2,lift the bowl and place it back on the plate 3 times,20,20,1.0,0.8388748419471806,1.0,281.65,268.0
+futuremamba,1000,3,pick up the bottle and put it down the plate 3 times,20,20,1.0,0.8388748419471806,1.0,285.35,259.0
+futuremamba,1000,4,lift the bowl and place it back on the plate 5 times,20,20,1.0,0.8388748419471806,1.0,384.95,374.5
+futuremamba,1000,5,pick up the bowl and place it on the plate 7 times,20,13,0.65,0.43285427668523624,0.818808175898918,536.4615384615385,539
+futuremamba,1000,6,swap the 2 bowls on their plates using the empty plate,20,8,0.4,0.21880653237281705,0.6134184992377469,467.625,512.0
+futuremamba,1000,7,rotate the 3 bowls on their plates from left to right using the empty plate,20,10,0.5,0.2992980081982123,0.7007019918017877,538.7,531.0
+futuremamba,1000,8,put the cream cheese in the nearest basket and place that basket in the center,20,20,1.0,0.8388748419471806,1.0,296.45,295.5
+futuremamba,1000,9,put the cream cheese in the nearest basket and place the empty basket in the center,20,20,1.0,0.8388748419471806,1.0,292.15,290.5
+futuremamba,1000,all,ALL_TASKS,200,171,0.855,0.7995133246921847,0.8971064935799559,307.6432748538012,292
+futuremamba,1500,0,pick up the bowl and place it back on the plate,20,20,1.0,0.8388748419471806,1.0,133.25,129.5
+futuremamba,1500,1,lift the bottle and put it down on the plate,20,20,1.0,0.8388748419471806,1.0,145.35,124.0
+futuremamba,1500,2,lift the bowl and place it back on the plate 3 times,20,20,1.0,0.8388748419471806,1.0,291.95,291.5
+futuremamba,1500,3,pick up the bottle and put it down the plate 3 times,20,20,1.0,0.8388748419471806,1.0,287.2,263.0
+futuremamba,1500,4,lift the bowl and place it back on the plate 5 times,20,20,1.0,0.8388748419471806,1.0,378.2,373.0
+futuremamba,1500,5,pick up the bowl and place it on the plate 7 times,20,12,0.6,0.3865815007622531,0.781193467627183,554,561.0
+futuremamba,1500,6,swap the 2 bowls on their plates using the empty plate,20,7,0.35,0.18119182410108206,0.5671457233147638,414.57142857142856,411
+futuremamba,1500,7,rotate the 3 bowls on their plates from left to right using the empty plate,20,9,0.45,0.2581978582556243,0.6579146575496577,512.1111111111111,516
+futuremamba,1500,8,put the cream cheese in the nearest basket and place that basket in the center,20,20,1.0,0.8388748419471806,1.0,295.4,295.0
+futuremamba,1500,9,put the cream cheese in the nearest basket and place the empty basket in the center,20,20,1.0,0.8388748419471806,1.0,290,290.5
+futuremamba,1500,all,ALL_TASKS,200,168,0.84,0.7828592983793289,0.8843258796841297,301.10714285714283,292.5
+futuremamba,2000,0,pick up the bowl and place it back on the plate,20,19,0.95,0.763868806553258,0.9911185511992047,127.73684210526316,125
+futuremamba,2000,1,lift the bottle and put it down on the plate,20,20,1.0,0.8388748419471806,1.0,145.65,131.5
+futuremamba,2000,2,lift the bowl and place it back on the plate 3 times,20,19,0.95,0.763868806553258,0.9911185511992047,275.89473684210526,273
+futuremamba,2000,3,pick up the bottle and put it down the plate 3 times,20,20,1.0,0.8388748419471806,1.0,265.05,255.5
+futuremamba,2000,4,lift the bowl and place it back on the plate 5 times,20,20,1.0,0.8388748419471806,1.0,374.2,370.0
+futuremamba,2000,5,pick up the bowl and place it on the plate 7 times,20,16,0.8,0.5839825677481064,0.919342337420202,542.4375,535.0
+futuremamba,2000,6,swap the 2 bowls on their plates using the empty plate,20,10,0.5,0.2992980081982123,0.7007019918017877,414.4,403.0
+futuremamba,2000,7,rotate the 3 bowls on their plates from left to right using the empty plate,20,14,0.7,0.4810271816464765,0.8545227551323956,527.8571428571429,528.5
+futuremamba,2000,8,put the cream cheese in the nearest basket and place that basket in the center,20,19,0.95,0.763868806553258,0.9911185511992047,307.10526315789474,296
+futuremamba,2000,9,put the cream cheese in the nearest basket and place the empty basket in the center,20,20,1.0,0.8388748419471806,1.0,288.9,283.5
+futuremamba,2000,all,ALL_TASKS,200,177,0.885,0.8333528310151243,0.9221362676743804,311.82485875706215,289
+futuremamba,2500,0,pick up the bowl and place it back on the plate,20,20,1.0,0.8388748419471806,1.0,124.05,123.0
+futuremamba,2500,1,lift the bottle and put it down on the plate,20,20,1.0,0.8388748419471806,1.0,149.15,130.5
+futuremamba,2500,2,lift the bowl and place it back on the plate 3 times,20,20,1.0,0.8388748419471806,1.0,284.15,279.0
+futuremamba,2500,3,pick up the bottle and put it down the plate 3 times,20,19,0.95,0.763868806553258,0.9911185511992047,297.05263157894734,274
+futuremamba,2500,4,lift the bowl and place it back on the plate 5 times,20,20,1.0,0.8388748419471806,1.0,370.5,367.0
+futuremamba,2500,5,pick up the bowl and place it on the plate 7 times,20,13,0.65,0.43285427668523624,0.818808175898918,552.2307692307693,553
+futuremamba,2500,6,swap the 2 bowls on their plates using the empty plate,20,6,0.3,0.1454772448676043,0.5189728183535235,476.3333333333333,445.5
+futuremamba,2500,7,rotate the 3 bowls on their plates from left to right using the empty plate,20,10,0.5,0.2992980081982123,0.7007019918017877,521.3,512.5
+futuremamba,2500,8,put the cream cheese in the nearest basket and place that basket in the center,20,20,1.0,0.8388748419471806,1.0,298.9,293.0
+futuremamba,2500,9,put the cream cheese in the nearest basket and place the empty basket in the center,20,20,1.0,0.8388748419471806,1.0,286.45,280.5
+futuremamba,2500,all,ALL_TASKS,200,168,0.84,0.7828592983793289,0.8843258796841297,304.51190476190476,291.5
+futuremamba,3000,0,pick up the bowl and place it back on the plate,20,20,1.0,0.8388748419471806,1.0,124.4,123.5
+futuremamba,3000,1,lift the bottle and put it down on the plate,20,20,1.0,0.8388748419471806,1.0,143.05,126.0
+futuremamba,3000,2,lift the bowl and place it back on the plate 3 times,20,20,1.0,0.8388748419471806,1.0,274.2,267.5
+futuremamba,3000,3,pick up the bottle and put it down the plate 3 times,20,20,1.0,0.8388748419471806,1.0,280.85,264.0
+futuremamba,3000,4,lift the bowl and place it back on the plate 5 times,20,20,1.0,0.8388748419471806,1.0,376.3,373.0
+futuremamba,3000,5,pick up the bowl and place it on the plate 7 times,20,15,0.75,0.531299122381256,0.8881382985923343,544.1333333333333,549
+futuremamba,3000,6,swap the 2 bowls on their plates using the empty plate,20,6,0.3,0.1454772448676043,0.5189728183535235,416.8333333333333,413.5
+futuremamba,3000,7,rotate the 3 bowls on their plates from left to right using the empty plate,20,10,0.5,0.2992980081982123,0.7007019918017877,505.7,501.5
+futuremamba,3000,8,put the cream cheese in the nearest basket and place that basket in the center,20,20,1.0,0.8388748419471806,1.0,298.9,300.5
+futuremamba,3000,9,put the cream cheese in the nearest basket and place the empty basket in the center,20,20,1.0,0.8388748419471806,1.0,285.65,284.0
+futuremamba,3000,all,ALL_TASKS,200,171,0.855,0.7995133246921847,0.8971064935799559,300.50877192982455,288
