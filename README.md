@@ -795,6 +795,7 @@ The complete 1,400-row episode table contains baseline plus all six FutureMamba 
 
 - `results/libero_mem_all10_summary.csv`: per-method/checkpoint/task success rates and successful-episode completion-step statistics.
 - `results/libero_mem_all10_episode_steps.csv`: every baseline/FutureMamba task, checkpoint, and episode outcome with completion steps.
+- `results/libero_mem_all10_completion_steps.md`: human-readable table with all 1,400 episode completion-step sequences.
 - `results/libero_mem_all10_final_audit.json`: machine-readable audit export; source audit SHA256 `sha256:c65b7322b0cf38b7a1de9e213d81eb8a2964eb9adb92aafc7ae0062716d90daf`.
 
 Task order follows authoritative `meta/tasks.jsonl`; these are ten independent task models, not one shared model. Checkpoint selection by the same evaluation set is exploratory and optimistic; use the common step-2000 row for the primary comparison.
