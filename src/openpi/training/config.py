@@ -1005,6 +1005,169 @@ def _action_history_bowl_configs() -> tuple[TrainConfig, ...]:
             )
         )
     return tuple(configs)
+_CAPACITY_ABLATION_VARIANTS = (
+    ("m1", {"memory": {"depth": 4}}),
+    ("m2", {"memory": {"d_model": 1536}}),
+    ("m3", {"memory": {"depth": 4, "d_model": 1536}}),
+    ("p1", {"progress_depth": 3, "progress_layer_mapping": (0, 8, 17)}),
+    ("p2", {"progress_depth": 9, "progress_layer_mapping": None}),
+    ("p3", {"progress_depth": 4, "progress_layer_mapping": (0, 3, 10, 17), "progress_memory_tokens": 2}),
+)
+
+
+def _capacity_ablation_configs() -> tuple[TrainConfig, ...]:
+    configs = []
+    for variant, changes in _CAPACITY_ABLATION_VARIANTS:
+        for task in (6, 7, 8):
+            task_name = _ACTION_HISTORY_TASKS[task - 1]
+            memory_changes = changes.get("memory", {})
+            model = futuremamba_pytorch_config.FutureMambaPytorchConfig(
+                pi05=True,
+                action_dim=32,
+                action_horizon=20,
+                execution_horizon=20,
+                action_history_chunk_size=20,
+                discrete_state_input=False,
+                memory=dataclasses.replace(
+                    futuremamba_pytorch_config.MambaMemoryConfig(), **memory_changes
+                ),
+                progress_depth=changes.get("progress_depth", 4),
+                progress_layer_mapping=changes.get("progress_layer_mapping", (0, 3, 10, 17)),
+                progress_memory_tokens=changes.get("progress_memory_tokens", 1),
+                memory_backend="mamba2",
+                handoff_ratio=0.4,
+                terminal_loss_weight=0.0,
+                frozen_prefix_microbatch_size=16,
+                schema_version=6,
+                dtype="bfloat16",
+                base_checkpoint_uri=_ACTION_HISTORY_BASE,
+                assets_uri=_ACTION_HISTORY_ASSETS,
+                dataset_uri=_ACTION_HISTORY_DATASET,
+                task_name=task_name,
+                train_seed=42,
+            )
+            name = f"futuremamba_capacity_{variant}_libero_mem_bowl_t{task}"
+            configs.append(
+                TrainConfig(
+                    name=name,
+                    model=model,
+                    data=LeRobotLiberoDataConfig(
+                        conditioning_cache_dir=(
+                            f"{_ACTION_HISTORY_BOWL_ROOT}/conditioning_cache_capacity_ablation/{name}"
+                        ),
+                        repo_id="libero-mem/LIBERO-Mem-Lerobot",
+                        dataset_root=_ACTION_HISTORY_DATASET,
+                        task_name=task_name,
+                        assets=AssetsConfig(
+                            assets_dir=_ACTION_HISTORY_ASSETS,
+                            asset_id="libero-mem/LIBERO-Mem-Lerobot",
+                        ),
+                        base_config=DataConfig(prompt_from_task=True),
+                        extra_delta_transform=False,
+                    ),
+                    episode_data=EpisodeDataConfig(
+                        query_stride=1,
+                        executed_horizon=1,
+                        window_queries=20,
+                        full_episodes=True,
+                    ),
+                    pytorch_weight_path=_ACTION_HISTORY_BASE,
+                    freeze_filter=model.get_freeze_filter(),
+                    ema_decay=None,
+                    batch_size=1,
+                    num_train_steps=3000,
+                    log_interval=10,
+                    save_interval=500,
+                    keep_period=500,
+                    num_workers=0,
+                    seed=42,
+                    checkpoint_base_dir=(
+                        f"{_ACTION_HISTORY_BOWL_ROOT}/checkpoints/action_history_capacity_ablation"
+                    ),
+                    log_file=(
+                        f"{_ACTION_HISTORY_BOWL_ROOT}/logs/action_history_capacity_ablation/{name}.log"
+                    ),
+                    wandb_run_name=f"{name}-base49999-seed42",
+                )
+            )
+    return tuple(configs)
+
+
+
+
+def _no_memory_bowl_configs() -> tuple[TrainConfig, ...]:
+    """No-memory causal ablation: identical to the handoff04 main family except memory_backend="none".
+
+    Reuses the handoff04 conditioning caches (they store frozen-VLM prefix KV and are
+    independent of the memory backend) and mirrors training budget/protocol exactly.
+    """
+    configs = []
+    for name, task_name in _ACTION_HISTORY_CONFIGS:
+        model = futuremamba_pytorch_config.FutureMambaPytorchConfig(
+            pi05=True,
+            action_dim=32,
+            action_horizon=20,
+            execution_horizon=20,
+            action_history_chunk_size=20,
+            discrete_state_input=False,
+            progress_depth=4,
+            progress_layer_mapping=(0, 3, 10, 17),
+            memory_backend="none",
+            handoff_ratio=0.4,
+            terminal_loss_weight=0.0,
+            frozen_prefix_microbatch_size=16,
+            dtype="bfloat16",
+            base_checkpoint_uri=_ACTION_HISTORY_BASE,
+            assets_uri=_ACTION_HISTORY_ASSETS,
+            dataset_uri=_ACTION_HISTORY_DATASET,
+            task_name=task_name,
+            train_seed=42,
+        )
+        no_memory_name = name.replace("action_history_handoff04", "nomemory_handoff04")
+        configs.append(
+            TrainConfig(
+                name=no_memory_name,
+                model=model,
+                data=LeRobotLiberoDataConfig(
+                    conditioning_cache_dir=(
+                        f"{_ACTION_HISTORY_BOWL_ROOT}/conditioning_cache_handoff04_all10/{name}"
+                    ),
+                    repo_id="libero-mem/LIBERO-Mem-Lerobot",
+                    dataset_root=_ACTION_HISTORY_DATASET,
+                    task_name=task_name,
+                    assets=AssetsConfig(
+                        assets_dir=_ACTION_HISTORY_ASSETS,
+                        asset_id="libero-mem/LIBERO-Mem-Lerobot",
+                    ),
+                    base_config=DataConfig(prompt_from_task=True),
+                    extra_delta_transform=False,
+                ),
+                episode_data=EpisodeDataConfig(
+                    query_stride=1,
+                    executed_horizon=1,
+                    window_queries=20,
+                    full_episodes=True,
+                ),
+                pytorch_weight_path=_ACTION_HISTORY_BASE,
+                freeze_filter=model.get_freeze_filter(),
+                ema_decay=None,
+                batch_size=1,
+                num_train_steps=3000,
+                log_interval=10,
+                save_interval=500,
+                keep_period=500,
+                num_workers=0,
+                seed=42,
+                checkpoint_base_dir=(
+                    f"{_ACTION_HISTORY_BOWL_ROOT}/checkpoints/action_history_nomemory_futuremamba_all10"
+                ),
+                log_file=(
+                    f"{_ACTION_HISTORY_BOWL_ROOT}/logs/action_history_nomemory_futuremamba_all10/{no_memory_name}.log"
+                ),
+                wandb_run_name=f"{no_memory_name}-all10-base49999-seed42",
+            )
+        )
+    return tuple(configs)
 
 
 # Use `get_config` if you need to get a config by name in your code.
@@ -1691,6 +1854,8 @@ _CONFIGS = [
         num_train_steps=20_000,
     ),
     *_action_history_bowl_configs(),
+    *_capacity_ablation_configs(),
+    *_no_memory_bowl_configs(),
     #
     # Debugging configs.
     #

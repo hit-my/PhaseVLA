@@ -36,6 +36,7 @@ _METADATA_FIELDS = (
     "denoising_order",
     "num_denoise_steps",
     "progress_denoise_steps",
+    "progress_memory_tokens",
     "prediction_horizon",
     "execution_horizon",
     "memory_input_source",
@@ -182,10 +183,12 @@ def load_futuremamba_checkpoint(
 def _validate_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(metadata, Mapping):
         raise ValueError("FutureMamba checkpoint metadata must be a mapping")
-    missing = [field for field in _METADATA_FIELDS if field not in metadata]
+    normalized = dict(metadata)
+    normalized.setdefault("progress_memory_tokens", 1)
+    missing = [field for field in _METADATA_FIELDS if field not in normalized]
     if missing:
         raise ValueError(f"FutureMamba checkpoint metadata missing {missing[0]}")
-    return {field: _json_value(metadata[field], field=field) for field in _METADATA_FIELDS}
+    return {field: _json_value(normalized[field], field=field) for field in _METADATA_FIELDS}
 
 
 def _json_value(value: Any, *, field: str) -> Any:

@@ -51,6 +51,7 @@ class FutureMambaPluginPytorch(nn.Module):
         self.memory_width = int(config.memory.d_model)
         self.action_expert_width = _action_expert_width(config, self.memory_width)
         self.progress_layer_indices = tuple(config.resolved_progress_layer_indices)
+        self.progress_memory_tokens = int(getattr(config, "progress_memory_tokens", 1))
         flattened_width = self.chunk_size * (self.action_dim + 1)
         self.action_chunk_projection = nn.Sequential(
             nn.Linear(flattened_width, self.memory_width),
@@ -59,7 +60,9 @@ class FutureMambaPluginPytorch(nn.Module):
         )
         self.empty_history = nn.Parameter(torch.zeros(self.memory_width))
         self.memory_backend = memory_backend if memory_backend is not None else _make_memory_backend(config)
-        self.memory_token_projection = nn.Linear(self.memory_width, self.action_expert_width)
+        self.memory_token_projection = nn.Linear(
+            self.memory_width, self.action_expert_width * self.progress_memory_tokens
+        )
         self.progress_expert = progress_expert if progress_expert is not None else ProgressExpertPytorch(config)
         self.progress_num_key_value_heads = _action_expert_num_key_value_heads(config, 1)
         self.progress_head_dim = _action_expert_head_dim(
@@ -156,7 +159,7 @@ class FutureMambaPluginPytorch(nn.Module):
         memory_output = torch.where(has_history[:, None], memory_output, empty)
         memory_token = self.memory_token_projection(
             memory_output.to(dtype=self.memory_token_projection.weight.dtype)
-        ).unsqueeze(1)
+        ).reshape(memory_output.shape[0], self.progress_memory_tokens, self.action_expert_width)
         next_history = ActionHistoryState(
             memory=memory,
             committed_output=committed_output,
@@ -453,7 +456,7 @@ class FutureMambaPytorch(nn.Module):
             if valid_queries < num_queries:
                 zero = torch.zeros(
                     1,
-                    1,
+                    self.futuremamba.progress_memory_tokens,
                     self.futuremamba.action_expert_width,
                     dtype=episode_tokens[0].dtype,
                     device=device,

@@ -57,6 +57,7 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
     frozen_prefix_microbatch_size: int = 2
     progress_use_prefix_kv: bool = True
     progress_prefix_kv_dropout: float = 0.0
+    progress_memory_tokens: int = 1
     schema_version: int = 5
     architecture: Literal["action_history_mamba_pe_ae_handoff"] = "action_history_mamba_pe_ae_handoff"
     base_checkpoint_uri: str | None = None
@@ -143,6 +144,10 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
                 "progress_prefix_kv_dropout must be in [0, 1], "
                 f"got {self.progress_prefix_kv_dropout}"
             )
+        if self.progress_memory_tokens <= 0:
+            raise ValueError(
+                f"progress_memory_tokens must be positive, got {self.progress_memory_tokens}"
+            )
         action_expert_config = _gemma.get_config(self.action_expert_variant)
         if self.progress_depth <= 0 or self.progress_depth > action_expert_config.depth:
             raise ValueError(
@@ -214,6 +219,7 @@ class FutureMambaPytorchConfig(pi0_config.Pi0Config):
             "history_state_schema_version": self.history_state_schema_version,
             "memory_config": dataclasses.asdict(self.memory),
             "progress_depth": self.progress_depth,
+            "progress_memory_tokens": self.progress_memory_tokens,
             "progress_layer_mapping": list(self.resolved_progress_layer_indices),
             "handoff_ratio": self.handoff_ratio,
             "denoising_order": "progress_expert_then_action_expert",

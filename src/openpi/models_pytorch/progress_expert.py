@@ -283,16 +283,20 @@ class ProgressExpertPytorch(nn.Module):
         adarms_cond = self._embed_timestep(timestep.to(device=noisy_actions.device, dtype=torch.float32)).to(compute_dtype)
         memory_token = memory_token.to(compute_dtype)
         prefix_valid_lengths = inputs.prefix_valid_lengths
+        memory_token_count = memory_token.shape[1]
         action_positions = prefix_valid_lengths[:, None] + 1 + torch.arange(
             inputs.action_horizon, device=noisy_actions.device
         )[None, :]
-        memory_positions = prefix_valid_lengths[:, None]
+        memory_positions = prefix_valid_lengths[:, None].expand(-1, memory_token_count)
+
         self.last_attention_shapes = []
         for layer_idx, layer in enumerate(self.layers):
             prefix_k, prefix_v = prefix_cache.layer(layer_idx)
             prefix_k = prefix_k.to(device=noisy_actions.device, dtype=compute_dtype)
             prefix_v = prefix_v.to(device=noisy_actions.device, dtype=compute_dtype)
-            attention_mask = self._attention_mask(prefix_mask.to(noisy_actions.device), inputs.action_horizon)
+            attention_mask = self._attention_mask(
+                prefix_mask.to(noisy_actions.device), inputs.action_horizon, memory_token_count
+            )
             action_position_embeddings = self._position_embeddings(action_tokens, action_positions)
             memory_position_embeddings = self._position_embeddings(memory_token, memory_positions)
             self.last_attention_shapes.append((inputs.action_horizon, attention_mask.shape[-1]))
@@ -335,8 +339,9 @@ class ProgressExpertPytorch(nn.Module):
         if prefix_mask.ndim != 2 or prefix_mask.dtype is not torch.bool:
             raise ValueError(f"prefix_mask must have shape [batch, prefix] and bool dtype, got {tuple(prefix_mask.shape)}")
         batch, prefix_len = prefix_mask.shape
-        if memory_token.shape != (batch, 1, self.width):
-            raise ValueError(f"memory_token must have shape [{batch}, 1, {self.width}], got {tuple(memory_token.shape)}")
+        expected_memory_shape = (batch, int(getattr(self.config, "progress_memory_tokens", 1)), self.width)
+        if memory_token.shape != expected_memory_shape:
+            raise ValueError(f"memory_token must have shape {expected_memory_shape}, got {tuple(memory_token.shape)}")
         if noisy_actions.shape != (batch, self.action_horizon, self.action_dim):
             raise ValueError(
                 f"noisy_actions must have shape [{batch}, {self.action_horizon}, {self.action_dim}], got {tuple(noisy_actions.shape)}"
@@ -359,13 +364,17 @@ class ProgressExpertPytorch(nn.Module):
                 raise ValueError(f"prefix_cache layer {layer_idx} must have key/value shape {expected}")
         return _ValidatedInputs(batch, self.action_horizon, noisy_actions.dtype, prefix_valid_lengths)
 
-    def _attention_mask(self, prefix_mask: torch.BoolTensor, action_horizon: int) -> torch.Tensor:
+    def _attention_mask(
+        self, prefix_mask: torch.BoolTensor, action_horizon: int, memory_token_count: int
+    ) -> torch.Tensor:
         batch = prefix_mask.shape[0]
         prefix_len = int(prefix_mask.long().sum(dim=-1).max().item())
         prefix_positions = torch.arange(prefix_len, device=prefix_mask.device)[None, :]
         prefix_visible = prefix_positions < prefix_mask.long().sum(dim=-1)[:, None]
         prefix = prefix_visible[:, None, None, :].expand(batch, 1, action_horizon, prefix_len)
-        memory = torch.ones(batch, 1, action_horizon, 1, dtype=torch.bool, device=prefix_mask.device)
+        memory = torch.ones(
+            batch, 1, action_horizon, memory_token_count, dtype=torch.bool, device=prefix_mask.device
+        )
         action_visible = torch.ones(action_horizon, action_horizon, dtype=torch.bool, device=prefix_mask.device).tril()
         action_visible = action_visible[None, None, :, :].expand(batch, 1, action_horizon, action_horizon)
         visible = torch.cat([prefix, memory, action_visible], dim=-1)
