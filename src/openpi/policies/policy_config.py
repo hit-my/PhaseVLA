@@ -11,6 +11,7 @@ import torch
 import openpi.models.model as _model
 import openpi.models.futuremamba_config as _futuremamba_config
 from openpi.models_pytorch.futuremamba_config import FutureMambaPytorchConfig
+from openpi.models_pytorch.memory_ae_config import MemoryAEConfig
 import openpi.policies.policy as _policy
 import openpi.policies.futuremamba_policy as _futuremamba_policy
 import openpi.shared.download as download
@@ -55,7 +56,13 @@ def create_trained_policy(
     metadata_path = checkpoint_dir / "metadata.json"
     has_plugin = plugin_path.is_file()
     has_metadata = metadata_path.is_file()
-    if has_plugin != has_metadata:
+    is_memory_ae = isinstance(train_config.model, MemoryAEConfig)
+    if is_memory_ae:
+        from openpi.training import memory_ae_checkpoint
+
+        if not (checkpoint_dir / memory_ae_checkpoint.WEIGHTS).is_file() or not has_metadata:
+            raise ValueError("incomplete MemoryAE bundle: memory_ae.safetensors and metadata.json are required")
+    if not is_memory_ae and has_plugin != has_metadata:
         missing = "metadata.json" if has_plugin else "plugin.safetensors"
         raise ValueError(f"incomplete FutureMamba bundle: missing {missing}")
 
@@ -64,7 +71,14 @@ def create_trained_policy(
     assets_checkpoint_dir = checkpoint_dir
     policy_metadata = train_config.policy_metadata
     logging.info("Loading model...")
-    if is_bundle:
+    if is_memory_ae:
+        device = torch.device(pytorch_device or ("cuda" if torch.cuda.is_available() else "cpu"))
+        model, policy_metadata, assets_checkpoint_dir = memory_ae_checkpoint.load_policy_bundle(
+            train_config.model, checkpoint_dir, device
+        )
+        is_pytorch = True
+        pytorch_device = str(device)
+    elif is_bundle:
         if not isinstance(train_config.model, FutureMambaPytorchConfig):
             raise TypeError("FutureMamba plugin bundle requires FutureMambaPytorchConfig")
         device = torch.device(pytorch_device or ("cuda" if torch.cuda.is_available() else "cpu"))

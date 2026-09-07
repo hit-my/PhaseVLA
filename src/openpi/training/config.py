@@ -19,6 +19,7 @@ import openpi.models.pi0_config as pi0_config
 import openpi.models.pi0_fast as pi0_fast
 import openpi.models.tokenizer as _tokenizer
 import openpi.models_pytorch.futuremamba_config as futuremamba_pytorch_config
+from openpi.models_pytorch.memory_ae_config import MemoryAEConfig
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
@@ -1170,6 +1171,32 @@ def _no_memory_bowl_configs() -> tuple[TrainConfig, ...]:
     return tuple(configs)
 
 
+def _memory_ae_bowl_configs() -> tuple[TrainConfig, ...]:
+    configs = []
+    for reference in _action_history_bowl_configs():
+        if reference.model.task_name not in _ACTION_HISTORY_TASKS[5:8]:
+            continue
+        model_fields = {field.name: getattr(reference.model, field.name) for field in dataclasses.fields(reference.model)}
+        model_fields.update(
+            architecture="action_history_mamba_memory_ae",
+            handoff_ratio=0.0,
+            progress_depth=18,
+            progress_layer_mapping=None,
+            frozen_prefix_microbatch_size=4,
+        )
+        name = reference.name.replace("action_history_handoff04", "nope_memory_ae")
+        configs.append(dataclasses.replace(
+            reference,
+            name=name,
+            model=MemoryAEConfig(**model_fields),
+            data=dataclasses.replace(reference.data, conditioning_cache_dir=None),
+            checkpoint_base_dir=f"{_ACTION_HISTORY_BOWL_ROOT}/checkpoints/nope_memory_ae_v1",
+            log_file=f"{_ACTION_HISTORY_BOWL_ROOT}/logs/nope_memory_ae_v1/{name}.log",
+            wandb_run_name=f"{name}-base49999-seed42-fulltime",
+        ))
+    return tuple(configs)
+
+
 # Use `get_config` if you need to get a config by name in your code.
 _CONFIGS = [
     #
@@ -1856,6 +1883,7 @@ _CONFIGS = [
     *_action_history_bowl_configs(),
     *_capacity_ablation_configs(),
     *_no_memory_bowl_configs(),
+    *_memory_ae_bowl_configs(),
     #
     # Debugging configs.
     #

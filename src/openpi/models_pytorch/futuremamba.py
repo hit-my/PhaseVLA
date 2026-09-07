@@ -43,6 +43,7 @@ class FutureMambaPluginPytorch(nn.Module):
         *,
         memory_backend: nn.Module | None = None,
         progress_expert: nn.Module | None = None,
+        include_progress_expert: bool = True,
     ) -> None:
         super().__init__()
         self.config = config
@@ -63,31 +64,28 @@ class FutureMambaPluginPytorch(nn.Module):
         self.memory_token_projection = nn.Linear(
             self.memory_width, self.action_expert_width * self.progress_memory_tokens
         )
-        self.progress_expert = progress_expert if progress_expert is not None else ProgressExpertPytorch(config)
+        if include_progress_expert:
+            self.progress_expert = progress_expert if progress_expert is not None else ProgressExpertPytorch(config)
+        elif progress_expert is not None:
+            raise ValueError("progress_expert cannot be supplied when include_progress_expert is False")
         self.progress_num_key_value_heads = _action_expert_num_key_value_heads(config, 1)
         self.progress_head_dim = _action_expert_head_dim(
             config, max(1, self.action_expert_width // self.progress_num_key_value_heads)
         )
         self.to(dtype=_dtype_from_config(config))
 
-    def initial_history_state(
-        self, batch_size: int, device: torch.device, dtype: torch.dtype
-    ) -> ActionHistoryState:
+    def initial_history_state(self, batch_size: int, device: torch.device, dtype: torch.dtype) -> ActionHistoryState:
         memory = self.memory_backend.initial_state(batch_size, device=device, dtype=dtype)
         empty = self.empty_history.to(device=device, dtype=dtype)[None].expand(batch_size, -1).clone()
         return ActionHistoryState(
             memory=memory,
             committed_output=empty,
             committed_chunks=torch.zeros(batch_size, dtype=torch.long, device=device),
-            pending_actions=torch.zeros(
-                batch_size, self.chunk_size, self.action_dim, dtype=dtype, device=device
-            ),
+            pending_actions=torch.zeros(batch_size, self.chunk_size, self.action_dim, dtype=dtype, device=device),
             pending_mask=torch.zeros(batch_size, self.chunk_size, dtype=torch.bool, device=device),
         )
 
-    def encode_action_chunk(
-        self, actions: torch.Tensor, action_mask: torch.BoolTensor
-    ) -> torch.Tensor:
+    def encode_action_chunk(self, actions: torch.Tensor, action_mask: torch.BoolTensor) -> torch.Tensor:
         self._validate_chunk(actions, action_mask)
         mask = action_mask.to(device=actions.device, dtype=torch.bool)
         values = actions.to(dtype=self.action_chunk_projection[0].weight.dtype)
@@ -104,9 +102,7 @@ class FutureMambaPluginPytorch(nn.Module):
         """Append new actions and expose all prior actions without double-counting partial chunks."""
         self._validate_history(history)
         self._validate_executed_actions(executed_actions, executed_action_mask, history)
-        actions = executed_actions.to(
-            device=history.pending_actions.device, dtype=history.pending_actions.dtype
-        )
+        actions = executed_actions.to(device=history.pending_actions.device, dtype=history.pending_actions.dtype)
         mask = executed_action_mask.to(device=actions.device, dtype=torch.bool)
         memory = history.memory
         committed_output = history.committed_output
@@ -141,9 +137,7 @@ class FutureMambaPluginPytorch(nn.Module):
                 pending_actions = torch.where(
                     full_rows[:, None, None], torch.zeros_like(pending_actions), pending_actions
                 )
-                pending_mask = torch.where(
-                    full_rows[:, None], torch.zeros_like(pending_mask), pending_mask
-                )
+                pending_mask = torch.where(full_rows[:, None], torch.zeros_like(pending_mask), pending_mask)
                 commit_count += int(full_rows.long().sum().item())
 
         partial_rows = pending_mask.any(dim=-1)
@@ -151,9 +145,7 @@ class FutureMambaPluginPytorch(nn.Module):
         if bool(partial_rows.any().item()):
             encoded = self.encode_action_chunk(pending_actions, pending_mask)
             partial_output, _ = self.memory_backend.step(encoded, memory)
-            memory_output = torch.where(
-                partial_rows[:, None], partial_output.to(memory_output.dtype), memory_output
-            )
+            memory_output = torch.where(partial_rows[:, None], partial_output.to(memory_output.dtype), memory_output)
         has_history = partial_rows | (committed_chunks > 0)
         empty = self.empty_history.to(device=memory_output.device, dtype=memory_output.dtype)[None]
         memory_output = torch.where(has_history[:, None], memory_output, empty)
@@ -168,11 +160,15 @@ class FutureMambaPluginPytorch(nn.Module):
             pending_mask=pending_mask,
         )
         history_actions = committed_chunks * self.chunk_size + pending_mask.long().sum(dim=-1)
-        return memory_token, next_history, {
-            "memory_commits": commit_count,
-            "history_actions": int(history_actions.sum().item()),
-            "pending_actions": int(pending_mask.long().sum().item()),
-        }
+        return (
+            memory_token,
+            next_history,
+            {
+                "memory_commits": commit_count,
+                "history_actions": int(history_actions.sum().item()),
+                "pending_actions": int(pending_mask.long().sum().item()),
+            },
+        )
 
     def progress_prefix_from_cache(
         self, prefix_cache: object, prefix_mask: torch.BoolTensor
@@ -191,9 +187,7 @@ class FutureMambaPluginPytorch(nn.Module):
         noisy_actions: torch.Tensor,
         timestep: torch.Tensor,
     ) -> torch.Tensor:
-        return self.progress_expert(
-            prefix_cache, prefix_mask, memory_token, noisy_actions, timestep
-        )
+        return self.progress_expert(prefix_cache, prefix_mask, memory_token, noisy_actions, timestep)
 
     def _empty_progress_prefix(self, batch_size: int, device: torch.device) -> PrefixKVView:
         dtype = self.memory_token_projection.weight.dtype
@@ -315,9 +309,7 @@ class FutureMambaPytorch(nn.Module):
             digest.update(tensor.detach().cpu().contiguous().view(torch.uint8).numpy().tobytes())
         return digest.hexdigest()
 
-    def initial_history_state(
-        self, batch_size: int, device: torch.device, dtype: torch.dtype
-    ) -> ActionHistoryState:
+    def initial_history_state(self, batch_size: int, device: torch.device, dtype: torch.dtype) -> ActionHistoryState:
         return self.futuremamba.initial_history_state(batch_size, device, dtype)
 
     def sample_actions_with_memory(
@@ -347,9 +339,7 @@ class FutureMambaPytorch(nn.Module):
 
         with torch.no_grad():
             *_, processed_state = self.base._preprocess_observation(observation, train=False)
-            frozen = self._detached_frozen_prefix(
-                self.base.extract_prefix_context(observation, train=False)
-            )
+            frozen = self._detached_frozen_prefix(self.base.extract_prefix_context(observation, train=False))
             prefix_cache, progress_prefix_mask = self.futuremamba.progress_prefix_from_cache(
                 frozen.kv_cache, frozen.pad_mask
             )
@@ -376,11 +366,90 @@ class FutureMambaPytorch(nn.Module):
                     )
                     action_calls += 1
                 x_t = x_t + dt.to(dtype=x_t.dtype) * velocity
-        return x_t, next_history, {
-            "progress_calls": progress_calls,
-            "action_calls": action_calls,
-            "handoff_steps": handoff_steps,
-            **history_diagnostics,
+        return (
+            x_t,
+            next_history,
+            {
+                "progress_calls": progress_calls,
+                "action_calls": action_calls,
+                "handoff_steps": handoff_steps,
+                **history_diagnostics,
+            },
+        )
+
+    def compute_cached_query_loss(
+        self,
+        batch,
+        *,
+        noise: torch.Tensor | None = None,
+        time: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
+        """Flow loss for independent no-memory queries with frozen prefix KV."""
+        if self.config.memory_backend != "none":
+            raise ValueError("cached independent queries require memory_backend='none'")
+        actions = batch.actions
+        if actions.ndim != 3 or tuple(actions.shape[1:]) != (self.config.action_horizon, self.config.action_dim):
+            raise ValueError("cached actions must have shape [query, action_horizon, action_dim]")
+        count = actions.shape[0]
+        if count == 0 or batch.action_mask.shape != actions.shape[:2]:
+            raise ValueError("cached queries need nonempty actions and matching action_mask")
+        if batch.has_history.shape != (count,):
+            raise ValueError("has_history must have one entry per cached query")
+        if batch.action_mask.dtype != torch.bool or batch.has_history.dtype != torch.bool:
+            raise ValueError("cached action_mask and has_history must be boolean")
+        if not bool(batch.action_mask.any(dim=-1).all().item()):
+            raise ValueError("each cached query must have at least one valid action")
+        device = actions.device
+        if noise is None:
+            noise = self.base.sample_noise(tuple(actions.shape), device)
+        else:
+            noise = noise.to(device=device, dtype=actions.dtype)
+        if noise.shape != actions.shape:
+            raise ValueError("noise must match cached actions")
+        if time is None:
+            time = self._sample_high_noise_time(
+                (count,),
+                handoff_steps=_handoff_steps(self.config.handoff_ratio, self.config.num_denoise_steps),
+                device=device,
+            )
+        else:
+            time = time.to(device=device, dtype=torch.float32)
+        if time.shape != (count,):
+            raise ValueError("time must have one entry per cached query")
+        safe_actions = torch.where(batch.action_mask[..., None], actions, torch.zeros_like(actions))
+        safe_noise = torch.where(batch.action_mask[..., None], noise, torch.zeros_like(noise))
+        x_t = time[:, None, None] * safe_noise + (1.0 - time[:, None, None]) * safe_actions
+        target_velocity = safe_noise - safe_actions
+        plugin = self.futuremamba
+        # The original no-memory backend returns zero after any executed action;
+        # an empty history instead consumes the learned empty_history vector.
+        empty = plugin.empty_history[None].expand(count, -1)
+        memory_output = torch.where(batch.has_history[:, None], torch.zeros_like(empty), empty)
+        memory_token = plugin.memory_token_projection(memory_output).reshape(
+            count, plugin.progress_memory_tokens, plugin.action_expert_width
+        )
+        keys, values = batch.action_expert_keys, batch.action_expert_values
+        prefix = PrefixKVView.from_layers(
+            tuple((keys[:, layer], values[:, layer]) for layer in range(keys.shape[1])),
+            batch.prefix_mask,
+        )
+        prediction = plugin.forward_progress(prefix, batch.prefix_mask, memory_token, x_t, time)
+        error = (prediction - target_velocity).square().mean(dim=-1)
+        per_query = torch.where(batch.action_mask, error, torch.zeros_like(error)).sum(dim=-1)
+        flow_loss = (per_query / batch.action_mask.sum(dim=-1)).mean()
+        zero = flow_loss.new_zeros(())
+        return {
+            "loss": flow_loss,
+            "flow_loss": flow_loss,
+            "terminal_loss": zero,
+            "terminal_error": zero,
+            "handoff_loss": zero,
+            "handoff_error": zero,
+            "boundary_loss": zero,
+            "boundary_error": zero,
+            "sample_time_mean": time.mean(),
+            "sample_time_min": time.min(),
+            "sample_time_max": time.max(),
         }
 
     def compute_episode_loss(
@@ -404,13 +473,9 @@ class FutureMambaPytorch(nn.Module):
             noise = noise.to(device=device, dtype=dtype)
         if tuple(noise.shape) != tuple(actions.shape):
             raise ValueError(f"noise must have shape {tuple(actions.shape)}, got {tuple(noise.shape)}")
-        handoff_steps = _handoff_steps(
-            float(self.config.handoff_ratio), int(self.config.num_denoise_steps)
-        )
+        handoff_steps = _handoff_steps(float(self.config.handoff_ratio), int(self.config.num_denoise_steps))
         if time is None:
-            time = self._sample_high_noise_time(
-                (batch_size, num_queries), handoff_steps=handoff_steps, device=device
-            )
+            time = self._sample_high_noise_time((batch_size, num_queries), handoff_steps=handoff_steps, device=device)
         else:
             time = time.to(device=device, dtype=torch.float32)
         if tuple(time.shape) != (batch_size, num_queries):
@@ -424,9 +489,7 @@ class FutureMambaPytorch(nn.Module):
         safe_noise = torch.where(valid_action_mask[..., None], noise, torch.zeros_like(noise))
         x_t = time[..., None, None] * safe_noise + (1.0 - time[..., None, None]) * safe_actions
         target_velocity = safe_noise - safe_actions
-        flow_error = torch.zeros(
-            batch_size, num_queries, int(self.config.action_horizon), dtype=dtype, device=device
-        )
+        flow_error = torch.zeros(batch_size, num_queries, int(self.config.action_horizon), dtype=dtype, device=device)
 
         history_tokens: list[torch.Tensor] = []
         for episode_index in range(batch_size):
@@ -435,9 +498,7 @@ class FutureMambaPytorch(nn.Module):
             episode_tokens = []
             for query_index in range(valid_queries):
                 if bool(batch.reset_mask[episode_index, query_index].item()):
-                    history = self.initial_history_state(
-                        1, device, next(self.futuremamba.parameters()).dtype
-                    )
+                    history = self.initial_history_state(1, device, next(self.futuremamba.parameters()).dtype)
                 if bool(train_query_mask[episode_index, query_index].item()):
                     token, history, _ = self.futuremamba.advance_history(
                         history,
@@ -517,15 +578,11 @@ class FutureMambaPytorch(nn.Module):
                         time[episode_index, query_start:query_stop],
                     )
                     flow_error[episode_index, query_start:query_stop] = torch.mean(
-                        torch.square(
-                            predicted - target_velocity[episode_index, query_start:query_stop]
-                        ),
+                        torch.square(predicted - target_velocity[episode_index, query_start:query_stop]),
                         dim=-1,
                     )
 
-        flow_loss = _mean_masked_action_error(
-            flow_error, batch.action_mask, train_query_mask
-        )
+        flow_loss = _mean_masked_action_error(flow_error, batch.action_mask, train_query_mask)
         zero = torch.zeros((), dtype=flow_loss.dtype, device=flow_loss.device)
         sampled_time = time[train_query_mask]
         return {
@@ -614,9 +671,7 @@ def _handoff_steps(ratio: float, num_steps: int) -> int:
     return max(0, min(num_steps, int(math.ceil(ratio * num_steps))))
 
 
-def _mean_masked_action_error(
-    error: torch.Tensor, action_mask: torch.Tensor, query_mask: torch.Tensor
-) -> torch.Tensor:
+def _mean_masked_action_error(error: torch.Tensor, action_mask: torch.Tensor, query_mask: torch.Tensor) -> torch.Tensor:
     action_weights = action_mask.to(dtype=error.dtype)
     query_error = torch.where(action_mask, error, torch.zeros_like(error)).sum(dim=-1)
     query_error = query_error / action_weights.sum(dim=-1).clamp_min(1.0)
@@ -625,9 +680,7 @@ def _mean_masked_action_error(
     return episode_error.mean()
 
 
-def _slice_episode_observation_range(
-    observation: Any, batch_index: int, query_start: int, query_stop: int
-) -> Any:
+def _slice_episode_observation_range(observation: Any, batch_index: int, query_start: int, query_stop: int) -> Any:
     if observation is None:
         return None
     if isinstance(observation, Mapping):

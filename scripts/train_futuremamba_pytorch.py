@@ -4,6 +4,7 @@ import argparse
 from collections.abc import Iterable, Iterator, Mapping
 import dataclasses
 import importlib.metadata
+import json
 import random
 
 import numpy as np
@@ -11,6 +12,7 @@ import logging
 from pathlib import Path
 import shutil
 from typing import Any
+import time
 
 import safetensors.torch
 import torch
@@ -40,6 +42,7 @@ class TrainingResult:
     losses: list[float]
     checkpoint: Path | None
 
+
 _LOSS_METRIC_NAMES = (
     "loss",
     "flow_loss",
@@ -62,11 +65,78 @@ def _scalar_training_metrics(outputs: Mapping[str, Any]) -> dict[str, float]:
         if value is None:
             continue
         if not torch.is_tensor(value) or value.ndim != 0:
-            raise ValueError(f"compute_episode_loss output {name!r} must be a scalar tensor")
+            raise ValueError(f"training loss output {name!r} must be a scalar tensor")
         if not torch.isfinite(value):
             raise FloatingPointError(f"training metric {name!r} must be finite")
         metrics[f"train/{name}"] = float(value.detach().cpu().item())
     return metrics
+
+
+def _training_protocol_metadata(model: nn.Module, batches: Iterable[Any]) -> dict[str, Any]:
+    if getattr(getattr(model, "config", None), "memory_backend", None) != "none":
+        return {"query_sampling_protocol": "episode"}
+    queries_per_update = getattr(batches, "queries_per_update", None)
+    if not isinstance(queries_per_update, int) or queries_per_update <= 0:
+        raise ValueError("no-memory training requires cached independent-query data")
+    return {
+        "query_sampling_protocol": "independent_query",
+        "queries_per_update": queries_per_update,
+        "mean_episode_queries": float(batches.mean_episode_queries),
+        "episode_count": int(batches.episode_count),
+    }
+
+
+def _validate_training_protocol(checkpoint: Path, expected: Mapping[str, Any]) -> None:
+    saved = json.loads((checkpoint / "metadata.json").read_text(encoding="utf-8"))
+    saved_protocol = saved.get("query_sampling_protocol", "episode")
+    expected_protocol = expected["query_sampling_protocol"]
+    if saved_protocol != expected_protocol:
+        raise ValueError(
+            "checkpoint training protocol mismatch: "
+            f"expected {expected_protocol!r}, got {saved_protocol!r}; use a new checkpoint root"
+        )
+    if expected_protocol == "independent_query":
+        for field in ("queries_per_update", "mean_episode_queries", "episode_count"):
+            if saved.get(field) != expected[field]:
+                raise ValueError(
+                    f"checkpoint training protocol mismatch for {field}: "
+                    f"expected {expected[field]!r}, got {saved.get(field)!r}"
+                )
+
+
+def _backward_cached_queries(
+    model: nn.Module, batch: Any, device: torch.device, microbatch_size: int
+) -> dict[str, float]:
+    query_count = int(batch.actions.shape[0])
+    if query_count <= 0 or microbatch_size <= 0:
+        raise ValueError("cached query batch and microbatch size must be positive")
+    aggregated: dict[str, torch.Tensor] = {}
+    for start in range(0, query_count, microbatch_size):
+        stop = min(start + microbatch_size, query_count)
+        # Slice CPU KV rows before transfer; never stage the complete update on the GPU.
+        microbatch = batch.slice(start, stop).to(device)
+        outputs = model.compute_cached_query_loss(microbatch)
+        weight = (stop - start) / query_count
+        loss = outputs["loss"]
+        if not torch.is_tensor(loss) or loss.ndim != 0:
+            raise ValueError("cached query loss must be a scalar tensor")
+        (loss * weight).backward()
+        for name in _LOSS_METRIC_NAMES:
+            value = outputs.get(name)
+            if value is None:
+                continue
+            if not torch.is_tensor(value) or value.ndim != 0:
+                raise ValueError(f"training loss output {name!r} must be a scalar tensor")
+            value = value.detach()
+            if name == "sample_time_min":
+                aggregated[name] = value if name not in aggregated else torch.minimum(aggregated[name], value)
+            elif name == "sample_time_max":
+                aggregated[name] = value if name not in aggregated else torch.maximum(aggregated[name], value)
+            else:
+                contribution = value * weight
+                aggregated[name] = contribution if name not in aggregated else aggregated[name] + contribution
+        del microbatch, outputs, loss
+    return _scalar_training_metrics(aggregated)
 
 
 def plugin_trainable_parameters(model: nn.Module) -> tuple[list[str], list[nn.Parameter]]:
@@ -75,6 +145,7 @@ def plugin_trainable_parameters(model: nn.Module) -> tuple[list[str], list[nn.Pa
     if not trainable or any(not name.startswith("futuremamba.") for name in names):
         raise RuntimeError(f"invalid trainable parameters: {names}")
     return names, [parameter for _, parameter in trainable]
+
 
 class WandbMetricLogger:
     def __init__(self, run) -> None:
@@ -87,9 +158,7 @@ class WandbMetricLogger:
         self._run.finish()
 
 
-def create_wandb_metric_logger(
-    *, enabled: bool, wandb_module=None, project: str, name: str, config: Mapping[str, Any]
-):
+def create_wandb_metric_logger(*, enabled: bool, wandb_module=None, project: str, name: str, config: Mapping[str, Any]):
     if not enabled:
         return None, None
     if wandb_module is None:
@@ -132,7 +201,8 @@ def _log_training_identity(
 ) -> None:
     LOGGER.info(
         "config=%s task=%s seed=%d checkpoint_root=%s log_file=%s wandb_run_name=%s "
-        "architecture=%s memory_input_source=%s",
+        "architecture=%s memory_input_source=%s query_sampling_protocol=%s "
+        "queries_per_update=%s mean_episode_queries=%s",
         train_config.name,
         metadata.get("task_name") or "unknown",
         train_config.seed,
@@ -141,6 +211,9 @@ def _log_training_identity(
         _wandb_run_name(train_config),
         metadata["architecture"],
         metadata["memory_input_source"],
+        metadata["query_sampling_protocol"],
+        metadata.get("queries_per_update"),
+        metadata.get("mean_episode_queries"),
     )
 
 
@@ -169,6 +242,10 @@ def run_training(
         raise ValueError("log_interval must be positive")
     if clip_gradient_norm <= 0:
         raise ValueError("clip_gradient_norm must be positive")
+    metadata = {**metadata, **_training_protocol_metadata(model, batches)}
+    cached_queries = metadata["query_sampling_protocol"] == "independent_query"
+    if cached_queries and terminal_monitor_enabled:
+        raise ValueError("terminal monitoring is not supported for independent-query training")
     device = _model_device(model) if device is None else torch.device(device)
     model.to(device)
     model.train(True)
@@ -179,13 +256,21 @@ def run_training(
     checkpoint_root = Path(checkpoint_root)
     start_step = 0
     data_iterator_step = 0
+    processed_queries = 0
     if resume:
         latest = _latest_checkpoint(checkpoint_root)
+        _validate_training_protocol(latest, metadata)
         restored = load_futuremamba_checkpoint(
             latest, model, optimizer, scheduler, expected_metadata=metadata, map_location=device
         )
         start_step = restored.step
         data_iterator_step = restored.data_iterator_step
+        processed_queries = int(
+            restored.metadata.get(
+                "processed_queries",
+                data_iterator_step * metadata["queries_per_update"] if cached_queries else 0,
+            )
+        )
         if start_step > num_train_steps:
             raise ValueError(f"checkpoint step {start_step} exceeds requested num_train_steps {num_train_steps}")
     else:
@@ -195,16 +280,32 @@ def run_training(
         else:
             checkpoint_root.mkdir(parents=True)
 
-    batch_iterator = _iterator_at_step(batches, data_iterator_step)
+    if cached_queries and hasattr(batches, "iter_from_update"):
+        batch_iterator = iter(batches.iter_from_update(data_iterator_step))
+    else:
+        batch_iterator = _iterator_at_step(batches, data_iterator_step)
     losses: list[float] = []
     last_checkpoint: Path | None = None
     for step in range(start_step, num_train_steps):
-        batch = _to_device(next(batch_iterator), device)
+        step_started = time.perf_counter()
+        batch = next(batch_iterator)
+        data_time = time.perf_counter() - step_started
         optimizer.zero_grad(set_to_none=True)
-        outputs = model.compute_episode_loss(batch)
-        loss = outputs["loss"]
-        metrics = _scalar_training_metrics(outputs)
-        loss.backward()
+        if cached_queries:
+            query_count = int(batch.actions.shape[0])
+            if query_count != metadata["queries_per_update"]:
+                raise ValueError("cached batch size must equal queries_per_update")
+            metrics = _backward_cached_queries(model, batch, device, int(model.config.frozen_prefix_microbatch_size))
+        else:
+            batch = _to_device(batch, device)
+            outputs = model.compute_episode_loss(batch)
+            loss = outputs["loss"]
+            metrics = _scalar_training_metrics(outputs)
+            loss.backward()
+            query_mask = getattr(batch, "train_query_mask", None)
+            if query_mask is None:
+                query_mask = getattr(batch, "query_mask", None)
+            query_count = 0 if query_mask is None else int(torch.as_tensor(query_mask).sum().item())
         grad_norm = torch.nn.utils.clip_grad_norm_(parameters, clip_gradient_norm)
         if not torch.isfinite(torch.as_tensor(grad_norm)):
             raise FloatingPointError(f"plugin gradient norm must be finite at step {step}")
@@ -212,17 +313,18 @@ def run_training(
         scheduler.step()
         data_iterator_step += 1
         completed_step = step + 1
-        losses.append(float(loss.detach().cpu().item()))
+        processed_queries += query_count
+        losses.append(metrics["train/loss"])
         metrics.update(
             {
                 "train/grad_norm": float(torch.as_tensor(grad_norm).detach().cpu().item()),
                 "train/learning_rate": float(optimizer.param_groups[0]["lr"]),
                 "train/data_iterator_step": data_iterator_step,
+                "train/processed_queries": processed_queries,
+                "train/data_time": data_time,
             }
         )
-        if terminal_monitor_enabled and (
-            completed_step % log_interval == 0 or completed_step == num_train_steps
-        ):
+        if terminal_monitor_enabled and (completed_step % log_interval == 0 or completed_step == num_train_steps):
             cuda_devices = [torch.cuda.current_device()] if device.type == "cuda" else []
             was_training = model.training
             with torch.random.fork_rng(devices=cuda_devices):
@@ -235,19 +337,23 @@ def run_training(
                 finally:
                     model.train(was_training)
             if not torch.isfinite(terminal_monitor):
-                raise FloatingPointError(
-                    f"terminal monitor loss must be finite at step {completed_step}"
-                )
+                raise FloatingPointError(f"terminal monitor loss must be finite at step {completed_step}")
             metrics["train/terminal_monitor_loss"] = float(terminal_monitor.cpu().item())
             metrics["train/terminal_monitor_step"] = completed_step
             if metrics["train/loss"] != metrics["train/flow_loss"]:
                 raise RuntimeError("terminal monitor experiment must optimize flow loss only")
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        metrics["train/step_time"] = time.perf_counter() - step_started
+        if cached_queries:
+            metrics["train/queries_per_update"] = metadata["queries_per_update"]
         if metric_logger is not None:
             metric_logger(metrics, completed_step)
         if completed_step % log_interval == 0 or completed_step == num_train_steps:
             LOGGER.info(
                 "step=%d/%d loss=%.8f flow_loss=%.8f terminal_loss=%.8f "
-                "handoff_loss=%.8f boundary_loss=%.8f grad_norm=%.8f",
+                "handoff_loss=%.8f boundary_loss=%.8f grad_norm=%.8f "
+                "processed_queries=%d data_time=%.6f step_time=%.6f",
                 completed_step,
                 num_train_steps,
                 metrics["train/loss"],
@@ -256,6 +362,9 @@ def run_training(
                 metrics.get("train/handoff_loss", 0.0),
                 metrics.get("train/boundary_loss", 0.0),
                 metrics["train/grad_norm"],
+                processed_queries,
+                data_time,
+                metrics["train/step_time"],
             )
         if completed_step % save_interval == 0 or completed_step == num_train_steps:
             last_checkpoint = checkpoint_root / str(completed_step)
@@ -265,7 +374,7 @@ def run_training(
                 optimizer,
                 scheduler,
                 step=completed_step,
-                metadata=metadata,
+                metadata={**metadata, "processed_queries": processed_queries},
                 data_iterator_step=data_iterator_step,
             )
     return TrainingResult(
@@ -294,7 +403,14 @@ def build_checkpoint_metadata(model: nn.Module, model_config: FutureMambaPytorch
         metadata["compute_capability"] = f"{major}.{minor}"
     return metadata
 
-def create_training_data(train_config: _config.TrainConfig, *, shuffle: bool):
+
+def create_training_data(train_config: _config.TrainConfig, *, shuffle: bool, queries_per_update: int | None = None):
+    if train_config.model.memory_backend == "none":
+        from openpi.training.cached_query_data_loader import create_cached_query_data
+
+        return create_cached_query_data(train_config, queries_per_update=queries_per_update)
+    if queries_per_update is not None:
+        raise ValueError("queries_per_update only applies to no-memory training")
     if not isinstance(train_config.data, _config.LeRobotLiberoDataConfig):
         raise TypeError("action-history handoff FutureMamba requires LeRobotLiberoDataConfig")
     data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
@@ -322,7 +438,9 @@ def load_training_model(train_config: _config.TrainConfig, device: torch.device)
     if not base_checkpoint:
         raise ValueError("action-history handoff training requires a frozen base checkpoint")
     checkpoint_path = Path(base_checkpoint.removeprefix("file://")).expanduser()
-    weight_path = checkpoint_path if checkpoint_path.name == "model.safetensors" else checkpoint_path / "model.safetensors"
+    weight_path = (
+        checkpoint_path if checkpoint_path.name == "model.safetensors" else checkpoint_path / "model.safetensors"
+    )
     if not weight_path.is_file():
         raise FileNotFoundError(f"converted base model.safetensors not found: {weight_path}")
     model = train_config.model.create_pytorch().to(device)
@@ -390,14 +508,14 @@ def _model_device(model: nn.Module) -> torch.device:
     return torch.device("cpu") if parameter is None else parameter.device
 
 
-
-
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Train action-history Mamba + Progress Expert")
     parser.add_argument("config")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--num-train-steps", type=int)
     parser.add_argument("--batch-size", type=int)
+    parser.add_argument("--queries-per-update", type=int)
+    parser.add_argument("--cpu-threads", type=int, help="No-memory CPU threads (default: 4)")
     parser.add_argument("--save-interval", type=int)
     parser.add_argument("--log-interval", type=int)
     parser.add_argument("--pytorch-training-precision", choices=("float32", "bfloat16"))
@@ -410,27 +528,33 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--device")
     return parser
 
+
 def apply_cli_overrides(train_config: _config.TrainConfig, args: argparse.Namespace) -> _config.TrainConfig:
     replacements: dict[str, Any] = {}
-    if args.seed is not None:
-        replacements["seed"] = args.seed
-    if args.num_train_steps is not None:
-        replacements["num_train_steps"] = args.num_train_steps
-    if args.batch_size is not None:
-        replacements["batch_size"] = args.batch_size
-    if args.save_interval is not None:
-        replacements["save_interval"] = args.save_interval
-    if args.log_interval is not None:
-        replacements["log_interval"] = args.log_interval
-    if args.pytorch_training_precision is not None:
-        replacements["pytorch_training_precision"] = args.pytorch_training_precision
-    if args.wandb_enabled is not None:
+    for name in (
+        "seed",
+        "num_train_steps",
+        "batch_size",
+        "save_interval",
+        "log_interval",
+        "pytorch_training_precision",
+        "wandb_run_name",
+    ):
+        value = getattr(args, name, None)
+        if value is not None:
+            replacements[name] = value
+    if getattr(args, "wandb_enabled", None) is not None:
         replacements["wandb_enabled"] = args.wandb_enabled == "true"
-    if args.log_file is not None:
+    if getattr(args, "log_file", None) is not None:
         replacements["log_file"] = str(args.log_file)
-    if args.wandb_run_name is not None:
-        replacements["wandb_run_name"] = args.wandb_run_name
-    effective_seed = train_config.seed if args.seed is None else args.seed
+    for name in ("queries_per_update", "cpu_threads"):
+        value = getattr(args, name, None)
+        if value is not None:
+            if value <= 0:
+                raise ValueError(f"{name} must be positive")
+            if train_config.model.memory_backend != "none":
+                raise ValueError(f"{name} only applies to no-memory training")
+    effective_seed = replacements.get("seed", train_config.seed)
     replacements["model"] = dataclasses.replace(train_config.model, train_seed=effective_seed)
     return dataclasses.replace(train_config, **replacements) if replacements else train_config
 
@@ -446,6 +570,8 @@ def seed_training_runtime(seed: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     train_config = apply_cli_overrides(_config.get_config(args.config), args)
+    if train_config.model.memory_backend == "none":
+        torch.set_num_threads(4 if args.cpu_threads is None else args.cpu_threads)
     seed_training_runtime(train_config.seed)
     device = torch.device(args.device or ("cuda" if torch.cuda.is_available() else "cpu"))
     checkpoint_root = args.checkpoint_root or Path(train_config.checkpoint_base_dir) / train_config.name
@@ -458,8 +584,13 @@ def main(argv: list[str] | None = None) -> int:
         metadata = build_checkpoint_metadata(model, train_config.model)
         metadata["memory_update_stride"] = train_config.episode_data.query_stride
         metadata["train_query_stride"] = train_config.episode_data.query_stride
+        if train_config.model.memory_backend == "none":
+            data = create_training_data(train_config, shuffle=True, queries_per_update=args.queries_per_update)
+            metadata["cpu_threads"] = torch.get_num_threads()
+        else:
+            data = create_training_data(train_config, shuffle=True)
+        metadata.update(_training_protocol_metadata(model, data))
         _log_training_identity(train_config, metadata, checkpoint_root)
-        data = create_training_data(train_config, shuffle=True)
         optimizer_config = train_config.optimizer
         schedule = train_config.lr_schedule
         learning_rate = float(getattr(schedule, "peak_lr", 2.5e-5))

@@ -1,0 +1,47 @@
+{
+  "checked_utc": "2026-09-07T21:56:37.840802+00:00",
+  "baseline_commit": "1522909",
+  "baseline": {
+    "passed": 15,
+    "failed": 25
+  },
+  "server_sync": {
+    "passed": 19,
+    "failed": 25
+  },
+  "new_failing_test_ids": [],
+  "known_failing_test_ids": [
+    "src/openpi/models_pytorch/action_only_futuremamba_test.py::test_empty_history_does_not_update_mamba",
+    "src/openpi/models_pytorch/action_only_futuremamba_test.py::test_padding_values_are_ignored_but_mask_is_encoded",
+    "src/openpi/models_pytorch/action_only_futuremamba_test.py::test_training_replays_prior_chunks_before_each_query",
+    "src/openpi/models_pytorch/action_only_futuremamba_test.py::test_progress_expert_has_no_prefix_arguments",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_checkpoint_contains_plugin_only_and_complete_runtime_state",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_restore_rejects_identity_mismatch_by_field_name[memory_backend]",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_restore_rejects_identity_mismatch_by_field_name[memory_state_schema_version]",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_restore_rejects_identity_mismatch_by_field_name[base_checkpoint_checksum]",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_restore_rejects_identity_mismatch_by_field_name[train_seed]",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_restore_is_strict_and_rejects_missing_plugin_key",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_save_rejects_changed_frozen_base",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_restore_recovers_plugin_optimizer_scheduler_rng_and_cursor",
+    "src/openpi/training/futuremamba_checkpoint_test.py::test_metadata_requires_every_identity_field",
+    "src/openpi/policies/policy_config_futuremamba_test.py::test_explicit_bundle_loader_strictly_loads_base_and_plugin",
+    "src/openpi/policies/policy_config_futuremamba_test.py::test_bundle_loader_rejects_base_checksum_mismatch",
+    "src/openpi/policies/policy_config_futuremamba_test.py::test_plugin_bundle_is_not_misdetected_as_plain_pi0",
+    "scripts/train_futuremamba_pytorch_test.py::test_training_hashes_frozen_base_only_at_checkpoint_boundaries",
+    "scripts/train_futuremamba_pytorch_test.py::test_two_step_restore_to_four_matches_uninterrupted_training",
+    "scripts/train_futuremamba_pytorch_test.py::test_robomme_training_requires_explicit_episode_pickle_dir",
+    "scripts/train_futuremamba_pytorch_test.py::test_robomme_training_builds_pytorch_window_loader",
+    "scripts/train_futuremamba_pytorch_test.py::test_episode_data_dir_cli_override_reaches_robomme_data_config",
+    "scripts/train_futuremamba_pytorch_test.py::test_robomme_provenance_cli_overrides_checkpoint_identity",
+    "scripts/train_futuremamba_pytorch_test.py::test_progress_prefix_cli_overrides_reach_config_metadata_and_log",
+    "scripts/train_futuremamba_pytorch_test.py::test_training_logs_progress_at_configured_interval",
+    "scripts/train_futuremamba_pytorch_test.py::test_training_emits_decomposed_metrics_each_step"
+  ],
+  "memory_ae_config_tasks": [
+    6,
+    7,
+    8
+  ],
+  "memory_ae_import_config_exit": 0,
+  "scope": "Selected CPU regression tests; no full-model training or simulator rerun."
+}

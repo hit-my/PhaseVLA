@@ -172,3 +172,8 @@ cython_debug/
 #.idea/
 # local timestamped backup copies of configs
 *.before-*
+
+# Experiment-server symlinks to external runtime artifacts.
+/checkpoints
+/data
+/runs

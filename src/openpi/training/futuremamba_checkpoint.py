@@ -59,6 +59,14 @@ _METADATA_FIELDS = (
     "gpu_name",
     "compute_capability",
 )
+_TRAINING_METADATA_FIELDS = (
+    "query_sampling_protocol",
+    "queries_per_update",
+    "mean_episode_queries",
+    "episode_count",
+    "processed_queries",
+    "cpu_threads",
+)
 _FILES = (
     "plugin.safetensors",
     "optimizer.pt",
@@ -92,6 +100,9 @@ def save_futuremamba_checkpoint(
     if data_iterator_step < 0:
         raise ValueError("data_iterator_step must be non-negative")
     normalized = _validate_metadata(metadata)
+    training_metadata = {
+        field: _json_value(metadata[field], field=field) for field in _TRAINING_METADATA_FIELDS if field in metadata
+    }
     if hasattr(model, "base_checksum"):
         actual_base_checksum = model.base_checksum()
         if normalized["base_checkpoint_checksum"] != actual_base_checksum:
@@ -114,7 +125,12 @@ def save_futuremamba_checkpoint(
         torch.save(optimizer.state_dict(), staging / "optimizer.pt")
         torch.save(scheduler.state_dict(), staging / "scheduler.pt")
         torch.save(_capture_rng_state(), staging / "rng_state.pt")
-        saved_metadata = {**normalized, "step": int(step), "data_iterator_step": int(data_iterator_step)}
+        saved_metadata = {
+            **normalized,
+            **training_metadata,
+            "step": int(step),
+            "data_iterator_step": int(data_iterator_step),
+        }
         _atomic_json(staging / "metadata.json", saved_metadata)
         missing = [name for name in _FILES if not (staging / name).is_file()]
         if missing:
@@ -235,7 +251,9 @@ def _strict_load_plugin(model: nn.Module, state: Mapping[str, torch.Tensor]) -> 
     for name, tensor in plugin_state.items():
         reference = expected[name]
         if tensor.shape != reference.shape:
-            raise ValueError(f"strict plugin load shape mismatch for {name}: {tuple(tensor.shape)} != {tuple(reference.shape)}")
+            raise ValueError(
+                f"strict plugin load shape mismatch for {name}: {tuple(tensor.shape)} != {tuple(reference.shape)}"
+            )
         if tensor.dtype != reference.dtype:
             raise ValueError(f"strict plugin load dtype mismatch for {name}: {tensor.dtype} != {reference.dtype}")
     _plugin_module(model).load_state_dict(plugin_state, strict=True)
