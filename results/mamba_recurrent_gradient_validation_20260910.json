@@ -1,0 +1,281 @@
+{
+  "date": "2026-09-10",
+  "base_commit": "32b45459d24a8617b29ca5d51da7234f92af93c8",
+  "scope": "Functional gradient-enabled Mamba-2 recurrent step; ActMem-VLA display name",
+  "targeted_pytest": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "command": "PYTHONPATH=src JAX_PLATFORMS=cpu PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q src/openpi/models_pytorch/mamba_recurrent_gradient_test.py src/openpi/models_pytorch/mamba_memory_test.py"
+  },
+  "numerical_audit": {
+    "torch": "2.9.1+cu128",
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "fp32_reference": {
+      "output_max_abs": 0.000186920166015625,
+      "input_grad_max_abs": 0.00021958351135253906,
+      "parameter_grad_max_abs": 0.002510547637939453,
+      "candidate_vs_native_max_abs": 7.152557373046875e-07,
+      "native_vs_sequence_max_abs": 0.00018680095672607422
+    },
+    "parameter_gradient_errors": [
+      {
+        "name": "layers.0.norm.weight",
+        "max_abs": 0.00033092498779296875,
+        "relative_l2": 6.220966315595433e-05,
+        "relative_max": 6.619154009968042e-05
+      },
+      {
+        "name": "layers.0.mixer.dt_bias",
+        "max_abs": 0.00016134977340698242,
+        "relative_l2": 0.0006232213345356286,
+        "relative_max": 0.0006029264768585563
+      },
+      {
+        "name": "layers.0.mixer.A_log",
+        "max_abs": 7.916241884231567e-05,
+        "relative_l2": 0.0011945042060688138,
+        "relative_max": 0.001195945660583675
+      },
+      {
+        "name": "layers.0.mixer.D",
+        "max_abs": 0.0003910064697265625,
+        "relative_l2": 3.360202390467748e-05,
+        "relative_max": 3.32923409587238e-05
+      },
+      {
+        "name": "layers.0.mixer.in_proj.weight",
+        "max_abs": 0.0009151101112365723,
+        "relative_l2": 5.707017407985404e-05,
+        "relative_max": 5.2939351007808e-05
+      },
+      {
+        "name": "layers.0.mixer.conv1d.weight",
+        "max_abs": 0.0007509589195251465,
+        "relative_l2": 7.358397851930931e-05,
+        "relative_max": 6.964512431295589e-05
+      },
+      {
+        "name": "layers.0.mixer.conv1d.bias",
+        "max_abs": 0.0012499094009399414,
+        "relative_l2": 9.42168990150094e-05,
+        "relative_max": 0.00011245832138229162
+      },
+      {
+        "name": "layers.0.mixer.norm.weight",
+        "max_abs": 0.00023895502090454102,
+        "relative_l2": 5.068428799859248e-05,
+        "relative_max": 5.268652239465155e-05
+      },
+      {
+        "name": "layers.0.mixer.out_proj.weight",
+        "max_abs": 0.0010461807250976562,
+        "relative_l2": 5.1195500418543816e-05,
+        "relative_max": 5.036406219005585e-05
+      },
+      {
+        "name": "layers.1.norm.weight",
+        "max_abs": 0.00029790401458740234,
+        "relative_l2": 8.836904453346506e-05,
+        "relative_max": 6.873555685160682e-05
+      },
+      {
+        "name": "layers.1.mixer.dt_bias",
+        "max_abs": 0.00046518445014953613,
+        "relative_l2": 0.0014560692943632603,
+        "relative_max": 0.0015220140339806676
+      },
+      {
+        "name": "layers.1.mixer.A_log",
+        "max_abs": 7.334724068641663e-05,
+        "relative_l2": 0.0019093803130090237,
+        "relative_max": 0.0020704278722405434
+      },
+      {
+        "name": "layers.1.mixer.D",
+        "max_abs": 0.0005271434783935547,
+        "relative_l2": 6.845231837360188e-05,
+        "relative_max": 5.7485180150251836e-05
+      },
+      {
+        "name": "layers.1.mixer.in_proj.weight",
+        "max_abs": 0.0016528964042663574,
+        "relative_l2": 8.430827438132837e-05,
+        "relative_max": 0.00010658027895260602
+      },
+      {
+        "name": "layers.1.mixer.conv1d.weight",
+        "max_abs": 0.0009391605854034424,
+        "relative_l2": 0.00011560172424651682,
+        "relative_max": 0.00015033347881399095
+      },
+      {
+        "name": "layers.1.mixer.conv1d.bias",
+        "max_abs": 0.0010579228401184082,
+        "relative_l2": 0.00011630431254161522,
+        "relative_max": 9.029304055729881e-05
+      },
+      {
+        "name": "layers.1.mixer.norm.weight",
+        "max_abs": 0.0003986358642578125,
+        "relative_l2": 6.365515582729131e-05,
+        "relative_max": 9.297293581767008e-05
+      },
+      {
+        "name": "layers.1.mixer.out_proj.weight",
+        "max_abs": 0.002510547637939453,
+        "relative_l2": 7.03918922226876e-05,
+        "relative_max": 0.00012498153955675662
+      },
+      {
+        "name": "norm.weight",
+        "max_abs": 0.000400543212890625,
+        "relative_l2": 3.242342791054398e-05,
+        "relative_max": 4.8197267460636795e-05
+      }
+    ],
+    "finite_difference_checks": [
+      {
+        "name": "layers.0.mixer.dt_bias",
+        "index": 0,
+        "analytic": 0.267772376537323,
+        "finite_difference": 0.2679663017746255,
+        "sequence_gradient": 0.267611026763916,
+        "absolute_error": 0.00019392523730249467
+      },
+      {
+        "name": "layers.0.mixer.dt_bias",
+        "index": 1,
+        "analytic": -0.005187429953366518,
+        "finite_difference": -0.005109472246355532,
+        "sequence_gradient": -0.005196478217840195,
+        "absolute_error": 7.795770701098624e-05
+      },
+      {
+        "name": "layers.0.mixer.dt_bias",
+        "index": 2,
+        "analytic": 0.01858958788216114,
+        "finite_difference": 0.018588839654209245,
+        "sequence_gradient": 0.01854672282934189,
+        "absolute_error": 7.48227951895275e-07
+      },
+      {
+        "name": "layers.0.mixer.dt_bias",
+        "index": 3,
+        "analytic": 0.0014361285138875246,
+        "finite_difference": 0.0013664846483152358,
+        "sequence_gradient": 0.0014389092102646828,
+        "absolute_error": 6.964386557228885e-05
+      },
+      {
+        "name": "layers.0.mixer.A_log",
+        "index": 0,
+        "analytic": -0.06627148389816284,
+        "finite_difference": -0.06623432321551566,
+        "sequence_gradient": -0.06619232147932053,
+        "absolute_error": 3.7160682647183196e-05
+      },
+      {
+        "name": "layers.0.mixer.A_log",
+        "index": 1,
+        "analytic": 0.0017640525475144386,
+        "finite_difference": 0.0016736215426741787,
+        "sequence_gradient": 0.0017641515005379915,
+        "absolute_error": 9.04310048402599e-05
+      },
+      {
+        "name": "layers.0.mixer.A_log",
+        "index": 2,
+        "analytic": -0.007372272200882435,
+        "finite_difference": -0.007291969789851766,
+        "sequence_gradient": -0.007364104501903057,
+        "absolute_error": 8.030241103066868e-05
+      },
+      {
+        "name": "layers.0.mixer.A_log",
+        "index": 3,
+        "analytic": -5.638247785100248e-06,
+        "finite_difference": -3.4843105822801586e-06,
+        "sequence_gradient": -5.6407802730973344e-06,
+        "absolute_error": 2.153937202820089e-06
+      },
+      {
+        "name": "layers.1.mixer.dt_bias",
+        "index": 0,
+        "analytic": 0.30610260367393494,
+        "finite_difference": 0.30609987423910445,
+        "sequence_gradient": 0.3056374192237854,
+        "absolute_error": 2.7294348304840454e-06
+      },
+      {
+        "name": "layers.1.mixer.dt_bias",
+        "index": 1,
+        "analytic": -0.10908950865268707,
+        "finite_difference": -0.1090960121049041,
+        "sequence_gradient": -0.10897178202867508,
+        "absolute_error": 6.503452217032635e-06
+      },
+      {
+        "name": "layers.1.mixer.dt_bias",
+        "index": 2,
+        "analytic": -0.0027825692668557167,
+        "finite_difference": -0.0027461113980583223,
+        "sequence_gradient": -0.00278561282902956,
+        "absolute_error": 3.6457868797394426e-05
+      },
+      {
+        "name": "layers.1.mixer.dt_bias",
+        "index": 3,
+        "analytic": 0.07220523059368134,
+        "finite_difference": 0.07227861028998935,
+        "sequence_gradient": 0.07214188575744629,
+        "absolute_error": 7.337969630800967e-05
+      },
+      {
+        "name": "layers.1.mixer.A_log",
+        "index": 0,
+        "analytic": -0.03549947589635849,
+        "finite_difference": -0.035524416507541894,
+        "sequence_gradient": -0.03542612865567207,
+        "absolute_error": 2.494061118340357e-05
+      },
+      {
+        "name": "layers.1.mixer.A_log",
+        "index": 1,
+        "analytic": 0.005058718379586935,
+        "finite_difference": 0.005093742365716024,
+        "sequence_gradient": 0.005052713677287102,
+        "absolute_error": 3.502398612908932e-05
+      },
+      {
+        "name": "layers.1.mixer.A_log",
+        "index": 2,
+        "analytic": 0.0001349999656667933,
+        "finite_difference": 0.00013654513168148694,
+        "sequence_gradient": 0.00013481146015692502,
+        "absolute_error": 1.5451660146936503e-06
+      },
+      {
+        "name": "layers.1.mixer.A_log",
+        "index": 3,
+        "analytic": -0.019745998084545135,
+        "finite_difference": -0.01976451618247665,
+        "sequence_gradient": -0.019720105454325676,
+        "absolute_error": 1.851809793151568e-05
+      }
+    ],
+    "incoming_state_unchanged": true,
+    "passed": true
+  },
+  "limitations": [
+    "Not a full repository test run; September 8 legacy failures remain documented.",
+    "Forward BF16 agreement is approximate, not bitwise.",
+    "Differentiable step is scoped to ngroups=1 and non-distributed reference configuration.",
+    "No policy success claim or final checkpoint selection is made."
+  ],
+  "source_sha256": {
+    "src/openpi/models_pytorch/mamba_memory.py": "2dcfac3876c3da7b346ba88a02d26db3243a127b92cd8fd1814fc22f2b2e51da",
+    "src/openpi/models_pytorch/mamba_recurrent_gradient_test.py": "84695970e2d8d11a5533e0551fe37d0246b75a519320289782aca96e0b691895",
+    "scripts/validate_mamba_recurrent_gradients.py": "d005e77fe6c49b4ba87601302777d3e1e181fd80dc0cbebd64e40245eaf13608"
+  }
+}

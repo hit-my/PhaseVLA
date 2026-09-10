@@ -1,16 +1,16 @@
-# PhaseVLA
+# ActMem-VLA
 
-PhaseVLA studies task progress in vision-language-action policies using recurrent action memory and a lightweight **Progress Expert (PE)**. The implementation builds on [OpenPI](https://github.com/Physical-Intelligence/openpi) and π0.5; the main PyTorch model is named **FutureMamba** in the source code.
+ActMem-VLA (formerly PhaseVLA) studies task progress in vision-language-action policies using recurrent action memory and a lightweight **PreAction Expert (PE)**. The implementation builds on [OpenPI](https://github.com/Physical-Intelligence/openpi) and π0.5; the main PyTorch model is named **FutureMamba** in the source code.
 
 ## Method
 
-The current LIBERO-Mem mainline encodes previously executed action chunks with Mamba-2. The resulting memory tokens condition a Progress Expert through attention KV. The frozen VLM supplies observation/language context. PE performs the first four of ten denoising steps (`handoff_ratio=0.4`); the frozen original Action Expert (AE) performs the remaining six. Only the memory plugin and PE are trained.
+The current LIBERO-Mem mainline encodes previously executed action chunks with Mamba-2. The resulting memory tokens condition a PreAction Expert through attention KV. The frozen VLM supplies observation/language context. PE performs the first four of ten denoising steps (`handoff_ratio=0.4`); the frozen original Action Expert (AE) performs the remaining six. Only the memory plugin and PE are trained.
 
 Episode resets clear recurrent state. Training and deployment keep causal action history, action masks, and checkpoint identity explicit. Earlier RoboMME observation-memory experiments are a separate protocol and should not be mixed with the LIBERO-Mem action-history results.
 
 | Variant | Memory | Trainable expert | Denoising |
 |---|---|---|---|
-| PhaseVLA | Mamba-2 action history | PE | PE → frozen AE |
+| ActMem-VLA | Mamba-2 action history | PE | PE → frozen AE |
 | no-memory | No recurrent history | PE | PE → frozen AE |
 | no-PE / Memory-AE | Mamba-2 action history | Original AE, with memory KV | AE only |
 | Capacity variants | Configurable memory depth/width | Configurable PE depth/tokens | PE → frozen AE |
@@ -65,6 +65,38 @@ environments/futuremamba/.venv/bin/python scripts/serve_policy.py policy:checkpo
 
 The server is only the policy endpoint. Reproducing the results below also requires the LIBERO-Mem task assets, stabilized initial states, and the matching formal evaluator. The generic LIBERO example is not a replacement for that protocol. Experiment queue/service wrappers currently live outside this repository on the experiment server.
 
+## Recurrent-gradient update (September 10, 2026)
+
+Gradient-enabled Mamba-2 `step` calls now use functional convolution and SSM
+state updates. This lets a later query's loss reach earlier committed history
+blocks. Native inference cache updates previously carried history forward but
+did not propagate this recurrent gradient on CUDA. `torch.no_grad()` inference
+retains the existing kernel path; parameter names and checkpoint tensor shapes
+are unchanged. The differentiable step supports the reference `ngroups=1`,
+non-distributed configuration and rejects unsupported grouped/parallel calls.
+Training graph storage can grow with history length; the constant-size state
+claim applies to inference, not full backpropagation through history.
+
+Use a separate run directory for training with this update. Loading old weights
+does not retroactively change their training history; record the Git revision
+and keep old and corrected results separate. The historical tables below refer
+to the old training implementation and are not results of this update. This
+change does not select a final paper checkpoint or establish higher success on
+every task. Memory-AE's separate full-sequence training path is unchanged.
+
+With the pinned runtime, run the recurrent regression tests on an available GPU:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 JAX_PLATFORMS=cpu PYTHONPATH=src   environments/futuremamba/.venv/bin/python -m pytest -q   src/openpi/models_pytorch/mamba_recurrent_gradient_test.py   src/openpi/models_pytorch/mamba_memory_test.py
+```
+
+The integrated backend passes **40 targeted regression tests**. Independent
+FP32 output/gradient comparisons and five-point finite-difference checks for
+`A_log` and `dt_bias` also pass. See the [validation record](results/mamba_recurrent_gradient_validation_20260910.json)
+and [`validate_mamba_recurrent_gradients.py`](scripts/validate_mamba_recurrent_gradients.py).
+The older verification snapshot below documents a different, partially failing
+suite; it is retained for transparency.
+
 ## Validation
 
 Run targeted CPU regression tests without allocating a training GPU:
@@ -87,7 +119,7 @@ As of September 8, 2026, the seed-42 ten-task sweep below is complete. T6/T7/T8 
 
 ## Attribution
 
-PhaseVLA extends OpenPI and uses π0.5, Mamba-2, LIBERO-Mem, and RoboMME in the corresponding experiments. Upstream source, examples, and license notices are retained; generic OpenPI tutorials are available in the upstream repository. See [LICENSE](LICENSE).
+ActMem-VLA extends OpenPI and uses π0.5, Mamba-2, LIBERO-Mem, and RoboMME in the corresponding experiments. Upstream source, examples, and license notices are retained; generic OpenPI tutorials are available in the upstream repository. See [LICENSE](LICENSE).
 
 ## Latest LIBERO-Mem ten-task FutureMamba results
 

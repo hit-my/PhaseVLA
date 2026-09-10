@@ -444,7 +444,11 @@ class Mamba2MemoryBackend(_MemoryBackend):
             if block.residual_in_fp32:
                 residual = residual.float()
             conv_state, ssm_state = (tensor.clone() for tensor in layer_state)
-            if x.device.type == "cpu":
+            if torch.is_grad_enabled():
+                hidden, conv_state, ssm_state = self._step_mixer_differentiable(
+                    block.mixer, hidden, conv_state, ssm_state
+                )
+            elif x.device.type == "cpu":
                 hidden, conv_state, ssm_state = self._step_mixer_cpu(
                     block.mixer, hidden, conv_state, ssm_state
                 )
@@ -471,6 +475,52 @@ class Mamba2MemoryBackend(_MemoryBackend):
         if z is not None and getattr(module, "norm_before_gate", True):
             output = output * F.silu(z.float())
         return output.to(dtype=x.dtype)
+
+    @staticmethod
+    def _step_mixer_differentiable(
+        mixer: nn.Module,
+        hidden: torch.Tensor,
+        conv_state: torch.Tensor,
+        ssm_state: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Functional recurrent update for autograd; incoming caches are read-only.
+
+        The pinned CUDA inference kernels update caches in place and do not
+        propagate gradients through earlier states. Keep their FP32 SSM
+        discretization, but build new states with differentiable tensor ops.
+        This path supports the single-group, non-distributed reference model.
+        """
+        if mixer.ngroups != 1:
+            raise ValueError("Differentiable Mamba-2 step requires ngroups=1")
+        if getattr(mixer, "process_group", None) is not None:
+            raise ValueError("Differentiable Mamba-2 step does not support tensor parallelism")
+        projected = mixer.in_proj(hidden.squeeze(1))
+        d_mlp = (projected.shape[-1] - 2 * mixer.d_ssm - 2 * mixer.d_state - mixer.nheads) // 2
+        z0, x0, z, xbc, dt = torch.split(
+            projected,
+            [d_mlp, d_mlp, mixer.d_ssm, mixer.d_ssm + 2 * mixer.d_state, mixer.nheads],
+            dim=-1,
+        )
+        next_conv = torch.cat((conv_state[:, :, 1:], xbc[:, :, None].to(conv_state.dtype)), dim=-1)
+        xbc = (next_conv * mixer.conv1d.weight.squeeze(1)).sum(dim=-1)
+        if mixer.conv1d.bias is not None:
+            xbc = xbc + mixer.conv1d.bias
+        xbc = mixer.act(xbc).to(hidden.dtype)
+        x, b, c = torch.split(xbc, [mixer.d_ssm, mixer.d_state, mixer.d_state], dim=-1)
+        dt = F.softplus(dt.float() + mixer.dt_bias.float())
+        decay = torch.exp(dt * (-torch.exp(mixer.A_log.float())))
+        x = x.reshape(x.shape[0], mixer.nheads, mixer.headdim)
+        contribution = torch.einsum("bh,bn,bhp->bhpn", dt, b.float(), x.float())
+        updated = ssm_state.float() * decay[:, :, None, None] + contribution
+        next_ssm = updated.to(ssm_state.dtype)
+        y = torch.einsum("bhpn,bn->bhp", updated, c.float())
+        d = mixer.D.float().reshape(1, mixer.nheads, mixer.headdim if mixer.D_has_hdim else 1)
+        y = (y + d * x.float()).reshape(x.shape[0], mixer.d_ssm).to(hidden.dtype)
+        y = Mamba2MemoryBackend._norm(mixer.norm, y, z) if mixer.rmsnorm else y * mixer.act(z)
+        if d_mlp:
+            y = torch.cat((F.silu(z0) * x0, y), dim=-1)
+        return mixer.out_proj(y).unsqueeze(1), next_conv, next_ssm
+
 
     @staticmethod
     def _step_mixer_cpu(
