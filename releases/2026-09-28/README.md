@@ -38,7 +38,7 @@ Keep model implementation, task, training seed, checkpoint, evaluation seed, pro
 
 ## Representative model release
 
-Planned public repository: `HITdongdong/ActMem-VLA`. Model upload requires authentication for that account and is tracked separately from this code/data release. Do not assume a checkpoint is downloadable until its model manifest is published. Representative checkpoints will preserve task, seed, step, base identity and configuration; plugin weights require the matching fine-tuned base checkpoint, not an arbitrary pi0.5 model.
+Public model repository: [HITdongdong/ActMem-VLA](https://huggingface.co/HITdongdong/ActMem-VLA). All ten task-specific representative plugins use training seed42 and step1500. Their remote weight SHA-256 values have been verified against source files; see `model_publication_receipt.json`. These are representative checkpoints, not task-wise selected best models. Plugin weights require the matching fine-tuned base checkpoint, not an arbitrary pi0.5 model. The model card explicitly documents this dependency.
 
 ## Validation performed for this release
 

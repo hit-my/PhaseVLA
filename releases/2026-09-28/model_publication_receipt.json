@@ -1,0 +1,80 @@
+{
+  "repository": "https://huggingface.co/HITdongdong/ActMem-VLA",
+  "public": true,
+  "models": [
+    {
+      "task": 6,
+      "path": "checkpoints/task_06/seed_42/step_1500/plugin.safetensors",
+      "sha256": "0526019b8ce9faf8b8a97487af6642915ada8407ee6973869c7a81b6eaa1a240",
+      "bytes": 231412480,
+      "revision": "d46eabada629bd30de7a35892e9b15886b8cdacc",
+      "verified": true
+    },
+    {
+      "task": 7,
+      "path": "checkpoints/task_07/seed_42/step_1500/plugin.safetensors",
+      "sha256": "6e39da2d8618800c9522ca00a24896af90d53f445e30d82862fc4b34fcb8e71a",
+      "bytes": 231412480,
+      "revision": "0b8bc6af9e243549a924581d399bdbc900a90977",
+      "verified": true
+    },
+    {
+      "task": 8,
+      "path": "checkpoints/task_08/seed_42/step_1500/plugin.safetensors",
+      "sha256": "7eca66fe8be229e97a3035d0aea8006aa0af789d1782d77df123d5652a621bf3",
+      "bytes": 231412480,
+      "revision": "2ca5633682b0471a81a3540cd8a6df2e749c93bd",
+      "verified": true
+    },
+    {
+      "task": 1,
+      "path": "checkpoints/task_01/seed_42/step_1500/plugin.safetensors",
+      "sha256": "1ead0651f6a6ad515ac698dd52d58691d8e6be02844eefe8d8bec128a50c4f36",
+      "revision": "843f62b91a795653e19403917333f32c602df92e",
+      "verified": true
+    },
+    {
+      "task": 2,
+      "path": "checkpoints/task_02/seed_42/step_1500/plugin.safetensors",
+      "sha256": "56de34846d147d4b02bf575eccb778c0482ff693ddedd5690696150236c7e41a",
+      "revision": "d867bb7485d1d9a5609b3c1b3f1fa6e09b4297b7",
+      "verified": true
+    },
+    {
+      "task": 3,
+      "path": "checkpoints/task_03/seed_42/step_1500/plugin.safetensors",
+      "sha256": "313124d5cdb09d2f898c7e63d288c17f3d779cc51e2ab2d436eda37e9bd5dcb4",
+      "revision": "109a9240eb0d121bf5c36e1e0e073b198487a4c6",
+      "verified": true
+    },
+    {
+      "task": 4,
+      "path": "checkpoints/task_04/seed_42/step_1500/plugin.safetensors",
+      "sha256": "01c52b9438cfbba0a3d3ea2db94d29759962756dc0c72c168cfcd0ea54b73b61",
+      "revision": "a26b2ceb35633e6408632df3e57de782d6dc1c4a",
+      "verified": true
+    },
+    {
+      "task": 5,
+      "path": "checkpoints/task_05/seed_42/step_1500/plugin.safetensors",
+      "sha256": "535fd2ba2cfcfdc5f0d8abe7545c3492584c4e88238506e09c21cae44d7f795f",
+      "revision": "c736ce180e257b840381dabb93d270792fd9c1ef",
+      "verified": true
+    },
+    {
+      "task": 9,
+      "path": "checkpoints/task_09/seed_42/step_1500/plugin.safetensors",
+      "sha256": "4fdc6224a652c4726ce6bfaae661bacfe9f7714a6ad970759008d585c9aacfeb",
+      "revision": "c259dde2c7dc78bd93d37c5b3fd229073cd9e287",
+      "verified": true
+    },
+    {
+      "task": 10,
+      "path": "checkpoints/task_10/seed_42/step_1500/plugin.safetensors",
+      "sha256": "5e57f4e2ff070f24487e8a41fd462bcc001e1f71ac0f367f5cf6a7c66553a5eb",
+      "revision": "3b0eead4d776266df8f502fa2ba9db8bc8515683",
+      "verified": true
+    }
+  ],
+  "verified_count": 10
+}
