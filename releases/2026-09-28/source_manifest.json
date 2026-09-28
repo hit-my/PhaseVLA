@@ -1,0 +1,167 @@
+[
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/main/train_entry.py",
+    "source": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/train_entry.py",
+    "sha256": "d3d467d411d372ea5193bd1fd158693e9fcc720048c1e8cd45a865c993c3e9c1"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/main/train_corrected.py",
+    "source": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/train_corrected.py",
+    "sha256": "58087c5bff3472ce4872b02d3e41332b481fe17f39e391c05e4f416093847147"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/main/mamba_differentiable_step.py",
+    "source": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/mamba_differentiable_step.py",
+    "sha256": "848ddf5eccac448a79d4d72daf23eb706bf8e7f2e9df98bc5073b52d99843c98"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/main/all10_source_identity.json",
+    "source": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/all10_source_identity.json",
+    "sha256": "b65558600cfddf0301eca8fb37d8c2bc5814ac3d2aa6febd36b6346c9751ead8"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/main/all10_train_jobs.json",
+    "source": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/all10_train_jobs.json",
+    "sha256": "e0a2f01497f993576e63fff1dbf8676ae58949f37dfc98d0fba97ae252deb4d5"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/main/three_seed_experiment_scope.json",
+    "source": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/three_seed_experiment_scope.json",
+    "sha256": "8231ffc1ce11dfa611adc594815a5752c7a360999896a9723037bf028bfedf50"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/accelerated/accelerated_futuremamba_train_all10.py",
+    "source": "/data/libero_mem_baseline/isolated_speedup/accelerated_futuremamba_train_all10.py",
+    "sha256": "be0d068ecbe50f8753963244d371c18732ca614e26a44cebaea3a0e3fa777905"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/accelerated/isolated_futuremamba_speedup_benchmark.py",
+    "source": "/data/libero_mem_baseline/isolated_speedup/isolated_futuremamba_speedup_benchmark.py",
+    "sha256": "8b3f5c676357c792a9cf29c91bf512ba1576f582c2b214bcdde59c24158958d8"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/accelerated/convert_jax_model_to_pytorch_strict.py",
+    "source": "/data/libero_mem_baseline/isolated_speedup/convert_jax_model_to_pytorch_strict.py",
+    "sha256": "e78ec8c4c347ef38626629593143e6eaea5980a5a03718e99c168305c36b5690"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/ablations/a100_ablation_entry.py",
+    "source": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/a100_ablation_entry.py",
+    "sha256": "d975954d159f9bce5538421a18c341acaeb0aec727455089892cb7f34e548839"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/ablations/a100_pae6_cache.py",
+    "source": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/a100_pae6_cache.py",
+    "sha256": "3fb5319a85bc900585129b265f6afc28e2eefacd6c6fe8a1641520bcfd35fb9f"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/ablations/jobs.json",
+    "source": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/jobs.json",
+    "sha256": "45517597d32c4d5eda67ef94ecbb2bf33c0410f38c529413e4a68fa3034d6b60"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/frozen_ae/train_frozen_memory_ae.py",
+    "source": "/data/libero_mem_baseline/frozen_memory_ae_multiseed_20260910/train_frozen_memory_ae.py",
+    "sha256": "46ec21b9d475248091a25d4a117a6b708f692a9aba9cfbc55bb71dcbb03360be"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/frozen_ae/frozen_memory_ae.py",
+    "source": "/data/libero_mem_baseline/frozen_memory_ae_multiseed_20260910/frozen_memory_ae.py",
+    "sha256": "cb551600dc4c73461867443707b7ae29dc3cab232161b2f7ad57cabf7e3931b7"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/followup/history_window_intervention.py",
+    "source": "/data/libero_mem_baseline/a100_followup_20260912/history_window_intervention.py",
+    "sha256": "66e6407bf3fda5790823ee0fb31da10c246ba02f70a6ddf8a7a4d0369c6e3199"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/followup/manifest.json",
+    "source": "/data/libero_mem_baseline/a100_followup_20260912/manifest.json",
+    "sha256": "c64ba25a223999e8b26845c3bde3fc5790025132caa74e97328a3efdfbf3f483"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/followup/ops/reference_cost.py",
+    "source": "/data/libero_mem_baseline/a100_followup_20260912/ops/reference_cost.py",
+    "sha256": "305ff702394f0ea8636f1afda0eec4df531f7a69b670780327ee9c84d7b52a8f"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/followup/ops/fullft.py",
+    "source": "/data/libero_mem_baseline/a100_followup_20260912/ops/fullft.py",
+    "sha256": "c838a5a1cc1bb2a49b9b6580170012d3de81a5850c0590a2833b7f9a115d228c"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/followup/ops/eval_entry.py",
+    "source": "/data/libero_mem_baseline/a100_followup_20260912/ops/eval_entry.py",
+    "sha256": "e628ddd0726094e37e045d0769ce46166327fb8c45dc5a13dd0b832f0f1a070b"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/followup/ops/serve_eval.py",
+    "source": "/data/libero_mem_baseline/a100_followup_20260912/ops/serve_eval.py",
+    "sha256": "68af24b7017213d68d3e7b517bd079705906e311dce0275f1fd69abd21d6cd29"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/evaluation/history_window_intervention.py",
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/history_window_intervention.py",
+    "sha256": "dabd51e5e555bfc930cf005c4478bd37602fbf43edec8bd4b0ce9ea223ea935b"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/evaluation/history_eval_entry.py",
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/history_eval_entry.py",
+    "sha256": "67e98de22707eb0ae7ae8940246aea47e02b2027b10c53a3f88150bde130907c"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/evaluation/ops/eval_entry.py",
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/ops/eval_entry.py",
+    "sha256": "0ff034bd44a6707023d613b93a51adbc4e6aa41c469b52eedc9fe5aafe15df1d"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/evaluation/ops/serve_eval.py",
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/ops/serve_eval.py",
+    "sha256": "89d7cdeac8047b11255b6641cfc50b70c8f3f7b7efe002091f340d5fa05fd82a"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/evaluation/eval_assets/run_handoff04_bowl_video_eval.py",
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/eval_assets/run_handoff04_bowl_video_eval.py",
+    "sha256": "633f6bf929ae5c78e081e0949abee5ee26748834a66d3514e022313b140b3701"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/actmem_gradientfix_v1_20260910/mamba_differentiable_step.py",
+    "source": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/mamba_differentiable_step.py",
+    "sha256": "848ddf5eccac448a79d4d72daf23eb706bf8e7f2e9df98bc5073b52d99843c98"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/actmem_single_seed_ablations_20260911/lgd_ablation_queue.py",
+    "source": "/pfs/pfs-7jnepv/lgd/actmem_single_seed_ablations_20260911/lgd_ablation_queue.py",
+    "sha256": "02ff2004e0cb206827e87d07a31e16e0c25fe21b9f5ecb694a496b06ed5f9f07"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/actmem_single_seed_ablations_20260911/lgd_ablation_entry.py",
+    "source": "/pfs/pfs-7jnepv/lgd/actmem_single_seed_ablations_20260911/lgd_ablation_entry.py",
+    "sha256": "bea0aed1e1aacc4b5c602970af89958223a6651f3f98319deeb4274da3455b7e"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/libero_fullmatrix_20260909/ops/train_entry.py",
+    "source": "/pfs/pfs-7jnepv/lgd/libero_fullmatrix_20260909/ops/train_entry.py",
+    "sha256": "bde3fface977a58371ec4c45e18de5bc2bbd21ff1a65cae0e3f92aeba74a5fd9"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/libero_fullmatrix_20260909/ops/eval_entry.py",
+    "source": "/pfs/pfs-7jnepv/lgd/libero_fullmatrix_20260909/ops/eval_entry.py",
+    "sha256": "4e88cfbe77e107a995f36e38b0f5e4f2fa09b400af872ed7977a30785fb88a6e"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/libero_fullmatrix_20260909/ops/serve_eval.py",
+    "source": "/pfs/pfs-7jnepv/lgd/libero_fullmatrix_20260909/ops/serve_eval.py",
+    "sha256": "32189588fc9c5485336ff55f729abc67d6ffa88dfd9f6e247927043400dd1322"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/libero_fullmatrix_20260909/ops/train_entry.before_offline_fix.20260908T214305Z.py",
+    "source": "/pfs/pfs-7jnepv/lgd/libero_fullmatrix_20260909/ops/train_entry.before_offline_fix.20260908T214305Z.py",
+    "sha256": "fc5f8a13175dd684276e9e95bd46f27c88666f93d31466a1801b2bf7b4a6a6d9"
+  },
+  {
+    "file": "releases/2026-09-28/runtime_snapshots/LGD/libero_fullmatrix_20260909/ops/memory_serve.py",
+    "source": "/pfs/pfs-7jnepv/lgd/libero_fullmatrix_20260909/ops/memory_serve.py",
+    "sha256": "0c49dbf4b236ede8bb78f0574aa543de173361cb398e7dc464d6497624db5a31"
+  }
+]

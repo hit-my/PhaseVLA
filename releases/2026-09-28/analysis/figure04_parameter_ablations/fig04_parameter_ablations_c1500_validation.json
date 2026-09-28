@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "checkpoint": 1500,
+  "training_seed": 42,
+  "evaluation_seeds": [
+    10001,
+    10002,
+    10003
+  ],
+  "episodes_per_bar": 60,
+  "unique_evaluations": 72,
+  "unique_episodes": 1440,
+  "default_reused_across_panels": true,
+  "font_size_pt": 10,
+  "source_sha256": "2406004f42eedb982ed2aa1633f8c6c53580502c606891417fd28b481913f439",
+  "mean_success_rate": {
+    "handover03": 48.333333333333336,
+    "ActMem-VLA": 55.0,
+    "handover05": 45.0,
+    "handover06": 47.22222222222222,
+    "mamba_depth4": 43.333333333333336,
+    "mamba_width1536": 55.55555555555556,
+    "pae_depth2": 43.888888888888886,
+    "pae_depth6": 53.88888888888889
+  }
+}

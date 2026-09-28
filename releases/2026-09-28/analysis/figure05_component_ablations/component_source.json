@@ -1,0 +1,4610 @@
+[
+  {
+    "method": "ActMem-VLA",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 16,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t6-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "1bd2ebf2305898e81412a0c03e770805408f496b4715c343dad061f98939d454",
+    "rollouts_sha256": "a49ff6b880f7fe982e466591ab5f785e20218518cfc64d9ccb4f7b7c67aa35d6",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t6-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 569
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 548
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 581
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 539
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 502
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 483
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 519
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 575
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 545
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 577
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 584
+      },
+      {
+        "episode": 14,
+        "success": true,
+        "steps": 567
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 511
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 513
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 583
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 501
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 16,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t6-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "cc32e3cbef3ca1e7f6023131f5f6f5b695bcc1a10427631f36ccce56a04c62f2",
+    "rollouts_sha256": "1e57be7170531f042ceda3fab39914c4c418d4415946321c0228f111ccf042ab",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t6-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 521
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 552
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 549
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 513
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 585
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 522
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 569
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 563
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 543
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 542
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 596
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 567
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 598
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 532
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 525
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 532
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 16,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t6-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "a416818894e72a312b6b745cdef51a6c4921e7058e9f3e6ed59ac1acfb2c8fae",
+    "rollouts_sha256": "9dabdd76908c2f87f9528b388b01a8a5cac619b55074a94389515254693dbf97",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t6-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 595
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 517
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 553
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 579
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 558
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 569
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 524
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 573
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 561
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 577
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 577
+      },
+      {
+        "episode": 17,
+        "success": true,
+        "steps": 561
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 597
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 544
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 7,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t7-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "b4dc5d692e25c73b358c235f73411769ae84e7a73b6fe3f3016e63ba8560ca20",
+    "rollouts_sha256": "fcf64024943b4b198cb962329ba2eacfc1af2e502d58aac96cdc115db529b23d",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t7-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 391
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 422
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 405
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 408
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 471
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 573
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 377
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 6,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t7-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "3370e673887f4656fe20d797a0466626e50607c94cc182091b95f72ddd4471c2",
+    "rollouts_sha256": "defbc040b19b5abad0f1de5418a15ad8aac5a348acff750184e588a107d20c3d",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t7-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 435
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 397
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 329
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 381
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 479
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 377
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 11,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t7-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "eba0e8af492cccc2972e37476333bbb842c61ce9515f65f2710bac2f70f89a55",
+    "rollouts_sha256": "b8beb39654702201baa023ddd185c86fc68731f4202d49ced432e93174acb497",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t7-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 351
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 434
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 387
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 339
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 500
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 438
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 413
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 570
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 489
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": true,
+        "steps": 453
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 383
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 9,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t8-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "1e02135936e05c699be23c46365843b1e5b8cdb2f5802c6227bd93b2907b6e54",
+    "rollouts_sha256": "c695acf6185e5e2e71a7f62973f7a00d6e275c014990c5d2cb5c6c6f7d212721",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t8-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 502
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 586
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 540
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 496
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 523
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 541
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 443
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 507
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 504
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 8,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t8-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "0ccc92d81b3d06169cafa52ec6449ec516f105af39dcacbe6d6fd2e39ff838ce",
+    "rollouts_sha256": "c232e5e3c418a3dc256a5f9b3680a244193fd1b49da8dc1895a52d7f0ac8ac2c",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t8-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 543
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 501
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 595
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 541
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 541
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 503
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 456
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 503
+      }
+    ]
+  },
+  {
+    "method": "ActMem-VLA",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 10,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t8-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "f9b8fb6acaa582c04d954ee343b37a95e631fc6cc1430f365337d9a896176f11",
+    "rollouts_sha256": "6e3bad6b1eb208da7e4ec85eb80970189a32260db5fb8c37a2ca2d5c8e1d816a",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/gradientfix-v1-t8-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 526
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 504
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 519
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 562
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 571
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 502
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 442
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 479
+      },
+      {
+        "episode": 17,
+        "success": true,
+        "steps": 471
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 506
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 10,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t6-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "837dcc36e5978b8b1582f87feea5f001a6d3ae5fff8a5da158913617ca1dd943",
+    "rollouts_sha256": "b50b2f70df5ce06603327a655a99ac6dde2c0be47d734aeac280c3fbcefc46be",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t6-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 530
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 566
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 537
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 520
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 521
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 542
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 560
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 586
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 555
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 558
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 12,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t6-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "2165012466f8a089468fac41f4eef6bfeb9e20c39195a4e487a526c3b82bdca9",
+    "rollouts_sha256": "20d320b360a30c7ad30ea4a057fd1f6dbd3e35f8505fb8398601aa3ac36a0614",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t6-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 521
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 539
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 534
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 509
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 564
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 577
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 529
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 492
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 544
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 563
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 591
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 590
+      },
+      {
+        "episode": 19,
+        "success": false,
+        "steps": 600
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 13,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t6-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "a477bdc613316fb59bef58335394e216b1ea55118b4d96eb88ba977d71fd9864",
+    "rollouts_sha256": "afe9acecf22d52b9c0ade514f0c53575485cf97a446b27b1229ffd48fa518056",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t6-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 542
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 562
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 527
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 554
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 597
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 494
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 537
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 521
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 566
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 598
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 549
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": true,
+        "steps": 597
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 595
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 6,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t7-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "475c188ace99da538d580a4a1c135782bff965d98c9964e1decf74b2402efa4b",
+    "rollouts_sha256": "acb799600e0c4241385348698751eb59d0d05aed415080ea6c874697be75dce6",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t7-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 352
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 350
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 432
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 401
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 349
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 379
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 8,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t7-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "f9ca6b66419f7c373af3efc53dab3c9bd7ad464d03c338b6232d2866a571bbc9",
+    "rollouts_sha256": "85d33a686183582a2cc48a9aebcd784c4b1968b4d68cf77685e86eaf2b162c01",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t7-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 354
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 410
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 361
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 376
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 326
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 401
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 373
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 385
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 9,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t7-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "d5e96173e750e2a41ae44d53795f5c0b20d6b8ad08abc6403a145eadfb511443",
+    "rollouts_sha256": "5fda7fc9207af9876078734a5403582eabcf1f3d5f34ae95e38518e207a137ca",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t7-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 492
+      },
+      {
+        "episode": 1,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 351
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 566
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 553
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 416
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 411
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": true,
+        "steps": 581
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 510
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 381
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 11,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t8-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "09394e3da819f63c3224e512ba4b984c0673c12f0b02bf88a17bc11ea3d4a2c0",
+    "rollouts_sha256": "1e553122a55f51fc755b4bdebc5a318a29d133523590c52919cad7883657aed3",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t8-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 504
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 525
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 543
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 502
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 538
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 535
+      },
+      {
+        "episode": 14,
+        "success": true,
+        "steps": 538
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 448
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 460
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 507
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 505
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 15,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t8-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "1f628a512dda58a630e4770f0af97e10bbeb0532d2044742f87c3b1982c33eb3",
+    "rollouts_sha256": "e705d36dbdb3ec11cb25a60ae5390d6fad2abc000ca9fe3dd0aa07b774533b37",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t8-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 540
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 480
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 502
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 503
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 558
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 500
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 497
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 492
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 541
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 541
+      },
+      {
+        "episode": 14,
+        "success": true,
+        "steps": 540
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 442
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 461
+      },
+      {
+        "episode": 17,
+        "success": true,
+        "steps": 479
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 505
+      },
+      {
+        "episode": 19,
+        "success": false,
+        "steps": 600
+      }
+    ]
+  },
+  {
+    "method": "no-PAE",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 12,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t8-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "66c5760f7ae648306a70bcf5f63703545d64e87d8040379e22c09981ebb3f145",
+    "rollouts_sha256": "db9742c9ebab6a406b7f2ec36d5ec2d16a5302af971439c82400ebe0658ffa4d",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "append_previous_executed_actions_before_current_query",
+      "partial_chunk_behavior": "right_pad_and_mask_without_commit",
+      "handoff_ratio": 0.4,
+      "denoising_order": "memory_conditioned_frozen_ae_then_plain_frozen_ae",
+      "progress_denoise_steps": 0,
+      "action_expert_denoise_steps": 10,
+      "empty_history_behavior": "learned_token_without_state_update",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/frozen-ae-early04-a100-t8-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false,
+      "memory_conditioned_denoise_steps": 4,
+      "plain_ae_denoise_steps": 6
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 509
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 597
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 537
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 590
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 549
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 561
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 502
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 513
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 532
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 470
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 514
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 528
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 7,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t6-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "efe97587a0b51365fc5e6e330478a6957dd4eb7da5cb67b34caf575c82a1ec47",
+    "rollouts_sha256": "18d9bf09e35d24dfc8f31d51c9201c650d8557bd58db773fca7a9d8b6d31a74c",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t6-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 562
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 538
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 533
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": true,
+        "steps": 535
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 528
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 506
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 506
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 9,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t6-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "f90df663c3f04b23ad36cddefdb9789dc1d2ec36c81ccb4ff5b58d5759b20cf0",
+    "rollouts_sha256": "229b6a9eebd6cb6287824338e7c690e68c2c8f273c52aa3092afaa3861bac52f",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t6-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 560
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 538
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 512
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 591
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 544
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 543
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 594
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 548
+      },
+      {
+        "episode": 19,
+        "success": false,
+        "steps": 600
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 6,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 7,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t6-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "fc9b3fc50465e5f2d7f35ae8c6bcdb48ffca78e5c5f6ec5e04a8b5a9147be6ae",
+    "rollouts_sha256": "aafdf9752432962567654643fa5c15e5ce3a69224d4ad96038e336b77a12932c",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        5
+      ],
+      "task_names": [
+        "pick up the bowl and place it on the plate 7 times"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t6-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 595
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 586
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 596
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 534
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 540
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 542
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 592
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": false,
+        "steps": 600
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 8,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t7-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "ff9592c5091da9d5d31444e924af0e53cb3ac02dfbf900c2f5098c30447e8287",
+    "rollouts_sha256": "4f4be0f8754858d295351d8a5c7c4623666f8d332793aadfa548484f8ba297a6",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t7-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 355
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": true,
+        "steps": 386
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 400
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 415
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 355
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": true,
+        "steps": 459
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 352
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 380
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 6,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t7-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "5649b6597a85e79ebc63a0b80a34f04225ce1707c722d31a570e90388c05f9a9",
+    "rollouts_sha256": "80a86d713cb308561f183596032c7eb917f2fd92d46228c23038f421e90af115",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t7-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 356
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 355
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 458
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 400
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 412
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 349
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": false,
+        "steps": 600
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 7,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 6,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t7-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "c659f02b83d45896f66bd44d93e3e6e52a4dafa65f98039f6bd74438d148eee6",
+    "rollouts_sha256": "60bbc2e70e8224b090a420f21dfa3e79b5f316f68be0900caa0c6610b19b2399",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        6
+      ],
+      "task_names": [
+        "swap the 2 bowls on their plates using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t7-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 420
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 338
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 387
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 391
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 438
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 378
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10001,
+    "successes": 9,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t8-s42-c1500-e10001/audited_summary.json",
+    "summary_sha256": "7d835e964e26d7c3d5c93ee48c82361d83bd9420c5f0f981df4b403724e51feb",
+    "rollouts_sha256": "ee3bcfdcbb2eb76b18d88550606c94de58a9d18983c98e92e1281146818b3d1a",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10001,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t8-s42-c1500-e10001/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 503
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 503
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 597
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 531
+      },
+      {
+        "episode": 9,
+        "success": true,
+        "steps": 508
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 510
+      },
+      {
+        "episode": 13,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 484
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 466
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 511
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10002,
+    "successes": 11,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t8-s42-c1500-e10002/audited_summary.json",
+    "summary_sha256": "ade325b92fe9703f4be05d7d1e2bfe9a9d52d552a6ab9838d6715e32ecb4957d",
+    "rollouts_sha256": "2c9ec97b8dda8164bd5d5633a4e8a114e3ff19fc32be79a54f8b5d6cdcc0ec21",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10002,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t8-s42-c1500-e10002/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 517
+      },
+      {
+        "episode": 2,
+        "success": true,
+        "steps": 477
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 5,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 6,
+        "success": true,
+        "steps": 556
+      },
+      {
+        "episode": 7,
+        "success": true,
+        "steps": 550
+      },
+      {
+        "episode": 8,
+        "success": true,
+        "steps": 536
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 11,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 12,
+        "success": true,
+        "steps": 514
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 533
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 437
+      },
+      {
+        "episode": 16,
+        "success": true,
+        "steps": 466
+      },
+      {
+        "episode": 17,
+        "success": true,
+        "steps": 498
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 518
+      },
+      {
+        "episode": 19,
+        "success": false,
+        "steps": 600
+      }
+    ]
+  },
+  {
+    "method": "no-memory",
+    "task": 8,
+    "train_seed": 42,
+    "checkpoint": 1500,
+    "eval_seed": 10003,
+    "successes": 10,
+    "episodes": 20,
+    "source": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t8-s42-c1500-e10003/audited_summary.json",
+    "summary_sha256": "4ee2f8209b81024140a9cb7dd14631c627ffc468349d2f0704084a074bbf78aa",
+    "rollouts_sha256": "4b9b949571866b04474029e6d1b152f59b63f30cc28871e8e9742bc8e07875f0",
+    "protocol": {
+      "suite": "libero_mem",
+      "task_ids": [
+        7
+      ],
+      "task_names": [
+        "rotate the 3 bowls on their plates from left to right using the empty plate"
+      ],
+      "episodes_per_task": 20,
+      "episode_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "rollouts": 20,
+      "train_seed": 42,
+      "rollout_seed": 10003,
+      "max_steps": 600,
+      "replan_steps": 20,
+      "predicted_action_horizon": 20,
+      "execution_horizon": 20,
+      "memory_update_timing": "none",
+      "partial_chunk_behavior": "none",
+      "handoff_ratio": 0.4,
+      "denoising_order": "progress_expert_then_action_expert",
+      "progress_denoise_steps": 4,
+      "action_expert_denoise_steps": 6,
+      "empty_history_behavior": "none",
+      "stable_frames": 6,
+      "num_steps_wait": 10,
+      "fixed_init_state_required": true,
+      "fixed_init_state_applied_via": "libero.libero.envs.OffScreenRenderEnv.set_init_state",
+      "stabilized_init_root": "/data/libero_mem_baseline/stabilized_init_states_v3_mujoco322",
+      "stabilized_init_audit_sha256": "sha256:f26072e6eaddfd491c54928724ac2bb21c0051f85a2a3aede4946979e8bc71b7",
+      "mujoco_version": "3.2.2",
+      "video_fps": 20,
+      "video_out_path": "/data/libero_mem_baseline/a100_local_eval_20260910/evaluations/A100-no-memory-t8-s42-c1500-e10003/videos",
+      "stabilize_libero_mem_objects": false
+    },
+    "rollouts": [
+      {
+        "episode": 0,
+        "success": true,
+        "steps": 555
+      },
+      {
+        "episode": 1,
+        "success": true,
+        "steps": 495
+      },
+      {
+        "episode": 2,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 3,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 4,
+        "success": true,
+        "steps": 545
+      },
+      {
+        "episode": 5,
+        "success": true,
+        "steps": 595
+      },
+      {
+        "episode": 6,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 7,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 8,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 9,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 10,
+        "success": true,
+        "steps": 503
+      },
+      {
+        "episode": 11,
+        "success": true,
+        "steps": 498
+      },
+      {
+        "episode": 12,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 13,
+        "success": true,
+        "steps": 533
+      },
+      {
+        "episode": 14,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 15,
+        "success": true,
+        "steps": 471
+      },
+      {
+        "episode": 16,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 17,
+        "success": false,
+        "steps": 600
+      },
+      {
+        "episode": 18,
+        "success": true,
+        "steps": 505
+      },
+      {
+        "episode": 19,
+        "success": true,
+        "steps": 503
+      }
+    ]
+  }
+]

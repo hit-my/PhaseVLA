@@ -1,0 +1,30 @@
+{
+  "selected_checkpoint": 1500,
+  "criterion": "max mean SR(ActMem) minus average mean SR(no-PAE, no-memory), same checkpoint across all tasks and methods; ties earliest",
+  "exploratory_test_set_selection": true,
+  "train_seed": 42,
+  "comparison": [
+    {
+      "checkpoint": 500,
+      "ActMem-VLA": 45.0,
+      "no-PAE": 44.44444444444444,
+      "no-memory": 32.77777777777778,
+      "advantage_pp": 6.388888888888886
+    },
+    {
+      "checkpoint": 1000,
+      "ActMem-VLA": 50.0,
+      "no-PAE": 52.22222222222222,
+      "no-memory": 35.0,
+      "advantage_pp": 6.388888888888886
+    },
+    {
+      "checkpoint": 1500,
+      "ActMem-VLA": 55.0,
+      "no-PAE": 53.333333333333336,
+      "no-memory": 40.55555555555556,
+      "advantage_pp": 8.055555555555557
+    }
+  ],
+  "source_sha256": "7e78813cac040d14efbbe340ae5cddea404a162d022f6d9f403440f9a740ae0c"
+}

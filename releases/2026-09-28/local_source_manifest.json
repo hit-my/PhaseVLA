@@ -1,0 +1,527 @@
+[
+  {
+    "file": "releases/2026-09-28/data/audit_paper_numbers_20260916.py",
+    "bytes": 3204,
+    "sha256": "9802b179b765193c375d6a6bcc75d4d0f074e4a55626cdaabcba7a2f634e908a"
+  },
+  {
+    "file": "releases/2026-09-28/data/export_validation.json",
+    "bytes": 432,
+    "sha256": "a2a7b1580d92d35760f570cf0164134dfad9a7ca4a6269018cab9453b0636daa"
+  },
+  {
+    "file": "releases/2026-09-28/data/paper_episodes.csv",
+    "bytes": 1592464,
+    "sha256": "d2a43ac859054720497323699f197cc47ee6c9d6c712f7c1247191bfe8eb0263"
+  },
+  {
+    "file": "releases/2026-09-28/data/paper_numbers_audit_20260916.json",
+    "bytes": 2516,
+    "sha256": "a86429542bc873c1a03539ac2661469dee5c5b634bf635b06e481edcb07ffbc6"
+  },
+  {
+    "file": "releases/2026-09-28/data/paper_source_20260912.json.gz",
+    "bytes": 175601,
+    "sha256": "f1ade53f0491246b2a9fe8eb54f6c4fbb39971c32763c48fffc602cf4cb6509e"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_mean_sd.csv",
+    "bytes": 1021,
+    "sha256": "3fc4797f9b937dd38e8fa09e6b33ad5bc94b9ad997f28a585d34e8bed9715ec1"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_metadata.json",
+    "bytes": 380,
+    "sha256": "fa6e77b6d2ce7e5e38f93deabd1adcc89c99a4cf39393390e8e48544cec01542"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_radar_metadata.json",
+    "bytes": 287,
+    "sha256": "77c99d7f61cac3f70588a437c783c83597c3c5c6a6b4b86202b56eaa825871e1"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_radar_values.csv",
+    "bytes": 660,
+    "sha256": "3e0c85da2b827820a1b7e8012e88f68359b7c667f09c74da76f61604bfd7517d"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_replicates.csv",
+    "bytes": 4387,
+    "sha256": "683fb59af4b28f1842a6ebe0e280f552bbd4b0bf938ccfe3e3d0319715aac7d9"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_success_rate_bars_only.pdf",
+    "bytes": 33825,
+    "sha256": "df0dfcf7c5db23c015ba4f842c5e883d538bd716567628a59d9e285206d4adf1"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_success_rate_bars_only.svg",
+    "bytes": 18496,
+    "sha256": "5f2e7696d95cd42ba6099ee8bf2b2552027bfab0479c06848515c84a840726bc"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_success_rate_radar.pdf",
+    "bytes": 32627,
+    "sha256": "9f0f3c07997b55a2a6d7a9006674c8f0d14edb4b13fa622b39c095b2d2c53eee"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/fig01_success_rate_radar.svg",
+    "bytes": 22130,
+    "sha256": "10e146f71ae71d8dc2dde8d4d16eec6fe32ebea30c8ca0734205fc7e17d4a15c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/plot_success_rate.py",
+    "bytes": 6437,
+    "sha256": "da753b8edffacf62078ec7fc1958aa263c747d137df667631f213319c12606bb"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/plot_success_rate_radar.py",
+    "bytes": 3771,
+    "sha256": "834aa71e8acafa1283d19cfd8974f27934fb6fc38ad10c4e69c25705783bdee3"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure01_success_rate/real_world_tasks_single_row (1)(2).pdf",
+    "bytes": 1758871,
+    "sha256": "e85b250b1aaea169673b6e3b4eb4e95e5bd1be822fe8dda0e204516727bec0fe"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/demonstration_lengths_verified.json",
+    "bytes": 262193,
+    "sha256": "fc43e7fcc2694f44cd7ea91ae0bc50cfe1fd412bf9f1c01f2ff5dba5675c2662"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/fig02_all_episodes.csv",
+    "bytes": 574372,
+    "sha256": "49f2317cacf3d67140c07366a0f731364d234b491c502d693badcd8d34f47f42"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/fig02_completion_steps_boxplot.pdf",
+    "bytes": 36630,
+    "sha256": "bf5f0107904e3868fce8ed4e7639c9b537e6f9a6079553fc51994378fcebb77a"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/fig02_completion_steps_boxplot.svg",
+    "bytes": 51731,
+    "sha256": "c3909f73675ad59732f1d8be8d9b0b7288dc5ce328ac9eb2e8872ac2066f7335"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/fig02_distribution_summary.csv",
+    "bytes": 3139,
+    "sha256": "437f2b6a75ca1626f1836d98434ed21a77f5a3431b5c8282fc5a9a92729a4d51"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/fig02_selected_evaluations.json",
+    "bytes": 21534,
+    "sha256": "09f5d432e5c73fee461486a10a4aad3ba7ec958082678ed52d1196bc5fc1fa92"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/fig02_validation.json",
+    "bytes": 1048,
+    "sha256": "2bafe5700e534f7f0ef9dea99ee349aa647d20123c67a3a99194389bd09054d5"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/layout_data_hashes.json",
+    "bytes": 311,
+    "sha256": "c0d5fd9681c8d1e5f6de746f97f85b3e1bc69a4cde0ef6de5345eadd421bf020"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/plot_completion_steps.py",
+    "bytes": 8866,
+    "sha256": "4b7fc1d79f43e175ea3d6bdde4c91b551ec7258df4e0c52d910f074faf29ff89"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure02_completion_steps/README.md",
+    "bytes": 1464,
+    "sha256": "428500cda13d9146f3e61a566d58ba876aa774b82cb39e8b09c0c652d2ebebe1"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/fig03_budgets.csv",
+    "bytes": 229,
+    "sha256": "cb35dfd0960a3c5d9db379719c1b22f0ecc50be48a55e74c974a273e992cc430"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/fig03_episode_audit.csv",
+    "bytes": 284927,
+    "sha256": "75a8d3326757a8b7c64d687cd5ecbe4911e0497dd5c03f45bf11a2f9a0f56fe7"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/fig03_seed_details.csv",
+    "bytes": 3613,
+    "sha256": "ef4d6601a8ba1b9b225f717324538acdf28e8f9342aeb8c01c6981b009c57a9c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/fig03_success_rates.csv",
+    "bytes": 1188,
+    "sha256": "cc931e2386743e749cc2941410511caec0329988f013f3eaf9affc63552d04a9"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/fig03_task_budget_success.pdf",
+    "bytes": 36227,
+    "sha256": "4681969e05f0a49bcb8f9a6fb0c7d2e3e88d919b2c6e2f1c709482197f76c291"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/fig03_task_budget_success.svg",
+    "bytes": 14862,
+    "sha256": "2f00eaeb34761b4d7979e15db2a959191543e3e1c0473109b79114a67bc0402b"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/fig03_validation.json",
+    "bytes": 1404,
+    "sha256": "d948c169cb256f62d69e5f2151d7b1ef6643c5d615d0b797c07fa361d7aadc9c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/layout_data_hashes.json",
+    "bytes": 388,
+    "sha256": "bcfb4d6929764d8f941cacc79fbb872daeb02eefd873ce3216a04e1ff0221235"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/plot_task_budget_success.py",
+    "bytes": 6055,
+    "sha256": "b2e6a8f12b25c56e9d497f9eda7a23da5061fe89bca26aac183117d258af8a28"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure03_task_budget/README.md",
+    "bytes": 1157,
+    "sha256": "18efa192382cd4a04108c880c0d5cf7efe7025ce726abdcd7c29a683e56851d6"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/fig04_parameter_ablations_c1500.pdf",
+    "bytes": 29857,
+    "sha256": "3035e3c025bb269c3b8b9e7cf402f243c32b0a89bc33d7ff29e84042ad55b46e"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/fig04_parameter_ablations_c1500.svg",
+    "bytes": 33254,
+    "sha256": "146af0d4641d88b8032c251982b4ab3b0277b0e23f332ce8143d7854b23ec7ee"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/fig04_parameter_ablations_c1500_seed_details.csv",
+    "bytes": 12442,
+    "sha256": "25ab87b6b666fa9eaa5de899a8507fc91cf7bdc06f3cdb31ca575cf649a3ec17"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/fig04_parameter_ablations_c1500_success_rates.csv",
+    "bytes": 1047,
+    "sha256": "70bd232e513cb055206f911bd13e0c99eb37810808b848be0a028d3fe315a15b"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/fig04_parameter_ablations_c1500_validation.json",
+    "bytes": 692,
+    "sha256": "61fb868ed1db135fefdabc32a0ff9af66e44cabf784b189892ff44385e403949"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/fig04_posthoc_selection.json",
+    "bytes": 3239,
+    "sha256": "a2ca3ed08c2c6d67cfe3af3fc7d62f7fe78c7c6d0589fc04b4e35d4512d7f849"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/plot_parameter_ablations.py",
+    "bytes": 5222,
+    "sha256": "6b08b3a55d9b3440a09fdb25d9153f8519c6c64259001fdd0e679b957b388e83"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/README.md",
+    "bytes": 1554,
+    "sha256": "192229562c2d099486cfe587d22de7e420e0d3d90e305704168e1d4a0f76b5d8"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/table04_parameter_ablations.csv",
+    "bytes": 566,
+    "sha256": "7b3e5b1ea6253f4a6a9c78ddffd65e978c0b33a431a0e757ca98a2d8557ad8e1"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure04_parameter_ablations/table04_parameter_ablations.md",
+    "bytes": 805,
+    "sha256": "ee4e3471d2edb0637749468cabbbc88696a9cb0fe605c2511cc784a6c1e0c12c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/component_all_checkpoints_source.json",
+    "bytes": 220293,
+    "sha256": "7e78813cac040d14efbbe340ae5cddea404a162d022f6d9f403440f9a740ae0c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/component_source.json",
+    "bytes": 110556,
+    "sha256": "01d8539ea2d318e5e48090cfa3f1af91161dd6e47f4ae81087733fc4e7c53a09"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/fig05_checkpoint_comparison.csv",
+    "bytes": 238,
+    "sha256": "f0caeca4a95315b7a63495d9a1babcfc6ece30d57e6211686db2b30fc19125ee"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/fig05_component_ablations.pdf",
+    "bytes": 28181,
+    "sha256": "888fe94da7a23e61ff3cb3559a5bb4f1b9b435dcf10ee9bd3e3817efa0589024"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/fig05_component_ablations_c1500_s42.svg",
+    "bytes": 10285,
+    "sha256": "7cc19fdeee110a66e3c5e96c53fa72a4e557935a275c2e73d6610e4436d34eb5"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/fig05_posthoc_selection.json",
+    "bytes": 894,
+    "sha256": "db4073adfd2b4e95e4429121e121f648da57b3a800a0874d4df74229aa1bb1ad"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/fig05_seed_details.csv",
+    "bytes": 4218,
+    "sha256": "baaa37ba29a3736507a3332e6633574cc8e81deeac1ae6a5cce28436fb7a942c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/fig05_success_rates.csv",
+    "bytes": 422,
+    "sha256": "7f20dd63e1b74f5444b58e8238f6e59a50a391ed3199e224593053f608cfd604"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/fig05_validation.json",
+    "bytes": 635,
+    "sha256": "8bb452ea5979fe111d69f7baed2bee4420809a15dbf000cff8fe5c96fd9cfca3"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/plot_component_ablations.py",
+    "bytes": 4197,
+    "sha256": "19ea603fd761b2b2818fe9fd45002c879bbd5da233e55f7b4371c2d8835e9a15"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure05_component_ablations/README.md",
+    "bytes": 934,
+    "sha256": "056480fb32a8f07eee9c6104d9761d1a734e609c43f0337f3c20f7bbf84590fd"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure06_real_world_success/fig06_real_world_success.pdf",
+    "bytes": 31697,
+    "sha256": "87fe8cdd677093ac630645b31572523062dda389b497296ab21c42df08d059d4"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure06_real_world_success/fig06_real_world_success.svg",
+    "bytes": 12643,
+    "sha256": "df997a593e95dffd396b59a569dc2fa494b334ef5dbd7bc9e872cc42726544e2"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure06_real_world_success/plot_real_world_success.py",
+    "bytes": 4376,
+    "sha256": "978b22e2a7ddf7abed53b54cda7ec69f521b6489a64b4ead610333d08bdb977b"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure06_real_world_success/README.md",
+    "bytes": 1232,
+    "sha256": "9b43715f372923165c3c3f6d2a8e9fd1f68b357dfb1610ea09f43db345cb89fb"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure06_real_world_success/real_world_results.csv",
+    "bytes": 300,
+    "sha256": "ff812b75d4e4d2a23e338ec00c2310dbb697cdd4ba61eeb288871b81b44a945e"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure06_real_world_success/real_world_success_rates.csv",
+    "bytes": 230,
+    "sha256": "1d751c54c40c09a9b5ab7149140f12001a1ee9e5b8bdb8ebf37a2d81c136e997"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure06_real_world_success/validation.json",
+    "bytes": 549,
+    "sha256": "944e0a05fe8123de8fedf466c7960d29873904988d43ae5caebb826b722f7384"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/extraction_manifest.json",
+    "bytes": 29660,
+    "sha256": "b5af7ee71ca6c6fbc4d79726e25faf58ec1fe812d85961d1dea0636eed80e21c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/extract_all10_memory.py",
+    "bytes": 5758,
+    "sha256": "87c0d5b517bfee61a1e95d661716dfa7635799fab184310c60e25bff31675552"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/extract_lgd_memory.py",
+    "bytes": 3720,
+    "sha256": "b474583785e7a8980e4dc07edfeec83634c6c0c8a62f6a089da14e787663b97c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/fig12_all10_memory_tsne.pdf",
+    "bytes": 71363,
+    "sha256": "68954503ce2783ddcf99d29611cc4bac5dfa034a721a680ed6b42de9114faa96"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/fig12_all10_memory_tsne.svg",
+    "bytes": 343231,
+    "sha256": "1883586e5b1ef78ce285b763db25d350d5ee92b68e1d97ec11d63d04126b628f"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/fig12_PARTIAL_memory_tsne.pdf",
+    "bytes": 60201,
+    "sha256": "212bd869564fdcde1264b38475b7d898c4889c79172c579e922f9690742fbcee"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/fig12_PARTIAL_memory_tsne.svg",
+    "bytes": 224105,
+    "sha256": "a17de3e9dbd427fbff104df82c8ffca72914f12aaefb1c916138de8576dc7c50"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/inspect_lgd.py",
+    "bytes": 330,
+    "sha256": "1c6b9bb645afb5a3881a60e167e1c7731be3bbc51ffec3a6df8505b6fced2eb0"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/inspect_lgd_import.py",
+    "bytes": 752,
+    "sha256": "bdabe3e488abf88ab437a3f739ecf18b5be6dfa3d67f2e66785f391cf43db930"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/inspect_lgd_runtime.py",
+    "bytes": 644,
+    "sha256": "823a6bc5872d013426d2741de09a46b109a5c4408214073750df7fe69195be2c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/lgd_extraction_manifest.json",
+    "bytes": 18904,
+    "sha256": "44cd945b2167cc31f92aad83c6cc3efe1b69a75095261f345ae3bbab1873941c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/merge_lgd_features.py",
+    "bytes": 1216,
+    "sha256": "b6144e9db6ad2d8f9d1a1ee2f9b0759453e29e3b79d3cfaee30aacc053fb45be"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/merge_memory_for_tsne.py",
+    "bytes": 5005,
+    "sha256": "61dcc73226d9ec8339ebcfba161a37af4b7b09111926fbf6852ba4c396129f5a"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/plot_all10_memory_tsne.py",
+    "bytes": 5548,
+    "sha256": "7e354288f2329fdec073c6814ac252a936e1b5a08b318fbb15f5e3cf1b0fd348"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/prepare_lgd_extraction.py",
+    "bytes": 1424,
+    "sha256": "0804ac215f2c73afb1f5d0a544b1326f2b6397c980e1bbf4bcf6064211d4c886"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/prepare_remaining_four.py",
+    "bytes": 2920,
+    "sha256": "612025e06c5693b16c0718cfb816fc4d79bafee2d75f80f96713ebd1d7b478f3"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/projection_report.json",
+    "bytes": 4873,
+    "sha256": "d16bbe3a2436aa72aa259178c31d7fb3c7207d9fffdf8edbbfeeb6c0cdc27d66"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/README.md",
+    "bytes": 3549,
+    "sha256": "7e29558bfafdbeaf5c156ec399dd858fb4f59c192a12da25307aa5dd21622137"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/replay_inputs.npz",
+    "bytes": 31029,
+    "sha256": "1cd091995cf312f1cfd1f50b8ae54ed0b7034c833340a50914f17fd48876145f"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/selected_checkpoints.json",
+    "bytes": 8799,
+    "sha256": "6f94e95740104c74ccc9a2fad24aefe7cba1944a47a6163304bdd67818ff8482"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/selection_protocol.json",
+    "bytes": 393,
+    "sha256": "848bfce1679ea28fd3fa1ca1333a9822479eb87f6bc03b2dcc2f2e5b772606b3"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/select_best_checkpoints.py",
+    "bytes": 1905,
+    "sha256": "4412e0366c5e8bf91236e17a4c071a6d43c143650864b3222c23f444d91d0b64"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T01_memory.npz",
+    "bytes": 71065,
+    "sha256": "b77e4c12c5515487cb56cee77609e0bcb9c4cd642ff98568df021a94a3e767d6"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T02_memory.npz",
+    "bytes": 67259,
+    "sha256": "51179831f8f7962711e184c13dd0fa20f5b70908d437d27746352a82ea789613"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T03_memory.npz",
+    "bytes": 128784,
+    "sha256": "3c073ad145913d3c42c7f20d1507dc6cacb22c805f4cb6892cef709d3432d3fa"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T04_memory.npz",
+    "bytes": 136482,
+    "sha256": "1397eb54d31e6d0c37f5907701c75f2218c2fb1228188145f27f052196026ea4"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T05_memory.npz",
+    "bytes": 165232,
+    "sha256": "56035f275f8b0734aa6ddecc6f907fa6a673092219406205b04facb00ed7f2b9"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T06_memory.npz",
+    "bytes": 273093,
+    "sha256": "e9703afd5fcd77e7b63c4bb1be7d91f7fe11e0545d4ad3c64ddfe7da4c0f6fbf"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T07_memory.npz",
+    "bytes": 182840,
+    "sha256": "1c01ed69f9a4a7c6da63373ca4d2096ce5a200d1934a7a9bf51c2f3caec984a1"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T08_memory.npz",
+    "bytes": 281113,
+    "sha256": "790dcc05c6852141c5de659f2591232ff186479ee9c8a3892a7133ff2d9e992b"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T09_memory.npz",
+    "bytes": 163311,
+    "sha256": "4b8f59412bb25c8d5e2b37f19c5bffd41f340033fdaa67532a1c97cb75e3d22c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure12_all_tasks_memory_tsne/T10_memory.npz",
+    "bytes": 161649,
+    "sha256": "d23744a832a55f04b6f0c12fb3e9b4ea5d1b63d78089f3b38378ed7128d3d1a8"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/fig16_milestone_progress_10pages.pdf",
+    "bytes": 771187,
+    "sha256": "5796c46eb5e453f1d3aa5f51bb6f37a3358cf200ded5ddd77cd3bc6a79d64814"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/milestones.csv",
+    "bytes": 20606,
+    "sha256": "ebab7eeb21cc1b79be68f8451aeb974ec8a441fc334345615634794906d44f16"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/milestone_candidates.json",
+    "bytes": 42128,
+    "sha256": "d53064708b05c9b8f75f7ebfa7f20442ace0d9b7c6a5d7b6eb6d414c2989968f"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/plot_memory_progress.py",
+    "bytes": 7792,
+    "sha256": "9c9b87d14e51e8b436c70b10513b67a3a2af4441e5ea2ea4e513066d43526b33"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/prepare_viewer.py",
+    "bytes": 5784,
+    "sha256": "61bae18394f6c9fa6487dac8089ed8076653656bf0ceeb4b4f7c0b55da283fa0"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/progress_annotations.json",
+    "bytes": 91968,
+    "sha256": "27f24600f3eb87e90caceb5b43a866cfc6a8ea08d9bf6b15853ebb5329c7cf8c"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/README.md",
+    "bytes": 2988,
+    "sha256": "f28840373cda9a6f2fc174ef8ce9d7e97b4f32c9122a2db859475e7933a737af"
+  },
+  {
+    "file": "releases/2026-09-28/analysis/figure16_memory_milestone_progress/unpack_evidence.py",
+    "bytes": 581,
+    "sha256": "89fb85b9df0db967214f94514b39577922fc32591a4f7e8044ab0025e6f540fd"
+  }
+]

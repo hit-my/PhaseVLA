@@ -1,0 +1,7 @@
+{
+  "selection": "same test-selected per-task per-training-seed checkpoint means as bars-only figure",
+  "actmem_macro_mean": 87.33333333333333,
+  "font_size_pt": 10,
+  "size_inches": 4.5,
+  "note": "Radar area depends on task ordering and is not an aggregate performance score."
+}

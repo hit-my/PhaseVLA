@@ -1,0 +1,74 @@
+{
+  "created_unix": 1789192776.0895724,
+  "gpu_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "gpu_uuids": [
+    "GPU-07cd0000-f987-c7c3-00fc-8167f4e5b27d",
+    "GPU-a1d9ba7c-3d17-5eaa-cc88-bd599d795e7c",
+    "GPU-66308ea4-0d82-9a15-7187-04a5bf878be7",
+    "GPU-c15dfab4-9619-618c-3a66-04e05c38dcda",
+    "GPU-0ed01f53-b2b5-37f5-66cc-666d2208fb1e",
+    "GPU-089763c4-3cbb-8381-a55a-7aeee652f213"
+  ],
+  "lgd_enabled": false,
+  "priority": [
+    "exclusive-GPU corrected production training cost reference",
+    "single-task full pi05 fine-tuning at measured incremental training-time budget",
+    "paired full-history/recent20 corrected checkpoint evaluation"
+  ],
+  "reference_checkpoint": 1500,
+  "reference_rule": "Fixed diagnostic reference; not final paper checkpoint selection. References are cost measurements, not extra independent training seeds.",
+  "evaluation_seeds": [
+    10001,
+    10002,
+    10003
+  ],
+  "episodes_per_seed": 20,
+  "tasks": [
+    6,
+    7,
+    8
+  ],
+  "training_seed": 42,
+  "budget_caveat": "ActMem uses pre-existing caches. End-to-end cache construction time is excluded; this is incremental training-time matching only.",
+  "planned": {
+    "cost_reference_trajectories": 3,
+    "fullft_trajectories": 3,
+    "fullft_evaluations": 9,
+    "paired_history_evaluations": 18
+  },
+  "deferred": [
+    "step-count conditioning control",
+    "extra capacity sweeps",
+    "dedicated end-to-end latency benchmark"
+  ],
+  "source_sha256": {
+    "ops/reference_cost.py": "305ff702394f0ea8636f1afda0eec4df531f7a69b670780327ee9c84d7b52a8f",
+    "ops/fullft.py": "c838a5a1cc1bb2a49b9b6580170012d3de81a5850c0590a2833b7f9a115d228c",
+    "ops/worker.py": "116a919ba463d2455276b2ab2efa176f3c4386651d782f1ad543e857a01f0ff0",
+    "ops/eval_entry.py": "e628ddd0726094e37e045d0769ce46166327fb8c45dc5a13dd0b832f0f1a070b",
+    "ops/serve_eval.py": "68af24b7017213d68d3e7b517bd079705906e311dce0275f1fd69abd21d6cd29",
+    "history_window_intervention.py": "66e6407bf3fda5790823ee0fb31da10c246ba02f70a6ddf8a7a4d0369c6e3199",
+    "eval_assets/run_handoff04_bowl_video_eval.py": "3ead3c9e849b47222a42d908f7312122124b2ce11741786c00b23aa8d1b23b63"
+  },
+  "egl_fix": "Integer CUDA visibility for legacy EGL renderer; UUID visibility retained for policy GPU",
+  "cuda_to_egl": {
+    "0": 2,
+    "1": 3,
+    "2": 0,
+    "3": 1,
+    "4": 6,
+    "5": 7,
+    "6": 4,
+    "7": 5
+  },
+  "egl_mapping_method": "eglQueryDeviceAttribEXT EGL_CUDA_DEVICE_NV with CUDA_DEVICE_ORDER=PCI_BUS_ID; verified against nvidia-smi processes",
+  "excluded_run": "excluded_before_egl_mapping: startup trials and cost records excluded due to renderer GPU mismatch; all cost references restarted from step zero",
+  "renderer_cuda_visibility": "empty: simulation CUDA disabled; graphics uses explicit MUJOCO_EGL_DEVICE_ID; policy subprocess restores assigned GPU UUID"
+}

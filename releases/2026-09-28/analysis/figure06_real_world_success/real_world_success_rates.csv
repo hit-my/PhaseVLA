@@ -1,0 +1,9 @@
+﻿task_id,method,successes,trials,success_rate
+R1,pi05,17,20,85.0
+R1,ActMem-VLA,20,20,100.0
+R2,pi05,2,20,10.0
+R2,ActMem-VLA,13,20,65.0
+R3,pi05,3,20,15.0
+R3,ActMem-VLA,7,20,35.0
+R4,pi05,6,20,30.0
+R4,ActMem-VLA,11,20,55.0

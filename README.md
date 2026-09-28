@@ -1,19 +1,25 @@
 # ActMem-VLA
 
-ActMem-VLA (formerly PhaseVLA) studies task progress in vision-language-action policies using recurrent action memory and a lightweight **PreAction Expert (PE)**. The implementation builds on [OpenPI](https://github.com/Physical-Intelligence/openpi) and π0.5; the main PyTorch model is named **FutureMamba** in the source code.
+## Code and experiment archive (2026-09-28)
+
+The [release archive](releases/2026-09-28/README.md) contains the actual corrected training wrappers, audited raw per-episode results from A100 and LGD, separate seed/checkpoint indices, plotting inputs and provenance hashes. Historical and corrected experiments are explicitly distinguished. See its limitations before aggregating results.
+
+
+ActMem-VLA (formerly PhaseVLA) studies task progress in vision-language-action policies using recurrent action memory and a lightweight **PreAction Expert (PAE)**. The implementation builds on [OpenPI](https://github.com/Physical-Intelligence/openpi) and π0.5; the main PyTorch model is named **FutureMamba** in the source code.
 
 ## Method
 
-The current LIBERO-Mem mainline encodes previously executed action chunks with Mamba-2. The resulting memory tokens condition a PreAction Expert through attention KV. The frozen VLM supplies observation/language context. PE performs the first four of ten denoising steps (`handoff_ratio=0.4`); the frozen original Action Expert (AE) performs the remaining six. Only the memory plugin and PE are trained.
+The current LIBERO-Mem mainline encodes previously executed action chunks with Mamba-2. The resulting memory tokens condition a PreAction Expert through attention KV. The frozen VLM supplies observation/language context. PAE performs the first four of ten denoising steps (`handoff_ratio=0.4`); the frozen original Action Expert (AE) performs the remaining six. Only the memory plugin and PAE are trained.
 
 Episode resets clear recurrent state. Training and deployment keep causal action history, action masks, and checkpoint identity explicit. Earlier RoboMME observation-memory experiments are a separate protocol and should not be mixed with the LIBERO-Mem action-history results.
 
 | Variant | Memory | Trainable expert | Denoising |
 |---|---|---|---|
-| ActMem-VLA | Mamba-2 action history | PE | PE → frozen AE |
-| no-memory | No recurrent history | PE | PE → frozen AE |
+| ActMem-VLA | Mamba-2 action history | PAE | PAE → frozen AE |
+| no-memory | No recurrent history | PAE | PAE → frozen AE |
 | no-PE / Memory-AE | Mamba-2 action history | Original AE, with memory KV | AE only |
-| Capacity variants | Configurable memory depth/width | Configurable PE depth/tokens | PE → frozen AE |
+| no-PAE / frozen AE (later experiment) | Mamba-2 action history | Memory branch only; AE frozen | First 4 AE calls with memory, last 6 without |
+| Capacity variants | Configurable memory depth/width | Configurable PAE depth/tokens | PAE → frozen AE |
 
 The no-memory path samples independent queries from frozen conditioning caches. The no-PE path samples queries with their full causal action history and computes the frozen VLM prefix online. Training steps and wall-clock costs across these paths are not interchangeable without accounting for query counts and caching.
 

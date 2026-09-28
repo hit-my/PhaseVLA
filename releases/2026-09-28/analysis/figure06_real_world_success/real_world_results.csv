@@ -1,0 +1,5 @@
+task_id,task_description,pi05_successes,actmem_successes,trials_per_method
+R1,Pick up and replace the bowl twice then press the button,17,20,20
+R2,Weigh the mango,2,13,20
+R3,Press the button three times then swing left,3,7,20
+R4,Pick up and replace the bowl three times then press the button,6,11,20

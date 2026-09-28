@@ -1,0 +1,59 @@
+{
+  "status": "PASS",
+  "policy_episodes": 1800,
+  "seed_evaluations": 90,
+  "budget_rule": "min(600,20*ceil(linear_demo_length_p95/20))",
+  "budgets": [
+    {
+      "task": 1,
+      "demos": 100,
+      "demo_p95": 167.05,
+      "budget": 180,
+      "demo_coverage": 0.99
+    },
+    {
+      "task": 2,
+      "demos": 98,
+      "demo_p95": 203.0,
+      "budget": 220,
+      "demo_coverage": 0.9795918367346939
+    },
+    {
+      "task": 3,
+      "demos": 98,
+      "demo_p95": 314.29999999999995,
+      "budget": 320,
+      "demo_coverage": 0.9693877551020408
+    },
+    {
+      "task": 4,
+      "demos": 99,
+      "demo_p95": 337.4,
+      "budget": 340,
+      "demo_coverage": 0.9494949494949495
+    },
+    {
+      "task": 5,
+      "demos": 97,
+      "demo_p95": 446.2,
+      "budget": 460,
+      "demo_coverage": 1.0
+    },
+    {
+      "task": 6,
+      "demos": 100,
+      "demo_p95": 626.35,
+      "budget": 600,
+      "demo_coverage": 0.83
+    }
+  ],
+  "checkpoint_selection": "unchanged from Figure01/Figure02 test-selected checkpoints",
+  "no_new_rollouts": true,
+  "source_sha256": "49f2317cacf3d67140c07366a0f731364d234b491c502d693badcd8d34f47f42",
+  "demo_source_sha256": "fc43e7fcc2694f44cd7ea91ae0bc50cfe1fd412bf9f1c01f2ff5dba5675c2662",
+  "macro_sr": {
+    "pi05": 62.5,
+    "MemoryVLA": 37.5,
+    "ActMem-VLA": 87.22222222222223
+  }
+}

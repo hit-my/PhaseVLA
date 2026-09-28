@@ -1,0 +1,5 @@
+{
+  "source_sha256": "2406004f42eedb982ed2aa1633f8c6c53580502c606891417fd28b481913f439",
+  "rule": "Max total successes across 3 evaluation seeds; ties: earliest step, then A100-local availability, then seed42, then lower seed.",
+  "caveat": "Selection uses reported evaluation outcomes, not independent validation. For qualitative diagnostics, not an unbiased new performance estimate."
+}

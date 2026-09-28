@@ -1,0 +1,206 @@
+[
+  {
+    "id": "handover03-t6-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 6,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "change": {
+      "kind": "handover",
+      "value": 0.3
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/handover03-t6-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/handover03-t6-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true,
+    "preferred_gpu": 2
+  },
+  {
+    "id": "handover05-t6-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 6,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "change": {
+      "kind": "handover",
+      "value": 0.5
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/handover05-t6-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/handover05-t6-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true,
+    "preferred_gpu": 3
+  },
+  {
+    "id": "handover06-t6-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 6,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "change": {
+      "kind": "handover",
+      "value": 0.6
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/handover06-t6-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/handover06-t6-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true,
+    "preferred_gpu": 4
+  },
+  {
+    "id": "mamba_depth4-t6-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 6,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "change": {
+      "kind": "memory_depth",
+      "value": 4
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/mamba_depth4-t6-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/mamba_depth4-t6-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true,
+    "preferred_gpu": 5
+  },
+  {
+    "id": "mamba_width1536-t6-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 6,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "change": {
+      "kind": "memory_width",
+      "value": 1536
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/mamba_width1536-t6-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/mamba_width1536-t6-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true,
+    "preferred_gpu": 6
+  },
+  {
+    "id": "pae_depth2-t6-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 6,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "change": {
+      "kind": "pae_depth",
+      "value": 2
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/pae_depth2-t6-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/pae_depth2-t6-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true,
+    "preferred_gpu": 7
+  },
+  {
+    "id": "pae_depth6-t7-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 7,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t7",
+    "change": {
+      "kind": "pae_depth",
+      "value": 6
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/pae_depth6-t7-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/pae_depth6-t7-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true
+  },
+  {
+    "id": "pae_depth6-t8-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 8,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t8",
+    "change": {
+      "kind": "pae_depth",
+      "value": 6
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/pae_depth6-t8-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/pae_depth6-t8-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true
+  },
+  {
+    "id": "pae_depth6-t6-s42",
+    "family": "ablation",
+    "model": "PhaseVLA",
+    "task": 6,
+    "seed": 42,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "change": {
+      "kind": "pae_depth",
+      "value": 6
+    },
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/checkpoints/pae_depth6-t6-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_migrated_ablations_20260911/logs/pae_depth6-t6-s42",
+    "steps": 3000,
+    "eval_seeds": [
+      10001,
+      10002,
+      10003
+    ],
+    "episodes_per_eval_seed": 20,
+    "record_success_and_steps": true
+  }
+]

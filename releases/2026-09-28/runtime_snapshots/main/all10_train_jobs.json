@@ -1,0 +1,272 @@
+[
+  {
+    "id": "actmem_gradientfix_v1_t6-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 6,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t6-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t6-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t7-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 7,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t7",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t7-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t7-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t8-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 8,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t8",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t8-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t8-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t1-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 1,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t1",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t1-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t1-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t2-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 2,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t2",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t2-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t2-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t3-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 3,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t3",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t3-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t3-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t4-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 4,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t4",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t4-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t4-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t5-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 5,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t5",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t5-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t5-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t9-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 9,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t9",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t9-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t9-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t10-s0",
+    "model": "PhaseVLA",
+    "seed": 0,
+    "task": 10,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t10",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t10-s0",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t10-s0",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t6-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 6,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t6-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t6-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t7-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 7,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t7",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t7-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t7-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t8-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 8,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t8",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t8-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t8-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t1-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 1,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t1",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t1-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t1-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t2-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 2,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t2",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t2-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t2-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t3-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 3,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t3",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t3-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t3-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t4-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 4,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t4",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t4-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t4-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t5-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 5,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t5",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t5-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t5-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t9-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 9,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t9",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t9-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t9-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t10-s1",
+    "model": "PhaseVLA",
+    "seed": 1,
+    "task": 10,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t10",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t10-s1",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t10-s1",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t1-s42",
+    "model": "PhaseVLA",
+    "seed": 42,
+    "task": 1,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t1",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t1-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t1-s42",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t2-s42",
+    "model": "PhaseVLA",
+    "seed": 42,
+    "task": 2,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t2",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t2-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t2-s42",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t3-s42",
+    "model": "PhaseVLA",
+    "seed": 42,
+    "task": 3,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t3",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t3-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t3-s42",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t4-s42",
+    "model": "PhaseVLA",
+    "seed": 42,
+    "task": 4,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t4",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t4-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t4-s42",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t5-s42",
+    "model": "PhaseVLA",
+    "seed": 42,
+    "task": 5,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t5",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t5-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t5-s42",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t9-s42",
+    "model": "PhaseVLA",
+    "seed": 42,
+    "task": 9,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t9",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t9-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t9-s42",
+    "steps": 3000
+  },
+  {
+    "id": "actmem_gradientfix_v1_t10-s42",
+    "model": "PhaseVLA",
+    "seed": 42,
+    "task": 10,
+    "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t10",
+    "checkpoint_root": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t10-s42",
+    "log_dir": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/logs/t10-s42",
+    "steps": 3000
+  }
+]

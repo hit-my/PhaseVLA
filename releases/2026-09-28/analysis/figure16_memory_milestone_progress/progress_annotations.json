@@ -1,0 +1,3606 @@
+[
+  {
+    "task": 1,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 116,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 143,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 7,
+        "sample_query": 160
+      }
+    ],
+    "actions_sha256": "30d841fda23428357275869cf6ef7acff993003a3dd11c6ea39c3ee24b4e0042"
+  },
+  {
+    "task": 1,
+    "episode": "demo_2",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 96,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 120,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 5,
+        "sample_query": 120
+      }
+    ],
+    "actions_sha256": "8479b306d25c642cc7675364d44a302e9bbbc2bbc010eb284ac7ea2cf1a217a3"
+  },
+  {
+    "task": 1,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 103,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 129,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 6,
+        "sample_query": 140
+      }
+    ],
+    "actions_sha256": "fa317a19a5a61dffa78ee4530b21023975b97dc1a6533e79b808ae03fc932209"
+  },
+  {
+    "task": 1,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 101,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 126,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 6,
+        "sample_query": 140
+      }
+    ],
+    "actions_sha256": "0e716190ca4f5b33fe14acff81d0dbab79d26954e374e081460fa02f44847122"
+  },
+  {
+    "task": 1,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 94,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 121,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 6,
+        "sample_query": 140
+      }
+    ],
+    "actions_sha256": "92dd08f7f2a678ee2d03801724d9e3abab96cd9d19cb1d8fc28aab15c36e7816"
+  },
+  {
+    "task": 2,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 111,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 140,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 6,
+        "sample_query": 140
+      }
+    ],
+    "actions_sha256": "1e099201993341d5508a5671c117f9b2c7dc3f5b3bafd0cc3a04915e75311fb7"
+  },
+  {
+    "task": 2,
+    "episode": "demo_2",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 101,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 126,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 6,
+        "sample_query": 140
+      }
+    ],
+    "actions_sha256": "8366d74d9acb4e0557bf6d33221400170b0469a5f56f369b1f13dc3d4eaa5164"
+  },
+  {
+    "task": 2,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 97,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 119,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 5,
+        "sample_query": 120
+      }
+    ],
+    "actions_sha256": "8753f1302229e242d0a3bdc2b95644bc0bdcb64d94bde75963f8632c96779e17"
+  },
+  {
+    "task": 2,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 110,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 133,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 6,
+        "sample_query": 140
+      }
+    ],
+    "actions_sha256": "7a7a2161e4140fc341d700165bcca4b02005b4061f37a4c79ed2012338c6f7ed"
+  },
+  {
+    "task": 2,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 2,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 110,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 131,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 1.0,
+        "point_index": 6,
+        "sample_query": 140
+      }
+    ],
+    "actions_sha256": "cc696fd561605a4ac4ca07f3247953ba547a9a8f4ab7f6a28e67afd8c98b568e"
+  },
+  {
+    "task": 3,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 101,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 126,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 173,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 191,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 239,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P3",
+        "query": 257,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 12,
+        "sample_query": 260
+      }
+    ],
+    "actions_sha256": "542901ac0681b6c8f0226e71dceea0d702db47f1a47c645d9c8881c3550010a1"
+  },
+  {
+    "task": 3,
+    "episode": "demo_2",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 90,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 112,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 169,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 190,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 243,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P3",
+        "query": 264,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 13,
+        "sample_query": 280
+      }
+    ],
+    "actions_sha256": "f5aed5a0557754fa0e3cc4c1a06b8c808854c5cf0c11a6693adf010ebd663dbb"
+  },
+  {
+    "task": 3,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 90,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 116,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 170,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 192,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 238,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P3",
+        "query": 254,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 12,
+        "sample_query": 260
+      }
+    ],
+    "actions_sha256": "fb32ded96c510f6e459e141944eb2d4739f3df52d0483d65a73b0958d651ccea"
+  },
+  {
+    "task": 3,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 94,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 119,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 168,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 185,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 229,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P3",
+        "query": 245,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 12,
+        "sample_query": 260
+      }
+    ],
+    "actions_sha256": "20dcd182987ab59725e0a448b295a1a888baaf391f8a2965e2fcde2ebbffbc93"
+  },
+  {
+    "task": 3,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 92,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 118,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 167,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 186,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 231,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P3",
+        "query": 251,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 12,
+        "sample_query": 260
+      }
+    ],
+    "actions_sha256": "fb7839ed1334863112faf544c643437163ef77d4751b40b4895e605a5db79f8f"
+  },
+  {
+    "task": 4,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 126,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "P1",
+        "query": 147,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "G2",
+        "query": 194,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "P2",
+        "query": 213,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "G3",
+        "query": 261,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P3",
+        "query": 281,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 14,
+        "sample_query": 300
+      }
+    ],
+    "actions_sha256": "00dc82746f6e0b1efbd7cbd82790717415c991201e50b8c3b296cabac4e3d164"
+  },
+  {
+    "task": 4,
+    "episode": "demo_2",
+    "excluded_command_cycles": [
+      1
+    ],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 164,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P1",
+        "query": 182,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G2",
+        "query": 242,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P2",
+        "query": 259,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "G3",
+        "query": 307,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P3",
+        "query": 325,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 16,
+        "sample_query": 340
+      }
+    ],
+    "actions_sha256": "10ef965d77e6ff1e46b513afdbf35cd19170058064c093002d7e08c95a0e5119"
+  },
+  {
+    "task": 4,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 81,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 103,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 153,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P2",
+        "query": 172,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G3",
+        "query": 217,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P3",
+        "query": 233,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 11,
+        "sample_query": 240
+      }
+    ],
+    "actions_sha256": "51d3eb8c5f898663fa253f4c9fb36ec8050292d260497dd3f304ca318022e154"
+  },
+  {
+    "task": 4,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 104,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 126,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 202,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P2",
+        "query": 216,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "G3",
+        "query": 261,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P3",
+        "query": 278,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 13,
+        "sample_query": 280
+      }
+    ],
+    "actions_sha256": "b441597e781ef4eb100c1773f629da32c4d29c06224265f8aa5af93e2b9ff983"
+  },
+  {
+    "task": 4,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 93,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 110,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 156,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P2",
+        "query": 173,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G3",
+        "query": 218,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P3",
+        "query": 234,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 11,
+        "sample_query": 240
+      }
+    ],
+    "actions_sha256": "56a5953d300c0a3412e73f29ddf1827298fc5a46bb53d8fd75aadbd19e3a5083"
+  },
+  {
+    "task": 5,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 10,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 101,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.1,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 121,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.2,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 166,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.3,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 185,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.4,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 231,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.5,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P3",
+        "query": 243,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.6,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "G4",
+        "query": 282,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.7,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P4",
+        "query": 296,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.8,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "G5",
+        "query": 336,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.9,
+        "point_index": 16,
+        "sample_query": 340
+      },
+      {
+        "label": "P5",
+        "query": 353,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 1.0,
+        "point_index": 17,
+        "sample_query": 360
+      }
+    ],
+    "actions_sha256": "425312c433c982a6757b1fd8fb63919dc9e9b4f46639c85b0da253c17201c58b"
+  },
+  {
+    "task": 5,
+    "episode": "demo_2",
+    "excluded_command_cycles": [],
+    "required_milestones": 10,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 85,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.1,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 103,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.2,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 139,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.3,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "P2",
+        "query": 155,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.4,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "G3",
+        "query": 188,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "P3",
+        "query": 198,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.6,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G4",
+        "query": 234,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.7,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P4",
+        "query": 247,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.8,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "G5",
+        "query": 281,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.9,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P5",
+        "query": 293,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 1.0,
+        "point_index": 14,
+        "sample_query": 300
+      }
+    ],
+    "actions_sha256": "1f7ff8e00e03e7d3efd80dbf249303fb80954978960335ee4d39f4ebb4b5443e"
+  },
+  {
+    "task": 5,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 10,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 81,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.1,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 98,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.2,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "G2",
+        "query": 141,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.3,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P2",
+        "query": 161,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.4,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G3",
+        "query": 197,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "P3",
+        "query": 211,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.6,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "G4",
+        "query": 247,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.7,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P4",
+        "query": 260,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.8,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "G5",
+        "query": 302,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.9,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P5",
+        "query": 315,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 1.0,
+        "point_index": 15,
+        "sample_query": 320
+      }
+    ],
+    "actions_sha256": "ee51a9986418090a651d9a5743ed28175656f8c9305eba2d7c689b3dd4b0a20d"
+  },
+  {
+    "task": 5,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 10,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 91,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.1,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 113,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.2,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 156,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.3,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P2",
+        "query": 178,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.4,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G3",
+        "query": 214,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.5,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P3",
+        "query": 230,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.6,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "G4",
+        "query": 268,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.7,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P4",
+        "query": 289,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.8,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "G5",
+        "query": 328,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.9,
+        "point_index": 16,
+        "sample_query": 340
+      },
+      {
+        "label": "P5",
+        "query": 345,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 1.0,
+        "point_index": 17,
+        "sample_query": 360
+      }
+    ],
+    "actions_sha256": "bff3a45e013be5f88e0e39bfca70f9d39ec169eff3b0262a600ef82af33b4a6d"
+  },
+  {
+    "task": 5,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 10,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 88,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.1,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 115,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.2,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 156,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.3,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P2",
+        "query": 175,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.4,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G3",
+        "query": 213,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.5,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P3",
+        "query": 229,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.6,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "G4",
+        "query": 266,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.7,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P4",
+        "query": 284,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.8,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "G5",
+        "query": 323,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.9,
+        "point_index": 16,
+        "sample_query": 340
+      },
+      {
+        "label": "P5",
+        "query": 343,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 1.0,
+        "point_index": 17,
+        "sample_query": 360
+      }
+    ],
+    "actions_sha256": "abe38dbb106ad8e7752bb5fb25b720e173a174f2c00a2caa448035e79c8ffe17"
+  },
+  {
+    "task": 6,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 14,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 93,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.07142857142857142,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 117,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.14285714285714285,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 162,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.21428571428571427,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 181,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.2857142857142857,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 228,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.35714285714285715,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P3",
+        "query": 246,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.42857142857142855,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "G4",
+        "query": 294,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.5,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P4",
+        "query": 313,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.5714285714285714,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "G5",
+        "query": 362,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.6428571428571429,
+        "point_index": 18,
+        "sample_query": 380
+      },
+      {
+        "label": "P5",
+        "query": 383,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 0.7142857142857143,
+        "point_index": 19,
+        "sample_query": 400
+      },
+      {
+        "label": "G6",
+        "query": 429,
+        "description": "第6次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 6,
+        "progress": 0.7857142857142857,
+        "point_index": 21,
+        "sample_query": 440
+      },
+      {
+        "label": "P6",
+        "query": 448,
+        "description": "第6次放置",
+        "kind": "place",
+        "cycle": 6,
+        "progress": 0.8571428571428571,
+        "point_index": 22,
+        "sample_query": 460
+      },
+      {
+        "label": "G7",
+        "query": 490,
+        "description": "第7次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 7,
+        "progress": 0.9285714285714286,
+        "point_index": 24,
+        "sample_query": 500
+      },
+      {
+        "label": "P7",
+        "query": 507,
+        "description": "第7次放置",
+        "kind": "place",
+        "cycle": 7,
+        "progress": 1.0,
+        "point_index": 25,
+        "sample_query": 520
+      }
+    ],
+    "actions_sha256": "7f124e39c96fcaf67f638db8af608d737aec1ba41ad9e61830b1773a2ad27da3"
+  },
+  {
+    "task": 6,
+    "episode": "demo_2",
+    "excluded_command_cycles": [],
+    "required_milestones": 14,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 110,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.07142857142857142,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 130,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.14285714285714285,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 177,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.21428571428571427,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 196,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.2857142857142857,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 244,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.35714285714285715,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P3",
+        "query": 268,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.42857142857142855,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "G4",
+        "query": 317,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.5,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P4",
+        "query": 340,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.5714285714285714,
+        "point_index": 16,
+        "sample_query": 340
+      },
+      {
+        "label": "G5",
+        "query": 391,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.6428571428571429,
+        "point_index": 19,
+        "sample_query": 400
+      },
+      {
+        "label": "P5",
+        "query": 415,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 0.7142857142857143,
+        "point_index": 20,
+        "sample_query": 420
+      },
+      {
+        "label": "G6",
+        "query": 463,
+        "description": "第6次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 6,
+        "progress": 0.7857142857142857,
+        "point_index": 23,
+        "sample_query": 480
+      },
+      {
+        "label": "P6",
+        "query": 487,
+        "description": "第6次放置",
+        "kind": "place",
+        "cycle": 6,
+        "progress": 0.8571428571428571,
+        "point_index": 24,
+        "sample_query": 500
+      },
+      {
+        "label": "G7",
+        "query": 547,
+        "description": "第7次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 7,
+        "progress": 0.9285714285714286,
+        "point_index": 27,
+        "sample_query": 560
+      },
+      {
+        "label": "P7",
+        "query": 568,
+        "description": "第7次放置",
+        "kind": "place",
+        "cycle": 7,
+        "progress": 1.0,
+        "point_index": 28,
+        "sample_query": 580
+      }
+    ],
+    "actions_sha256": "0e0582010db8a8eb380d6511e48c005355a108dedbd65e03873e83b9bb1f1357"
+  },
+  {
+    "task": 6,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 14,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 96,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.07142857142857142,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 126,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.14285714285714285,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 172,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.21428571428571427,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 212,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.2857142857142857,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "G3",
+        "query": 257,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.35714285714285715,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P3",
+        "query": 276,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.42857142857142855,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "G4",
+        "query": 320,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.5,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P4",
+        "query": 338,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.5714285714285714,
+        "point_index": 16,
+        "sample_query": 340
+      },
+      {
+        "label": "G5",
+        "query": 380,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.6428571428571429,
+        "point_index": 18,
+        "sample_query": 380
+      },
+      {
+        "label": "P5",
+        "query": 399,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 0.7142857142857143,
+        "point_index": 19,
+        "sample_query": 400
+      },
+      {
+        "label": "G6",
+        "query": 444,
+        "description": "第6次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 6,
+        "progress": 0.7857142857142857,
+        "point_index": 22,
+        "sample_query": 460
+      },
+      {
+        "label": "P6",
+        "query": 465,
+        "description": "第6次放置",
+        "kind": "place",
+        "cycle": 6,
+        "progress": 0.8571428571428571,
+        "point_index": 23,
+        "sample_query": 480
+      },
+      {
+        "label": "G7",
+        "query": 512,
+        "description": "第7次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 7,
+        "progress": 0.9285714285714286,
+        "point_index": 25,
+        "sample_query": 520
+      },
+      {
+        "label": "P7",
+        "query": 534,
+        "description": "第7次放置",
+        "kind": "place",
+        "cycle": 7,
+        "progress": 1.0,
+        "point_index": 26,
+        "sample_query": 540
+      }
+    ],
+    "actions_sha256": "cc668c15613e03e6c1fee01cf48d0e19d734d60832dedcbd86e6c35ea5fdc789"
+  },
+  {
+    "task": 6,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 14,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 95,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.07142857142857142,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 117,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.14285714285714285,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 170,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.21428571428571427,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 193,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.2857142857142857,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G3",
+        "query": 239,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.35714285714285715,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P3",
+        "query": 262,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.42857142857142855,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "G4",
+        "query": 305,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.5,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P4",
+        "query": 320,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.5714285714285714,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "G5",
+        "query": 372,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.6428571428571429,
+        "point_index": 18,
+        "sample_query": 380
+      },
+      {
+        "label": "P5",
+        "query": 393,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 0.7142857142857143,
+        "point_index": 19,
+        "sample_query": 400
+      },
+      {
+        "label": "G6",
+        "query": 439,
+        "description": "第6次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 6,
+        "progress": 0.7857142857142857,
+        "point_index": 21,
+        "sample_query": 440
+      },
+      {
+        "label": "P6",
+        "query": 460,
+        "description": "第6次放置",
+        "kind": "place",
+        "cycle": 6,
+        "progress": 0.8571428571428571,
+        "point_index": 22,
+        "sample_query": 460
+      },
+      {
+        "label": "G7",
+        "query": 507,
+        "description": "第7次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 7,
+        "progress": 0.9285714285714286,
+        "point_index": 25,
+        "sample_query": 520
+      },
+      {
+        "label": "P7",
+        "query": 528,
+        "description": "第7次放置",
+        "kind": "place",
+        "cycle": 7,
+        "progress": 1.0,
+        "point_index": 26,
+        "sample_query": 540
+      }
+    ],
+    "actions_sha256": "28a5efde6ee5172a1934bf15b32212412e4d1c50ce899882ae108b5ce28f63cd"
+  },
+  {
+    "task": 6,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 14,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 92,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.07142857142857142,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 121,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.14285714285714285,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 180,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.21428571428571427,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P2",
+        "query": 206,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.2857142857142857,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "G3",
+        "query": 259,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.35714285714285715,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P3",
+        "query": 285,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.42857142857142855,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "G4",
+        "query": 338,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.5,
+        "point_index": 16,
+        "sample_query": 340
+      },
+      {
+        "label": "P4",
+        "query": 365,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 0.5714285714285714,
+        "point_index": 18,
+        "sample_query": 380
+      },
+      {
+        "label": "G5",
+        "query": 421,
+        "description": "第5次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 5,
+        "progress": 0.6428571428571429,
+        "point_index": 21,
+        "sample_query": 440
+      },
+      {
+        "label": "P5",
+        "query": 449,
+        "description": "第5次放置",
+        "kind": "place",
+        "cycle": 5,
+        "progress": 0.7142857142857143,
+        "point_index": 22,
+        "sample_query": 460
+      },
+      {
+        "label": "G6",
+        "query": 511,
+        "description": "第6次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 6,
+        "progress": 0.7857142857142857,
+        "point_index": 25,
+        "sample_query": 520
+      },
+      {
+        "label": "P6",
+        "query": 535,
+        "description": "第6次放置",
+        "kind": "place",
+        "cycle": 6,
+        "progress": 0.8571428571428571,
+        "point_index": 26,
+        "sample_query": 540
+      },
+      {
+        "label": "G7",
+        "query": 606,
+        "description": "第7次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 7,
+        "progress": 0.9285714285714286,
+        "point_index": 30,
+        "sample_query": 620
+      },
+      {
+        "label": "P7",
+        "query": 627,
+        "description": "第7次放置",
+        "kind": "place",
+        "cycle": 7,
+        "progress": 1.0,
+        "point_index": 31,
+        "sample_query": 640
+      }
+    ],
+    "actions_sha256": "089bcc16d9d2eadb8fec15e9a6637f62cb339350620b6ea3cf8a023bd3ff3aea"
+  },
+  {
+    "task": 7,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 119,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 156,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "G2",
+        "query": 247,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P2",
+        "query": 287,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "G3",
+        "query": 371,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 18,
+        "sample_query": 380
+      },
+      {
+        "label": "P3",
+        "query": 401,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 20,
+        "sample_query": 420
+      }
+    ],
+    "actions_sha256": "c8bcc422cbe83b642c3616c9b9ac17146479fe528c42eab56da9d5fc01874dab"
+  },
+  {
+    "task": 7,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 77,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 3,
+        "sample_query": 80
+      },
+      {
+        "label": "P1",
+        "query": 121,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 200,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "P2",
+        "query": 234,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "G3",
+        "query": 324,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 16,
+        "sample_query": 340
+      },
+      {
+        "label": "P3",
+        "query": 356,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 17,
+        "sample_query": 360
+      }
+    ],
+    "actions_sha256": "f9cc29e3a6982e0e90aede6420ef5ceb091c29a9dffecedc7ab8cf7c06f2a648"
+  },
+  {
+    "task": 7,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 75,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 3,
+        "sample_query": 80
+      },
+      {
+        "label": "P1",
+        "query": 100,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "G2",
+        "query": 188,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "P2",
+        "query": 220,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "G3",
+        "query": 287,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P3",
+        "query": 314,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 15,
+        "sample_query": 320
+      }
+    ],
+    "actions_sha256": "442df10a1621f1517f045f5ee7338532ff891ff2a16c47599072161543f12711"
+  },
+  {
+    "task": 7,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 81,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 4,
+        "sample_query": 100
+      },
+      {
+        "label": "P1",
+        "query": 124,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 209,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P2",
+        "query": 261,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "G3",
+        "query": 352,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 17,
+        "sample_query": 360
+      },
+      {
+        "label": "P3",
+        "query": 380,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 18,
+        "sample_query": 380
+      }
+    ],
+    "actions_sha256": "bcacc782d384c015e0121b9577e043cfb36d296280fe4181ac7ca9cb43946ace"
+  },
+  {
+    "task": 7,
+    "episode": "demo_6",
+    "excluded_command_cycles": [],
+    "required_milestones": 6,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 112,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.16666666666666666,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 129,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.3333333333333333,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 217,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P2",
+        "query": 239,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.6666666666666666,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "G3",
+        "query": 313,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.8333333333333334,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P3",
+        "query": 340,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 1.0,
+        "point_index": 16,
+        "sample_query": 340
+      }
+    ],
+    "actions_sha256": "89095e18fab6f46a4c2f8620f2fba37324e2bbe13f7b305ed5172c309e0c10c4"
+  },
+  {
+    "task": 8,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 8,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 120,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.125,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 145,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "G2",
+        "query": 246,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.375,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "P2",
+        "query": 289,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "G3",
+        "query": 397,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.625,
+        "point_index": 19,
+        "sample_query": 400
+      },
+      {
+        "label": "P3",
+        "query": 423,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.75,
+        "point_index": 21,
+        "sample_query": 440
+      },
+      {
+        "label": "G4",
+        "query": 513,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.875,
+        "point_index": 25,
+        "sample_query": 520
+      },
+      {
+        "label": "P4",
+        "query": 576,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 1.0,
+        "point_index": 28,
+        "sample_query": 580
+      }
+    ],
+    "actions_sha256": "da8f8f765501d17e02e20a919149d31d33ba23b948712392f942dcd8a95e0de1"
+  },
+  {
+    "task": 8,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 8,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 80,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.125,
+        "point_index": 3,
+        "sample_query": 80
+      },
+      {
+        "label": "P1",
+        "query": 134,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "G2",
+        "query": 229,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.375,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "P2",
+        "query": 248,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 12,
+        "sample_query": 260
+      },
+      {
+        "label": "G3",
+        "query": 358,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.625,
+        "point_index": 17,
+        "sample_query": 360
+      },
+      {
+        "label": "P3",
+        "query": 377,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.75,
+        "point_index": 18,
+        "sample_query": 380
+      },
+      {
+        "label": "G4",
+        "query": 471,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.875,
+        "point_index": 23,
+        "sample_query": 480
+      },
+      {
+        "label": "P4",
+        "query": 496,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 1.0,
+        "point_index": 24,
+        "sample_query": 500
+      }
+    ],
+    "actions_sha256": "015b365fc48651aac1783c4b6443fdda4ef4c1153187fa29f14fc247bc42bfd5"
+  },
+  {
+    "task": 8,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 8,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 76,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.125,
+        "point_index": 3,
+        "sample_query": 80
+      },
+      {
+        "label": "P1",
+        "query": 120,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "G2",
+        "query": 201,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.375,
+        "point_index": 10,
+        "sample_query": 220
+      },
+      {
+        "label": "P2",
+        "query": 239,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 11,
+        "sample_query": 240
+      },
+      {
+        "label": "G3",
+        "query": 347,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.625,
+        "point_index": 17,
+        "sample_query": 360
+      },
+      {
+        "label": "P3",
+        "query": 368,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.75,
+        "point_index": 18,
+        "sample_query": 380
+      },
+      {
+        "label": "G4",
+        "query": 471,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.875,
+        "point_index": 23,
+        "sample_query": 480
+      },
+      {
+        "label": "P4",
+        "query": 532,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 1.0,
+        "point_index": 26,
+        "sample_query": 540
+      }
+    ],
+    "actions_sha256": "a1d293a16b2877b142d4f6c68aebea5953faad281367c69933c52f96272e05e0"
+  },
+  {
+    "task": 8,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 8,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 130,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.125,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "P1",
+        "query": 176,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 274,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.375,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P2",
+        "query": 307,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "G3",
+        "query": 441,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.625,
+        "point_index": 22,
+        "sample_query": 460
+      },
+      {
+        "label": "P3",
+        "query": 466,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.75,
+        "point_index": 23,
+        "sample_query": 480
+      },
+      {
+        "label": "G4",
+        "query": 578,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.875,
+        "point_index": 28,
+        "sample_query": 580
+      },
+      {
+        "label": "P4",
+        "query": 650,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 1.0,
+        "point_index": 32,
+        "sample_query": 660
+      }
+    ],
+    "actions_sha256": "1edb135b943a6a8a1605570c2eb2e2736318cb60515b1de9729b3e6057510ecf"
+  },
+  {
+    "task": 8,
+    "episode": "demo_6",
+    "excluded_command_cycles": [],
+    "required_milestones": 8,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 104,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.125,
+        "point_index": 5,
+        "sample_query": 120
+      },
+      {
+        "label": "P1",
+        "query": 167,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 271,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.375,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P2",
+        "query": 292,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 0.5,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "G3",
+        "query": 415,
+        "description": "第3次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 3,
+        "progress": 0.625,
+        "point_index": 20,
+        "sample_query": 420
+      },
+      {
+        "label": "P3",
+        "query": 437,
+        "description": "第3次放置",
+        "kind": "place",
+        "cycle": 3,
+        "progress": 0.75,
+        "point_index": 21,
+        "sample_query": 440
+      },
+      {
+        "label": "G4",
+        "query": 536,
+        "description": "第4次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 4,
+        "progress": 0.875,
+        "point_index": 26,
+        "sample_query": 540
+      },
+      {
+        "label": "P4",
+        "query": 562,
+        "description": "第4次放置",
+        "kind": "place",
+        "cycle": 4,
+        "progress": 1.0,
+        "point_index": 28,
+        "sample_query": 580
+      }
+    ],
+    "actions_sha256": "fc71287270ef33d0779e0f98116a362e38cf54b7b89a7216896d7f31916807c4"
+  },
+  {
+    "task": 9,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 151,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P1",
+        "query": 178,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 307,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P2",
+        "query": 337,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 16,
+        "sample_query": 340
+      }
+    ],
+    "actions_sha256": "2dec8c7b5251577a66ad6b376d752bbadab7ab8837355e349ebe62a55503f0a0"
+  },
+  {
+    "task": 9,
+    "episode": "demo_2",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 132,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 6,
+        "sample_query": 140
+      },
+      {
+        "label": "P1",
+        "query": 167,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 276,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P2",
+        "query": 306,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 15,
+        "sample_query": 320
+      }
+    ],
+    "actions_sha256": "182447acac90b4d9d1ffb0127a9a286b1172cd88ff480ae22eb09d03ea531930"
+  },
+  {
+    "task": 9,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 160,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P1",
+        "query": 187,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G2",
+        "query": 309,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P2",
+        "query": 337,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 16,
+        "sample_query": 340
+      }
+    ],
+    "actions_sha256": "c47d447236b4256c62f6984cab91c8d0c7c982bead969dff20608c8eb1f39b48"
+  },
+  {
+    "task": 9,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 163,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P1",
+        "query": 182,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G2",
+        "query": 301,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 15,
+        "sample_query": 320
+      },
+      {
+        "label": "P2",
+        "query": 326,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 16,
+        "sample_query": 340
+      }
+    ],
+    "actions_sha256": "69dc49bbb65529f063f532cf097aab7f4c52e6230f5da4c1a1ac8d5064a35e8b"
+  },
+  {
+    "task": 9,
+    "episode": "demo_5",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 159,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P1",
+        "query": 192,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G2",
+        "query": 300,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P2",
+        "query": 331,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 16,
+        "sample_query": 340
+      }
+    ],
+    "actions_sha256": "7295bf2d6e9ce3261bc4c31de4148f66ca5001facd292a8890c50cbd488f1e6d"
+  },
+  {
+    "task": 10,
+    "episode": "demo_1",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 144,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P1",
+        "query": 166,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 261,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 13,
+        "sample_query": 280
+      },
+      {
+        "label": "P2",
+        "query": 290,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 14,
+        "sample_query": 300
+      }
+    ],
+    "actions_sha256": "7f19f541a4ec4dc1426c3eb2e7f42235508eb8f5736e93e1078f0568dea1c0f9"
+  },
+  {
+    "task": 10,
+    "episode": "demo_2",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 166,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P1",
+        "query": 183,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 9,
+        "sample_query": 200
+      },
+      {
+        "label": "G2",
+        "query": 291,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P2",
+        "query": 320,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 15,
+        "sample_query": 320
+      }
+    ],
+    "actions_sha256": "67bd4c024af858ced953ece473e4f8108db18ee4ef1ef9a30d050d78952fe027"
+  },
+  {
+    "task": 10,
+    "episode": "demo_3",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 161,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "P1",
+        "query": 178,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 282,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P2",
+        "query": 312,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 15,
+        "sample_query": 320
+      }
+    ],
+    "actions_sha256": "368863f03304ff0882951ed8704fde13a22fb480f4901559473c9ac3a8dbef02"
+  },
+  {
+    "task": 10,
+    "episode": "demo_4",
+    "excluded_command_cycles": [],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 154,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P1",
+        "query": 177,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 281,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 14,
+        "sample_query": 300
+      },
+      {
+        "label": "P2",
+        "query": 311,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 15,
+        "sample_query": 320
+      }
+    ],
+    "actions_sha256": "feb583c24fe5dc7725ff174c9b8582e88f890a6444724361bec1243907c2d44a"
+  },
+  {
+    "task": 10,
+    "episode": "demo_5",
+    "excluded_command_cycles": [
+      2
+    ],
+    "required_milestones": 4,
+    "final_sample_progress": 1.0,
+    "events": [
+      {
+        "label": "G1",
+        "query": 142,
+        "description": "第1次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 1,
+        "progress": 0.25,
+        "point_index": 7,
+        "sample_query": 160
+      },
+      {
+        "label": "P1",
+        "query": 168,
+        "description": "第1次放置",
+        "kind": "place",
+        "cycle": 1,
+        "progress": 0.5,
+        "point_index": 8,
+        "sample_query": 180
+      },
+      {
+        "label": "G2",
+        "query": 356,
+        "description": "第2次抓取（抬起参考帧）",
+        "kind": "grasp",
+        "cycle": 2,
+        "progress": 0.75,
+        "point_index": 17,
+        "sample_query": 360
+      },
+      {
+        "label": "P2",
+        "query": 383,
+        "description": "第2次放置",
+        "kind": "place",
+        "cycle": 2,
+        "progress": 1.0,
+        "point_index": 19,
+        "sample_query": 400
+      }
+    ],
+    "actions_sha256": "7efd9d0d20d4d5b3e039c98a69130419e72590855d6996be4d645b5faf9ec60a"
+  }
+]

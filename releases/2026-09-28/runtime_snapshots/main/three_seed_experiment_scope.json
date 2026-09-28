@@ -1,0 +1,106 @@
+{
+  "train_seeds": [
+    42,
+    0,
+    1
+  ],
+  "eval_seeds": [
+    10001,
+    10002,
+    10003
+  ],
+  "episodes_per_eval_seed": 20,
+  "groups": [
+    {
+      "method": "ActMem-VLA",
+      "tasks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "configurations": 1,
+      "training_runs": 30
+    },
+    {
+      "method": "no-Mamba",
+      "tasks": [
+        6,
+        7,
+        8
+      ],
+      "configurations": 1,
+      "training_runs": 9,
+      "reuse_existing_after_protocol_audit": true
+    },
+    {
+      "method": "no-PAE-frozen-AE",
+      "tasks": [
+        6,
+        7,
+        8
+      ],
+      "configurations": 1,
+      "training_runs": 9
+    },
+    {
+      "method": "handover",
+      "tasks": [
+        6,
+        7,
+        8
+      ],
+      "ratios": [
+        0.3,
+        0.5,
+        0.6
+      ],
+      "training_runs": 27
+    },
+    {
+      "method": "Mamba-capacity",
+      "tasks": [
+        6,
+        7,
+        8
+      ],
+      "proposed_width_depth": [
+        [
+          1536,
+          2
+        ],
+        [
+          1024,
+          4
+        ]
+      ],
+      "training_runs": 18
+    },
+    {
+      "method": "PAE-capacity",
+      "tasks": [
+        6,
+        7,
+        8
+      ],
+      "proposed_depths": [
+        2,
+        6
+      ],
+      "training_runs": 18
+    }
+  ],
+  "scope_note": "Three training seeds restored by user. Capacity choices and common ablation checkpoint budget remain proposals; this manifest does not launch those grids.",
+  "default_reference": {
+    "memory_width": 1024,
+    "memory_depth": 2,
+    "pae_depth": 4,
+    "handover": 0.4
+  }
+}

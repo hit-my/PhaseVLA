@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "checkpoint": 1500,
+  "train_seed": 42,
+  "eval_seeds": [
+    10001,
+    10002,
+    10003
+  ],
+  "evaluations": 27,
+  "episodes": 540,
+  "platform": "A100",
+  "macro_success_rates": {
+    "no-memory": 40.55555555555556,
+    "no-PAE": 53.333333333333336,
+    "ActMem-VLA": 55.0
+  },
+  "source_sha256": "01d8539ea2d318e5e48090cfa3f1af91161dd6e47f4ae81087733fc4e7c53a09",
+  "selection_note": "1500 selected post-hoc to maximize ActMem mean advantage over the average of the two component ablations among common checkpoints 500/1000/1500; same checkpoint for every method and task; exploratory"
+}

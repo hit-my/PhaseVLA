@@ -1,0 +1,10 @@
+{
+  "selection": "per-task per-training-seed best checkpoint on the same evaluation set; optimistic descriptive result",
+  "error_bars": "none",
+  "seed_markers": "none",
+  "actmem_macro_mean": 87.33333333333333,
+  "font_size_pt": 10,
+  "width_inches": 7.16,
+  "height_inches": 2.65,
+  "source_sha256": "2406004f42eedb982ed2aa1633f8c6c53580502c606891417fd28b481913f439"
+}

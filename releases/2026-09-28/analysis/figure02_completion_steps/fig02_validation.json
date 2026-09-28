@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "policy_episodes": 3000,
+  "policy_successes": 2402,
+  "demo_episodes": 961,
+  "demo_frames": 321405,
+  "missing_boxes": [
+    {
+      "task": 6,
+      "method": "MemoryVLA"
+    }
+  ],
+  "units": "environment steps; demonstrations are full trajectory lengths, not first-success time",
+  "selection": "same test-selected checkpoints as Figure01",
+  "font_size_pt": 10,
+  "layout": "3 rows x 2 columns; row-major T1-T6",
+  "width_inches": 3.5,
+  "height_inches": 3.05,
+  "axis_scaling": "independent task limits from whisker extents with padding; outlier markers hidden, all data retained in box statistics",
+  "task_axis_limits": {
+    "1": [
+      50.0,
+      250.0
+    ],
+    "2": [
+      50.0,
+      300.0
+    ],
+    "3": [
+      150.0,
+      650.0
+    ],
+    "4": [
+      100.0,
+      600.0
+    ],
+    "5": [
+      250.0,
+      650.0
+    ],
+    "6": [
+      400.0,
+      700.0
+    ]
+  },
+  "source_sha256": "2406004f42eedb982ed2aa1633f8c6c53580502c606891417fd28b481913f439"
+}

@@ -1,0 +1,598 @@
+{
+  "source_policy": "Best corrected main-experiment checkpoints selected from audited success rates",
+  "selection": "First five numerically ordered demonstration episodes per task, fixed independently of memory visualization.",
+  "query_interval": 20,
+  "empty_history_excluded": true,
+  "memory_input": "Normalized and padded executed actions, not joint observations",
+  "normalization": "Original all10 base-policy action transform; quantile normalization=True",
+  "diagnostic": "Offline demonstration replay, not held-out policy rollouts",
+  "tasks": [
+    {
+      "task": 1,
+      "task_name": "pick up the bowl and place it back on the plate",
+      "version": "corrected",
+      "seed": 0,
+      "step": 500,
+      "evaluation_sr": 100.0,
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t1-s0/500/plugin.safetensors",
+      "checkpoint_sha256": "5903e7e4d679cd7c966c6880f560f28eaad82ae460f45a132405099249be7062",
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_1_pick_up_the_bowl_and_place_it_back_on_the_plate_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 162,
+          "queries": 8,
+          "actions_sha256": "30d841fda23428357275869cf6ef7acff993003a3dd11c6ea39c3ee24b4e0042"
+        },
+        {
+          "id": "demo_2",
+          "length": 141,
+          "queries": 7,
+          "actions_sha256": "8479b306d25c642cc7675364d44a302e9bbbc2bbc010eb284ac7ea2cf1a217a3"
+        },
+        {
+          "id": "demo_3",
+          "length": 148,
+          "queries": 7,
+          "actions_sha256": "fa317a19a5a61dffa78ee4530b21023975b97dc1a6533e79b808ae03fc932209"
+        },
+        {
+          "id": "demo_4",
+          "length": 145,
+          "queries": 7,
+          "actions_sha256": "0e716190ca4f5b33fe14acff81d0dbab79d26954e374e081460fa02f44847122"
+        },
+        {
+          "id": "demo_5",
+          "length": 142,
+          "queries": 7,
+          "actions_sha256": "92dd08f7f2a678ee2d03801724d9e3abab96cd9d19cb1d8fc28aab15c36e7816"
+        }
+      ],
+      "memory_shape": [
+        36,
+        1024
+      ]
+    },
+    {
+      "task": 2,
+      "task_name": "lift the bottle and put it down on the plate",
+      "version": "corrected",
+      "seed": 0,
+      "step": 500,
+      "evaluation_sr": 100.0,
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t2-s0/500/plugin.safetensors",
+      "checkpoint_sha256": "960e4545a16270832d7dec38e38ddfd5831b3360404f95abf0d45f5615d28956",
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_2_lift_the_bottle_and_put_it_down_on_the_plate_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 159,
+          "queries": 7,
+          "actions_sha256": "1e099201993341d5508a5671c117f9b2c7dc3f5b3bafd0cc3a04915e75311fb7"
+        },
+        {
+          "id": "demo_2",
+          "length": 148,
+          "queries": 7,
+          "actions_sha256": "8366d74d9acb4e0557bf6d33221400170b0469a5f56f369b1f13dc3d4eaa5164"
+        },
+        {
+          "id": "demo_3",
+          "length": 138,
+          "queries": 6,
+          "actions_sha256": "8753f1302229e242d0a3bdc2b95644bc0bdcb64d94bde75963f8632c96779e17"
+        },
+        {
+          "id": "demo_4",
+          "length": 155,
+          "queries": 7,
+          "actions_sha256": "7a7a2161e4140fc341d700165bcca4b02005b4061f37a4c79ed2012338c6f7ed"
+        },
+        {
+          "id": "demo_5",
+          "length": 153,
+          "queries": 7,
+          "actions_sha256": "cc696fd561605a4ac4ca07f3247953ba547a9a8f4ab7f6a28e67afd8c98b568e"
+        }
+      ],
+      "memory_shape": [
+        34,
+        1024
+      ]
+    },
+    {
+      "task": 3,
+      "task_name": "lift the bowl and place it back on the plate 3 times",
+      "version": "corrected",
+      "seed": 0,
+      "step": 500,
+      "evaluation_sr": 100.0,
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t3-s0/500/plugin.safetensors",
+      "original_checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t3-s0/500",
+      "memory_tensor_sha256": {
+        "empty_history": "a800335ba13b784eb83d0ba6e76542b9817f3a40dd6f3c5556066af61ed4fb2d",
+        "action_chunk_projection.0.weight": "a06bed8edb91b31d3ecd88dc379126b901016d57dcbc839e8ea71f28634223a6",
+        "action_chunk_projection.0.bias": "4d1d15f4a034f5640a642f4bbeda6d407704f8c1957102ca33fa2f5d25849af9",
+        "action_chunk_projection.2.weight": "1fe71eeecfd132c88dd32e452dd45467df16623d0e74251d6bbf32cb04d46dfa",
+        "action_chunk_projection.2.bias": "44b94ab5dfef34848144b7518ff3fc44dd898e1d82f71144634baf03ec7254a8",
+        "memory_backend.layers.0.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.0.mixer.dt_bias": "832d15592fe39e77ddbdadd6cfc33680cc79224e2453eee8c04fb6f3229f9bd2",
+        "memory_backend.layers.0.mixer.A_log": "a89aade59906083e91ed05154b77b11fd7f28771198e10ae94abf20917892960",
+        "memory_backend.layers.0.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.0.mixer.in_proj.weight": "0f64e850f871231b3be64e7dd3f93a6d5887bb7508fd35fb613e16a7e2b84823",
+        "memory_backend.layers.0.mixer.conv1d.weight": "de60c714bb963070bb99c63b743db6b330d2e0bcbd5e84e98f8909030ccad2a0",
+        "memory_backend.layers.0.mixer.conv1d.bias": "cbc06fd4a401bfad42388fd600af5310907560cbd1714f7fe8c55767fb07069f",
+        "memory_backend.layers.0.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.0.mixer.out_proj.weight": "042d624640c75277492d155a88990cb3e78f29c72345174b9c0f1b6c3d1edfac",
+        "memory_backend.layers.1.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.1.mixer.dt_bias": "2ce41285a0a9126a009c82209369b92f80910d72adf54577b5735155bf38520b",
+        "memory_backend.layers.1.mixer.A_log": "66098c29007559319e393b9a712ba532e62b247a0b16d378a7025fcd122ee5ae",
+        "memory_backend.layers.1.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.1.mixer.in_proj.weight": "56726a220214d0df94f203348a504a1b92a0516dc4d6a165a9bec8444e414d3c",
+        "memory_backend.layers.1.mixer.conv1d.weight": "45951111c1d19fe9039a335f61e357bce48c5d5f6b71f5dc011e3688df671710",
+        "memory_backend.layers.1.mixer.conv1d.bias": "d882359f9bef35d5b6183f8ba97d49aad0fe479a8e4acca26c34863b2dceb235",
+        "memory_backend.layers.1.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.1.mixer.out_proj.weight": "ab834a06725bb34051f92fb5537a1360efab200cc656d83d963fe955509e4288",
+        "memory_backend.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_token_projection.weight": "25a0bee876d0127c143648d0dde2319130eeac2426949fcecc4aa72454136ea5",
+        "memory_token_projection.bias": "dd378f14e52a8e78eb3e3d81f1a321cf459911986c9b5816f98f41878cb140b0"
+      },
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_3_lift_the_bowl_and_place_it_back_on_the_plate_3_times_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 276,
+          "actions_sha256": "542901ac0681b6c8f0226e71dceea0d702db47f1a47c645d9c8881c3550010a1",
+          "queries": 13
+        },
+        {
+          "id": "demo_2",
+          "length": 286,
+          "actions_sha256": "f5aed5a0557754fa0e3cc4c1a06b8c808854c5cf0c11a6693adf010ebd663dbb",
+          "queries": 14
+        },
+        {
+          "id": "demo_3",
+          "length": 273,
+          "actions_sha256": "fb32ded96c510f6e459e141944eb2d4739f3df52d0483d65a73b0958d651ccea",
+          "queries": 13
+        },
+        {
+          "id": "demo_4",
+          "length": 266,
+          "actions_sha256": "20dcd182987ab59725e0a448b295a1a888baaf391f8a2965e2fcde2ebbffbc93",
+          "queries": 13
+        },
+        {
+          "id": "demo_5",
+          "length": 272,
+          "actions_sha256": "fb7839ed1334863112faf544c643437163ef77d4751b40b4895e605a5db79f8f",
+          "queries": 13
+        }
+      ],
+      "memory_shape": [
+        66,
+        1024
+      ],
+      "execution_host": "LGD:9024"
+    },
+    {
+      "task": 4,
+      "task_name": "pick up the bottle and put it down the plate 3 times",
+      "version": "corrected",
+      "seed": 1,
+      "step": 500,
+      "evaluation_sr": 100.0,
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t4-s1/500/plugin.safetensors",
+      "original_checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t4-s1/500",
+      "memory_tensor_sha256": {
+        "empty_history": "dd601c0af0f340c99f1a94496d2afaa1d5afd41b2739359076e055e2fb1e1598",
+        "action_chunk_projection.0.weight": "05e6bf4cb62bd0f8acc91ca6c2b120b96e50a1096aa7529e6d19c4c9b23f82af",
+        "action_chunk_projection.0.bias": "06c6823a5eb4e9bdb0ee865c81c9f0efcac09937c33df8179020cea827c4aa64",
+        "action_chunk_projection.2.weight": "2a5f0285abc2b0af77c5b6b5a9d5ad3116d3d85c5b92c611dba892ed7fb88919",
+        "action_chunk_projection.2.bias": "662e4604b7dcb6f54e528114cc69e1f46fb0a33a9dac6a21f61df7c3d45c8433",
+        "memory_backend.layers.0.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.0.mixer.dt_bias": "7a6646bfdb10b2a23e02eb439cd0ee9883256446c79b67ca556b0208e82e2058",
+        "memory_backend.layers.0.mixer.A_log": "1fa79af355cf718af91634bfccd151a39aa5d0eda58a1597cbfc9a7ec60b0a8d",
+        "memory_backend.layers.0.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.0.mixer.in_proj.weight": "adb1fa2447ab6c8486f2cd68a36443e4b2da1356dbb3b666170a7a244c134a4f",
+        "memory_backend.layers.0.mixer.conv1d.weight": "1caea2f609b84a02e70d4c2d85aa164c5d0e5def732195a56726815afdb2a6a3",
+        "memory_backend.layers.0.mixer.conv1d.bias": "62e4e3cf075644e4a0f4dea94426926e750e1c8510efc6125ce52e4c90e6e379",
+        "memory_backend.layers.0.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.0.mixer.out_proj.weight": "b194717c5440c2ab1b06ad37c27fec2480a534595dfe30e8629e80a9129288c7",
+        "memory_backend.layers.1.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.1.mixer.dt_bias": "d2b9ce3bf5b8bd6302b41ca9ce8edecd55de0ee29cb97baaf0513d43d5f81845",
+        "memory_backend.layers.1.mixer.A_log": "074e9c01389b8588182661db5eea080fd587cba1d23042e80f3ec7edc30b2b13",
+        "memory_backend.layers.1.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.1.mixer.in_proj.weight": "110bf351719dbe156cd9123e9d64f28f011785a141f8c53199c357008063223d",
+        "memory_backend.layers.1.mixer.conv1d.weight": "d696f5cebd3a72b15fb408080e72b122c9fea2c344e2fa27dda6ef51bc59fa6c",
+        "memory_backend.layers.1.mixer.conv1d.bias": "3c1b70fdd959ebfe9d8efffc39284764bba79cd92c61df865c4ac9ac52caec6f",
+        "memory_backend.layers.1.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.1.mixer.out_proj.weight": "584d7ef07211a33ebd0c1bd851031e1edf1d6e461b7e2a4a4cd15eff58b5d457",
+        "memory_backend.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_token_projection.weight": "b261765d4ef19d01ce9a5c27048c1493174e66ff33f69adf3838fbd4a8c9b58b",
+        "memory_token_projection.bias": "db70d297a856870a4dad10f9369ea74a512a0d9958fda4bf6b753dab8a3c39a8"
+      },
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_4_pick_up_the_bottle_and_put_it_down_the_plate_3_times_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 303,
+          "actions_sha256": "00dc82746f6e0b1efbd7cbd82790717415c991201e50b8c3b296cabac4e3d164",
+          "queries": 15
+        },
+        {
+          "id": "demo_2",
+          "length": 347,
+          "actions_sha256": "10ef965d77e6ff1e46b513afdbf35cd19170058064c093002d7e08c95a0e5119",
+          "queries": 17
+        },
+        {
+          "id": "demo_3",
+          "length": 255,
+          "actions_sha256": "51d3eb8c5f898663fa253f4c9fb36ec8050292d260497dd3f304ca318022e154",
+          "queries": 12
+        },
+        {
+          "id": "demo_4",
+          "length": 300,
+          "actions_sha256": "b441597e781ef4eb100c1773f629da32c4d29c06224265f8aa5af93e2b9ff983",
+          "queries": 14
+        },
+        {
+          "id": "demo_5",
+          "length": 256,
+          "actions_sha256": "56a5953d300c0a3412e73f29ddf1827298fc5a46bb53d8fd75aadbd19e3a5083",
+          "queries": 12
+        }
+      ],
+      "memory_shape": [
+        70,
+        1024
+      ],
+      "execution_host": "LGD:9024"
+    },
+    {
+      "task": 5,
+      "task_name": "lift the bowl and place it back on the plate 5 times",
+      "version": "corrected",
+      "seed": 42,
+      "step": 1000,
+      "evaluation_sr": 100.0,
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t5-s42/1000/plugin.safetensors",
+      "original_checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t5-s42/1000",
+      "memory_tensor_sha256": {
+        "empty_history": "2ae7f1fd62cb097e649b5523cd5c98acfbf7365cd789266d8fea7923ef8a88a5",
+        "action_chunk_projection.0.weight": "688df56cd85382822b7d0cfcef8a724a95a8ca7ffc7da32f91b321e4283bac45",
+        "action_chunk_projection.0.bias": "05be8faa2b0344d3ad097f120b37b61fc58ac73bbae1a086a5527c0b7b1c9951",
+        "action_chunk_projection.2.weight": "34121dba935b477f2f648d89c064cc8b3c35881b161e74762189744bf7fdb3f3",
+        "action_chunk_projection.2.bias": "85e8052263c6efe1419b594b4a78d9738d606af841739a66e30de03575db6aae",
+        "memory_backend.layers.0.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.0.mixer.dt_bias": "122dfe3f96cdd4591464e89b0ec92d9d1e45fc36dfcae4119d61a0abd8f03152",
+        "memory_backend.layers.0.mixer.A_log": "179c38d3b6c89e7bb1c74513c34c35f46aad35b5a3d5f3af815cdac0179b9533",
+        "memory_backend.layers.0.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.0.mixer.in_proj.weight": "260affb72137b6dd08f6834430fdabff86a4ce962ad3ef53a0d402afddfccc0a",
+        "memory_backend.layers.0.mixer.conv1d.weight": "2b7675a540ee27b38aa4aed53e23e23ec73322d94fe10d573bace5fbd41e2c7c",
+        "memory_backend.layers.0.mixer.conv1d.bias": "5f97302055a85d0c0c566eafe1cf79ded02cbde11b2354d61ecd6930c49697ab",
+        "memory_backend.layers.0.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.0.mixer.out_proj.weight": "603f238b04fea76e74452db4e681cc0975887b63be72f86eb395f6f25ba9922d",
+        "memory_backend.layers.1.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.1.mixer.dt_bias": "e4ac935fe2ce177e089ada060690bae78316bb716b23f376f9a84bb3490a6432",
+        "memory_backend.layers.1.mixer.A_log": "1bc1afc648a678310fb7e54016446976bc590a6f8c67ef5470db7373c2262b19",
+        "memory_backend.layers.1.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.1.mixer.in_proj.weight": "35d1deb9e0fc67171c91e8f4133048a6b3d61732e6facabe0582f6ac68509cc7",
+        "memory_backend.layers.1.mixer.conv1d.weight": "72184c7e120809b15b5cf2a21e7b16624df9e1b3e5f787c7aa1dcb45a932664f",
+        "memory_backend.layers.1.mixer.conv1d.bias": "b5be8dbdcba2874410efb0fe1e3e00d4c45f74bc3bc10c952f63ca140a0d4731",
+        "memory_backend.layers.1.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.1.mixer.out_proj.weight": "d87aadf09606bd6692f75e05510cce11d10e4148d708e8a7dab400594edb463c",
+        "memory_backend.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_token_projection.weight": "3d5e9594d68132e80c1b6f2626ccb164998262e4279996f612b6e9e492543ab6",
+        "memory_token_projection.bias": "3c14ef4082320badc9cfd4e8a82820afb7509c04e00cb102a1bd7e6052283ce2"
+      },
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_5_lift_the_bowl_and_place_it_back_on_the_plate_5_times_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 373,
+          "actions_sha256": "425312c433c982a6757b1fd8fb63919dc9e9b4f46639c85b0da253c17201c58b",
+          "queries": 18
+        },
+        {
+          "id": "demo_2",
+          "length": 312,
+          "actions_sha256": "1f7ff8e00e03e7d3efd80dbf249303fb80954978960335ee4d39f4ebb4b5443e",
+          "queries": 15
+        },
+        {
+          "id": "demo_3",
+          "length": 334,
+          "actions_sha256": "ee51a9986418090a651d9a5743ed28175656f8c9305eba2d7c689b3dd4b0a20d",
+          "queries": 16
+        },
+        {
+          "id": "demo_4",
+          "length": 366,
+          "actions_sha256": "bff3a45e013be5f88e0e39bfca70f9d39ec169eff3b0262a600ef82af33b4a6d",
+          "queries": 18
+        },
+        {
+          "id": "demo_5",
+          "length": 362,
+          "actions_sha256": "abe38dbb106ad8e7752bb5fb25b720e173a174f2c00a2caa448035e79c8ffe17",
+          "queries": 18
+        }
+      ],
+      "memory_shape": [
+        85,
+        1024
+      ],
+      "execution_host": "LGD:9024"
+    },
+    {
+      "task": 6,
+      "task_name": "pick up the bowl and place it on the plate 7 times",
+      "version": "corrected",
+      "seed": 42,
+      "step": 1500,
+      "evaluation_sr": 80.0,
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t6-s42/1500/plugin.safetensors",
+      "checkpoint_sha256": "0526019b8ce9faf8b8a97487af6642915ada8407ee6973869c7a81b6eaa1a240",
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_6_pick_up_the_bowl_and_place_it_on_the_plate_7_times_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 528,
+          "queries": 26,
+          "actions_sha256": "7f124e39c96fcaf67f638db8af608d737aec1ba41ad9e61830b1773a2ad27da3"
+        },
+        {
+          "id": "demo_2",
+          "length": 588,
+          "queries": 29,
+          "actions_sha256": "0e0582010db8a8eb380d6511e48c005355a108dedbd65e03873e83b9bb1f1357"
+        },
+        {
+          "id": "demo_3",
+          "length": 554,
+          "queries": 27,
+          "actions_sha256": "cc668c15613e03e6c1fee01cf48d0e19d734d60832dedcbd86e6c35ea5fdc789"
+        },
+        {
+          "id": "demo_4",
+          "length": 548,
+          "queries": 27,
+          "actions_sha256": "28a5efde6ee5172a1934bf15b32212412e4d1c50ce899882ae108b5ce28f63cd"
+        },
+        {
+          "id": "demo_5",
+          "length": 649,
+          "queries": 32,
+          "actions_sha256": "089bcc16d9d2eadb8fec15e9a6637f62cb339350620b6ea3cf8a023bd3ff3aea"
+        }
+      ],
+      "memory_shape": [
+        141,
+        1024
+      ]
+    },
+    {
+      "task": 7,
+      "task_name": "swap the 2 bowls on their plates using the empty plate",
+      "version": "corrected",
+      "seed": 0,
+      "step": 2000,
+      "evaluation_sr": 45.0,
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t7-s0/2000/plugin.safetensors",
+      "checkpoint_sha256": "de3f116d70c4dd1a53f7caba949fdd302d36fffd2b4e98813a138c3136c86ae5",
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_7_swap_the_2_bowls_on_their_plates_using_the_empty_plate_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 425,
+          "queries": 21,
+          "actions_sha256": "c8bcc422cbe83b642c3616c9b9ac17146479fe528c42eab56da9d5fc01874dab"
+        },
+        {
+          "id": "demo_3",
+          "length": 384,
+          "queries": 19,
+          "actions_sha256": "f9cc29e3a6982e0e90aede6420ef5ceb091c29a9dffecedc7ab8cf7c06f2a648"
+        },
+        {
+          "id": "demo_4",
+          "length": 338,
+          "queries": 16,
+          "actions_sha256": "442df10a1621f1517f045f5ee7338532ff891ff2a16c47599072161543f12711"
+        },
+        {
+          "id": "demo_5",
+          "length": 406,
+          "queries": 20,
+          "actions_sha256": "bcacc782d384c015e0121b9577e043cfb36d296280fe4181ac7ca9cb43946ace"
+        },
+        {
+          "id": "demo_6",
+          "length": 363,
+          "queries": 18,
+          "actions_sha256": "89095e18fab6f46a4c2f8620f2fba37324e2bbe13f7b305ed5172c309e0c10c4"
+        }
+      ],
+      "memory_shape": [
+        94,
+        1024
+      ]
+    },
+    {
+      "task": 8,
+      "task_name": "rotate the 3 bowls on their plates from left to right using the empty plate",
+      "version": "corrected",
+      "seed": 0,
+      "step": 3000,
+      "evaluation_sr": 56.666666666666664,
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t8-s0/3000/plugin.safetensors",
+      "checkpoint_sha256": "26e32244325c630a694a15a8e648793facb0b9a269f6bd716a74dfbe4a75ea94",
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_8_rotate_the_3_bowls_on_their_plates_from_left_to_right_using_the_empty_plate_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 613,
+          "queries": 30,
+          "actions_sha256": "da8f8f765501d17e02e20a919149d31d33ba23b948712392f942dcd8a95e0de1"
+        },
+        {
+          "id": "demo_3",
+          "length": 522,
+          "queries": 26,
+          "actions_sha256": "015b365fc48651aac1783c4b6443fdda4ef4c1153187fa29f14fc247bc42bfd5"
+        },
+        {
+          "id": "demo_4",
+          "length": 560,
+          "queries": 27,
+          "actions_sha256": "a1d293a16b2877b142d4f6c68aebea5953faad281367c69933c52f96272e05e0"
+        },
+        {
+          "id": "demo_5",
+          "length": 677,
+          "queries": 33,
+          "actions_sha256": "1edb135b943a6a8a1605570c2eb2e2736318cb60515b1de9729b3e6057510ecf"
+        },
+        {
+          "id": "demo_6",
+          "length": 589,
+          "queries": 29,
+          "actions_sha256": "fc71287270ef33d0779e0f98116a362e38cf54b7b89a7216896d7f31916807c4"
+        }
+      ],
+      "memory_shape": [
+        145,
+        1024
+      ]
+    },
+    {
+      "task": 9,
+      "task_name": "put the cream cheese in the nearest basket and place that basket in the center",
+      "version": "corrected",
+      "seed": 0,
+      "step": 500,
+      "evaluation_sr": 100.0,
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t9-s0/500/plugin.safetensors",
+      "original_checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t9-s0/500",
+      "memory_tensor_sha256": {
+        "empty_history": "21c93015c9de3ddc125233e6543605943c617670f89e3491b4dfa34936ac1491",
+        "action_chunk_projection.0.weight": "f8abe695a12dc27097c761b7926c642aaf07fdf133a4cfe405fa0852da3431f3",
+        "action_chunk_projection.0.bias": "7aace4ee759a6ccb6c346749254c656168b23c5c29dec9d810134a58127fb878",
+        "action_chunk_projection.2.weight": "b2bbedbd0cf275c27b9ec1aa94e96617027a74745ed57d1854499942405e6326",
+        "action_chunk_projection.2.bias": "c336ba7b7e0da14e2102b7b1d5321225e0376bcb7ddd9c5290ca37922db1bedf",
+        "memory_backend.layers.0.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.0.mixer.dt_bias": "832d15592fe39e77ddbdadd6cfc33680cc79224e2453eee8c04fb6f3229f9bd2",
+        "memory_backend.layers.0.mixer.A_log": "a89aade59906083e91ed05154b77b11fd7f28771198e10ae94abf20917892960",
+        "memory_backend.layers.0.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.0.mixer.in_proj.weight": "0c2be8afccd49eb0df8a22280b1528fa975dc3dd7644487d25a942791c15f417",
+        "memory_backend.layers.0.mixer.conv1d.weight": "88264f5dcfb6795ba43cca6f6fbdcdd21633dc86b15228e0c4201830ebf2cac8",
+        "memory_backend.layers.0.mixer.conv1d.bias": "9c09c6a944dac7587f1798bcf71ffd6c1fccd724203849f743df6231a64a6b16",
+        "memory_backend.layers.0.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.0.mixer.out_proj.weight": "004c1ff68019e684cac3b6042874637dad9ef8bbf3f565ae383ccb5297ed0ae4",
+        "memory_backend.layers.1.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_backend.layers.1.mixer.dt_bias": "2ce41285a0a9126a009c82209369b92f80910d72adf54577b5735155bf38520b",
+        "memory_backend.layers.1.mixer.A_log": "66098c29007559319e393b9a712ba532e62b247a0b16d378a7025fcd122ee5ae",
+        "memory_backend.layers.1.mixer.D": "26ab507cf4bbb401acc7bebf555f8cd2130512b6c6ba2eb38e94aafcaeae114a",
+        "memory_backend.layers.1.mixer.in_proj.weight": "49d2d45c7eca376ca35ee7fe7f9b9c985e70b5cf2436427736a58b51ec0c6fbd",
+        "memory_backend.layers.1.mixer.conv1d.weight": "6d51d00ad48b8082a2de113cfe854d91bdf68e18b322ef2339b94029371ba971",
+        "memory_backend.layers.1.mixer.conv1d.bias": "3887b531300db8a4156d5dcf5318aad8f9fca97e420842d3ef75b50d555575a9",
+        "memory_backend.layers.1.mixer.norm.weight": "045ad01d502fc9de7069fd37169060ce79a14a289444ffcd9881ec367a554644",
+        "memory_backend.layers.1.mixer.out_proj.weight": "5a9d2a736f7044b72a40927477f8f93e80de16fe37d3f182ef5b4c55226a84eb",
+        "memory_backend.norm.weight": "95fbbe9f3324b7d9f3a3550109772b0060170636c8aabc21e00aebae78594b7e",
+        "memory_token_projection.weight": "6f3328d89734a0d5c90d766e25db32461e457f37e824c7e1975f8ae15a8287d5",
+        "memory_token_projection.bias": "615ac6d9af919182ad941a9fb6bea7f58966aef56871c0d2f6d0fd87927894aa"
+      },
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_9_put_the_cream_cheese_in_the_nearest_basket_and_place_that_basket_in_the_center_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 356,
+          "actions_sha256": "2dec8c7b5251577a66ad6b376d752bbadab7ab8837355e349ebe62a55503f0a0",
+          "queries": 17
+        },
+        {
+          "id": "demo_2",
+          "length": 325,
+          "actions_sha256": "182447acac90b4d9d1ffb0127a9a286b1172cd88ff480ae22eb09d03ea531930",
+          "queries": 16
+        },
+        {
+          "id": "demo_3",
+          "length": 356,
+          "actions_sha256": "c47d447236b4256c62f6984cab91c8d0c7c982bead969dff20608c8eb1f39b48",
+          "queries": 17
+        },
+        {
+          "id": "demo_4",
+          "length": 345,
+          "actions_sha256": "69dc49bbb65529f063f532cf097aab7f4c52e6230f5da4c1a1ac8d5064a35e8b",
+          "queries": 17
+        },
+        {
+          "id": "demo_5",
+          "length": 350,
+          "actions_sha256": "7295bf2d6e9ce3261bc4c31de4148f66ca5001facd292a8890c50cbd488f1e6d",
+          "queries": 17
+        }
+      ],
+      "memory_shape": [
+        84,
+        1024
+      ],
+      "execution_host": "LGD:9024"
+    },
+    {
+      "task": 10,
+      "task_name": "put the cream cheese in the nearest basket and place the empty basket in the center",
+      "version": "corrected",
+      "seed": 0,
+      "step": 500,
+      "evaluation_sr": 100.0,
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t10-s0/500/plugin.safetensors",
+      "checkpoint_sha256": "c5dfec1ba7dad103370c82836fe842a45dd3a16ce45adef88fa9a227ca5e97a5",
+      "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_10_put_the_cream_cheese_in_the_nearest_basket_and_place_the_empty_basket_in_the_center_demo.hdf5",
+      "episodes": [
+        {
+          "id": "demo_1",
+          "length": 309,
+          "queries": 15,
+          "actions_sha256": "7f19f541a4ec4dc1426c3eb2e7f42235508eb8f5736e93e1078f0568dea1c0f9"
+        },
+        {
+          "id": "demo_2",
+          "length": 339,
+          "queries": 16,
+          "actions_sha256": "67bd4c024af858ced953ece473e4f8108db18ee4ef1ef9a30d050d78952fe027"
+        },
+        {
+          "id": "demo_3",
+          "length": 331,
+          "queries": 16,
+          "actions_sha256": "368863f03304ff0882951ed8704fde13a22fb480f4901559473c9ac3a8dbef02"
+        },
+        {
+          "id": "demo_4",
+          "length": 330,
+          "queries": 16,
+          "actions_sha256": "feb583c24fe5dc7725ff174c9b8582e88f890a6444724361bec1243907c2d44a"
+        },
+        {
+          "id": "demo_5",
+          "length": 402,
+          "queries": 20,
+          "actions_sha256": "7efd9d0d20d4d5b3e039c98a69130419e72590855d6996be4d645b5faf9ec60a"
+        }
+      ],
+      "memory_shape": [
+        83,
+        1024
+      ]
+    }
+  ],
+  "lgd_replay_input_sha256": "1cd091995cf312f1cfd1f50b8ae54ed0b7034c833340a50914f17fd48876145f"
+}

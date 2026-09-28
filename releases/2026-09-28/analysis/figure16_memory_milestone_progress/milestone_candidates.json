@@ -1,0 +1,1601 @@
+[
+  {
+    "task": 1,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 162,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_1_pick_up_the_bowl_and_place_it_back_on_the_plate_demo.hdf5",
+    "actions_sha256": "30d841fda23428357275869cf6ef7acff993003a3dd11c6ea39c3ee24b4e0042",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 69,
+        "release_action": 142,
+        "peak_observation": 116,
+        "settled_observation": 152
+      }
+    ]
+  },
+  {
+    "task": 1,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 141,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_1_pick_up_the_bowl_and_place_it_back_on_the_plate_demo.hdf5",
+    "actions_sha256": "8479b306d25c642cc7675364d44a302e9bbbc2bbc010eb284ac7ea2cf1a217a3",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 54,
+        "release_action": 119,
+        "peak_observation": 96,
+        "settled_observation": 129
+      }
+    ]
+  },
+  {
+    "task": 1,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 148,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_1_pick_up_the_bowl_and_place_it_back_on_the_plate_demo.hdf5",
+    "actions_sha256": "fa317a19a5a61dffa78ee4530b21023975b97dc1a6533e79b808ae03fc932209",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 57,
+        "release_action": 128,
+        "peak_observation": 103,
+        "settled_observation": 138
+      }
+    ]
+  },
+  {
+    "task": 1,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 145,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_1_pick_up_the_bowl_and_place_it_back_on_the_plate_demo.hdf5",
+    "actions_sha256": "0e716190ca4f5b33fe14acff81d0dbab79d26954e374e081460fa02f44847122",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 58,
+        "release_action": 125,
+        "peak_observation": 101,
+        "settled_observation": 135
+      }
+    ]
+  },
+  {
+    "task": 1,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 142,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_1_pick_up_the_bowl_and_place_it_back_on_the_plate_demo.hdf5",
+    "actions_sha256": "92dd08f7f2a678ee2d03801724d9e3abab96cd9d19cb1d8fc28aab15c36e7816",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 47,
+        "release_action": 120,
+        "peak_observation": 94,
+        "settled_observation": 130
+      }
+    ]
+  },
+  {
+    "task": 2,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 159,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_2_lift_the_bottle_and_put_it_down_on_the_plate_demo.hdf5",
+    "actions_sha256": "1e099201993341d5508a5671c117f9b2c7dc3f5b3bafd0cc3a04915e75311fb7",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 65,
+        "release_action": 139,
+        "peak_observation": 111,
+        "settled_observation": 149
+      }
+    ]
+  },
+  {
+    "task": 2,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 148,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_2_lift_the_bottle_and_put_it_down_on_the_plate_demo.hdf5",
+    "actions_sha256": "8366d74d9acb4e0557bf6d33221400170b0469a5f56f369b1f13dc3d4eaa5164",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 56,
+        "release_action": 125,
+        "peak_observation": 101,
+        "settled_observation": 135
+      }
+    ]
+  },
+  {
+    "task": 2,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 138,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_2_lift_the_bottle_and_put_it_down_on_the_plate_demo.hdf5",
+    "actions_sha256": "8753f1302229e242d0a3bdc2b95644bc0bdcb64d94bde75963f8632c96779e17",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 59,
+        "release_action": 118,
+        "peak_observation": 97,
+        "settled_observation": 128
+      }
+    ]
+  },
+  {
+    "task": 2,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 155,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_2_lift_the_bottle_and_put_it_down_on_the_plate_demo.hdf5",
+    "actions_sha256": "7a7a2161e4140fc341d700165bcca4b02005b4061f37a4c79ed2012338c6f7ed",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 72,
+        "release_action": 132,
+        "peak_observation": 110,
+        "settled_observation": 142
+      }
+    ]
+  },
+  {
+    "task": 2,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 153,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_2_lift_the_bottle_and_put_it_down_on_the_plate_demo.hdf5",
+    "actions_sha256": "cc696fd561605a4ac4ca07f3247953ba547a9a8f4ab7f6a28e67afd8c98b568e",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 72,
+        "release_action": 130,
+        "peak_observation": 110,
+        "settled_observation": 140
+      }
+    ]
+  },
+  {
+    "task": 3,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 276,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_3_lift_the_bowl_and_place_it_back_on_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "542901ac0681b6c8f0226e71dceea0d702db47f1a47c645d9c8881c3550010a1",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 63,
+        "release_action": 125,
+        "peak_observation": 101,
+        "settled_observation": 135
+      },
+      {
+        "cycle": 2,
+        "close_action": 142,
+        "release_action": 190,
+        "peak_observation": 173,
+        "settled_observation": 200
+      },
+      {
+        "cycle": 3,
+        "close_action": 208,
+        "release_action": 256,
+        "peak_observation": 239,
+        "settled_observation": 266
+      }
+    ]
+  },
+  {
+    "task": 3,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 286,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_3_lift_the_bowl_and_place_it_back_on_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "f5aed5a0557754fa0e3cc4c1a06b8c808854c5cf0c11a6693adf010ebd663dbb",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 53,
+        "release_action": 111,
+        "peak_observation": 90,
+        "settled_observation": 121
+      },
+      {
+        "cycle": 2,
+        "close_action": 131,
+        "release_action": 189,
+        "peak_observation": 169,
+        "settled_observation": 199
+      },
+      {
+        "cycle": 3,
+        "close_action": 206,
+        "release_action": 263,
+        "peak_observation": 243,
+        "settled_observation": 273
+      }
+    ]
+  },
+  {
+    "task": 3,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 273,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_3_lift_the_bowl_and_place_it_back_on_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "fb32ded96c510f6e459e141944eb2d4739f3df52d0483d65a73b0958d651ccea",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 50,
+        "release_action": 115,
+        "peak_observation": 90,
+        "settled_observation": 125
+      },
+      {
+        "cycle": 2,
+        "close_action": 133,
+        "release_action": 191,
+        "peak_observation": 170,
+        "settled_observation": 201
+      },
+      {
+        "cycle": 3,
+        "close_action": 206,
+        "release_action": 253,
+        "peak_observation": 238,
+        "settled_observation": 263
+      }
+    ]
+  },
+  {
+    "task": 3,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 266,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_3_lift_the_bowl_and_place_it_back_on_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "20dcd182987ab59725e0a448b295a1a888baaf391f8a2965e2fcde2ebbffbc93",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 54,
+        "release_action": 118,
+        "peak_observation": 94,
+        "settled_observation": 128
+      },
+      {
+        "cycle": 2,
+        "close_action": 137,
+        "release_action": 184,
+        "peak_observation": 168,
+        "settled_observation": 194
+      },
+      {
+        "cycle": 3,
+        "close_action": 200,
+        "release_action": 244,
+        "peak_observation": 229,
+        "settled_observation": 254
+      }
+    ]
+  },
+  {
+    "task": 3,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 272,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_3_lift_the_bowl_and_place_it_back_on_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "fb7839ed1334863112faf544c643437163ef77d4751b40b4895e605a5db79f8f",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 48,
+        "release_action": 117,
+        "peak_observation": 92,
+        "settled_observation": 127
+      },
+      {
+        "cycle": 2,
+        "close_action": 132,
+        "release_action": 185,
+        "peak_observation": 167,
+        "settled_observation": 195
+      },
+      {
+        "cycle": 3,
+        "close_action": 198,
+        "release_action": 250,
+        "peak_observation": 231,
+        "settled_observation": 260
+      }
+    ]
+  },
+  {
+    "task": 4,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 303,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_4_pick_up_the_bottle_and_put_it_down_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "00dc82746f6e0b1efbd7cbd82790717415c991201e50b8c3b296cabac4e3d164",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 91,
+        "release_action": 146,
+        "peak_observation": 126,
+        "settled_observation": 156
+      },
+      {
+        "cycle": 2,
+        "close_action": 163,
+        "release_action": 212,
+        "peak_observation": 194,
+        "settled_observation": 222
+      },
+      {
+        "cycle": 3,
+        "close_action": 229,
+        "release_action": 280,
+        "peak_observation": 261,
+        "settled_observation": 290
+      }
+    ]
+  },
+  {
+    "task": 4,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 347,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_4_pick_up_the_bottle_and_put_it_down_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "10ef965d77e6ff1e46b513afdbf35cd19170058064c093002d7e08c95a0e5119",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 70,
+        "release_action": 102,
+        "peak_observation": 101,
+        "settled_observation": 112
+      },
+      {
+        "cycle": 2,
+        "close_action": 128,
+        "release_action": 181,
+        "peak_observation": 164,
+        "settled_observation": 191
+      },
+      {
+        "cycle": 3,
+        "close_action": 208,
+        "release_action": 258,
+        "peak_observation": 242,
+        "settled_observation": 268
+      },
+      {
+        "cycle": 4,
+        "close_action": 276,
+        "release_action": 324,
+        "peak_observation": 307,
+        "settled_observation": 334
+      }
+    ]
+  },
+  {
+    "task": 4,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 255,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_4_pick_up_the_bottle_and_put_it_down_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "51d3eb8c5f898663fa253f4c9fb36ec8050292d260497dd3f304ca318022e154",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 40,
+        "release_action": 102,
+        "peak_observation": 81,
+        "settled_observation": 112
+      },
+      {
+        "cycle": 2,
+        "close_action": 119,
+        "release_action": 171,
+        "peak_observation": 153,
+        "settled_observation": 181
+      },
+      {
+        "cycle": 3,
+        "close_action": 187,
+        "release_action": 232,
+        "peak_observation": 217,
+        "settled_observation": 242
+      }
+    ]
+  },
+  {
+    "task": 4,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 300,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_4_pick_up_the_bottle_and_put_it_down_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "b441597e781ef4eb100c1773f629da32c4d29c06224265f8aa5af93e2b9ff983",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 64,
+        "release_action": 125,
+        "peak_observation": 104,
+        "settled_observation": 135
+      },
+      {
+        "cycle": 2,
+        "close_action": 172,
+        "release_action": 215,
+        "peak_observation": 202,
+        "settled_observation": 225
+      },
+      {
+        "cycle": 3,
+        "close_action": 230,
+        "release_action": 277,
+        "peak_observation": 261,
+        "settled_observation": 287
+      }
+    ]
+  },
+  {
+    "task": 4,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 256,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_4_pick_up_the_bottle_and_put_it_down_the_plate_3_times_demo.hdf5",
+    "actions_sha256": "56a5953d300c0a3412e73f29ddf1827298fc5a46bb53d8fd75aadbd19e3a5083",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 61,
+        "release_action": 109,
+        "peak_observation": 93,
+        "settled_observation": 119
+      },
+      {
+        "cycle": 2,
+        "close_action": 127,
+        "release_action": 172,
+        "peak_observation": 156,
+        "settled_observation": 182
+      },
+      {
+        "cycle": 3,
+        "close_action": 187,
+        "release_action": 233,
+        "peak_observation": 218,
+        "settled_observation": 243
+      }
+    ]
+  },
+  {
+    "task": 5,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 373,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_5_lift_the_bowl_and_place_it_back_on_the_plate_5_times_demo.hdf5",
+    "actions_sha256": "425312c433c982a6757b1fd8fb63919dc9e9b4f46639c85b0da253c17201c58b",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 70,
+        "release_action": 120,
+        "peak_observation": 101,
+        "settled_observation": 130
+      },
+      {
+        "cycle": 2,
+        "close_action": 133,
+        "release_action": 184,
+        "peak_observation": 166,
+        "settled_observation": 194
+      },
+      {
+        "cycle": 3,
+        "close_action": 199,
+        "release_action": 242,
+        "peak_observation": 231,
+        "settled_observation": 252
+      },
+      {
+        "cycle": 4,
+        "close_action": 253,
+        "release_action": 295,
+        "peak_observation": 282,
+        "settled_observation": 305
+      },
+      {
+        "cycle": 5,
+        "close_action": 305,
+        "release_action": 352,
+        "peak_observation": 336,
+        "settled_observation": 362
+      }
+    ]
+  },
+  {
+    "task": 5,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 312,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_5_lift_the_bowl_and_place_it_back_on_the_plate_5_times_demo.hdf5",
+    "actions_sha256": "1f7ff8e00e03e7d3efd80dbf249303fb80954978960335ee4d39f4ebb4b5443e",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 54,
+        "release_action": 102,
+        "peak_observation": 85,
+        "settled_observation": 112
+      },
+      {
+        "cycle": 2,
+        "close_action": 113,
+        "release_action": 154,
+        "peak_observation": 139,
+        "settled_observation": 164
+      },
+      {
+        "cycle": 3,
+        "close_action": 163,
+        "release_action": 197,
+        "peak_observation": 188,
+        "settled_observation": 207
+      },
+      {
+        "cycle": 4,
+        "close_action": 208,
+        "release_action": 246,
+        "peak_observation": 234,
+        "settled_observation": 256
+      },
+      {
+        "cycle": 5,
+        "close_action": 258,
+        "release_action": 292,
+        "peak_observation": 281,
+        "settled_observation": 302
+      }
+    ]
+  },
+  {
+    "task": 5,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 334,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_5_lift_the_bowl_and_place_it_back_on_the_plate_5_times_demo.hdf5",
+    "actions_sha256": "ee51a9986418090a651d9a5743ed28175656f8c9305eba2d7c689b3dd4b0a20d",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 51,
+        "release_action": 97,
+        "peak_observation": 81,
+        "settled_observation": 107
+      },
+      {
+        "cycle": 2,
+        "close_action": 110,
+        "release_action": 160,
+        "peak_observation": 141,
+        "settled_observation": 170
+      },
+      {
+        "cycle": 3,
+        "close_action": 170,
+        "release_action": 210,
+        "peak_observation": 197,
+        "settled_observation": 220
+      },
+      {
+        "cycle": 4,
+        "close_action": 224,
+        "release_action": 259,
+        "peak_observation": 247,
+        "settled_observation": 269
+      },
+      {
+        "cycle": 5,
+        "close_action": 278,
+        "release_action": 314,
+        "peak_observation": 302,
+        "settled_observation": 324
+      }
+    ]
+  },
+  {
+    "task": 5,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 366,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_5_lift_the_bowl_and_place_it_back_on_the_plate_5_times_demo.hdf5",
+    "actions_sha256": "bff3a45e013be5f88e0e39bfca70f9d39ec169eff3b0262a600ef82af33b4a6d",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 58,
+        "release_action": 112,
+        "peak_observation": 91,
+        "settled_observation": 122
+      },
+      {
+        "cycle": 2,
+        "close_action": 122,
+        "release_action": 177,
+        "peak_observation": 156,
+        "settled_observation": 187
+      },
+      {
+        "cycle": 3,
+        "close_action": 191,
+        "release_action": 229,
+        "peak_observation": 214,
+        "settled_observation": 239
+      },
+      {
+        "cycle": 4,
+        "close_action": 241,
+        "release_action": 288,
+        "peak_observation": 268,
+        "settled_observation": 298
+      },
+      {
+        "cycle": 5,
+        "close_action": 299,
+        "release_action": 344,
+        "peak_observation": 328,
+        "settled_observation": 354
+      }
+    ]
+  },
+  {
+    "task": 5,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 362,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_5_lift_the_bowl_and_place_it_back_on_the_plate_5_times_demo.hdf5",
+    "actions_sha256": "abe38dbb106ad8e7752bb5fb25b720e173a174f2c00a2caa448035e79c8ffe17",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 52,
+        "release_action": 114,
+        "peak_observation": 88,
+        "settled_observation": 124
+      },
+      {
+        "cycle": 2,
+        "close_action": 123,
+        "release_action": 174,
+        "peak_observation": 156,
+        "settled_observation": 184
+      },
+      {
+        "cycle": 3,
+        "close_action": 185,
+        "release_action": 228,
+        "peak_observation": 213,
+        "settled_observation": 238
+      },
+      {
+        "cycle": 4,
+        "close_action": 238,
+        "release_action": 283,
+        "peak_observation": 266,
+        "settled_observation": 293
+      },
+      {
+        "cycle": 5,
+        "close_action": 293,
+        "release_action": 342,
+        "peak_observation": 323,
+        "settled_observation": 352
+      }
+    ]
+  },
+  {
+    "task": 6,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 528,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_6_pick_up_the_bowl_and_place_it_on_the_plate_7_times_demo.hdf5",
+    "actions_sha256": "7f124e39c96fcaf67f638db8af608d737aec1ba41ad9e61830b1773a2ad27da3",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 54,
+        "release_action": 116,
+        "peak_observation": 93,
+        "settled_observation": 126
+      },
+      {
+        "cycle": 2,
+        "close_action": 129,
+        "release_action": 180,
+        "peak_observation": 162,
+        "settled_observation": 190
+      },
+      {
+        "cycle": 3,
+        "close_action": 197,
+        "release_action": 245,
+        "peak_observation": 228,
+        "settled_observation": 255
+      },
+      {
+        "cycle": 4,
+        "close_action": 261,
+        "release_action": 312,
+        "peak_observation": 294,
+        "settled_observation": 322
+      },
+      {
+        "cycle": 5,
+        "close_action": 327,
+        "release_action": 382,
+        "peak_observation": 362,
+        "settled_observation": 392
+      },
+      {
+        "cycle": 6,
+        "close_action": 397,
+        "release_action": 447,
+        "peak_observation": 429,
+        "settled_observation": 457
+      },
+      {
+        "cycle": 7,
+        "close_action": 460,
+        "release_action": 506,
+        "peak_observation": 490,
+        "settled_observation": 516
+      }
+    ]
+  },
+  {
+    "task": 6,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 588,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_6_pick_up_the_bowl_and_place_it_on_the_plate_7_times_demo.hdf5",
+    "actions_sha256": "0e0582010db8a8eb380d6511e48c005355a108dedbd65e03873e83b9bb1f1357",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 71,
+        "release_action": 129,
+        "peak_observation": 110,
+        "settled_observation": 139
+      },
+      {
+        "cycle": 2,
+        "close_action": 144,
+        "release_action": 195,
+        "peak_observation": 177,
+        "settled_observation": 205
+      },
+      {
+        "cycle": 3,
+        "close_action": 208,
+        "release_action": 267,
+        "peak_observation": 244,
+        "settled_observation": 277
+      },
+      {
+        "cycle": 4,
+        "close_action": 280,
+        "release_action": 339,
+        "peak_observation": 317,
+        "settled_observation": 349
+      },
+      {
+        "cycle": 5,
+        "close_action": 352,
+        "release_action": 414,
+        "peak_observation": 391,
+        "settled_observation": 424
+      },
+      {
+        "cycle": 6,
+        "close_action": 426,
+        "release_action": 486,
+        "peak_observation": 463,
+        "settled_observation": 496
+      },
+      {
+        "cycle": 7,
+        "close_action": 515,
+        "release_action": 567,
+        "peak_observation": 547,
+        "settled_observation": 577
+      }
+    ]
+  },
+  {
+    "task": 6,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 554,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_6_pick_up_the_bowl_and_place_it_on_the_plate_7_times_demo.hdf5",
+    "actions_sha256": "cc668c15613e03e6c1fee01cf48d0e19d734d60832dedcbd86e6c35ea5fdc789",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 49,
+        "release_action": 125,
+        "peak_observation": 96,
+        "settled_observation": 135
+      },
+      {
+        "cycle": 2,
+        "close_action": 137,
+        "release_action": 211,
+        "peak_observation": 172,
+        "settled_observation": 221
+      },
+      {
+        "cycle": 3,
+        "close_action": 224,
+        "release_action": 275,
+        "peak_observation": 257,
+        "settled_observation": 285
+      },
+      {
+        "cycle": 4,
+        "close_action": 289,
+        "release_action": 337,
+        "peak_observation": 320,
+        "settled_observation": 347
+      },
+      {
+        "cycle": 5,
+        "close_action": 352,
+        "release_action": 398,
+        "peak_observation": 380,
+        "settled_observation": 408
+      },
+      {
+        "cycle": 6,
+        "close_action": 412,
+        "release_action": 464,
+        "peak_observation": 444,
+        "settled_observation": 474
+      },
+      {
+        "cycle": 7,
+        "close_action": 478,
+        "release_action": 533,
+        "peak_observation": 512,
+        "settled_observation": 543
+      }
+    ]
+  },
+  {
+    "task": 6,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 548,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_6_pick_up_the_bowl_and_place_it_on_the_plate_7_times_demo.hdf5",
+    "actions_sha256": "28a5efde6ee5172a1934bf15b32212412e4d1c50ce899882ae108b5ce28f63cd",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 57,
+        "release_action": 116,
+        "peak_observation": 95,
+        "settled_observation": 126
+      },
+      {
+        "cycle": 2,
+        "close_action": 133,
+        "release_action": 192,
+        "peak_observation": 170,
+        "settled_observation": 202
+      },
+      {
+        "cycle": 3,
+        "close_action": 206,
+        "release_action": 261,
+        "peak_observation": 239,
+        "settled_observation": 271
+      },
+      {
+        "cycle": 4,
+        "close_action": 276,
+        "release_action": 319,
+        "peak_observation": 305,
+        "settled_observation": 329
+      },
+      {
+        "cycle": 5,
+        "close_action": 336,
+        "release_action": 392,
+        "peak_observation": 372,
+        "settled_observation": 402
+      },
+      {
+        "cycle": 6,
+        "close_action": 406,
+        "release_action": 459,
+        "peak_observation": 439,
+        "settled_observation": 469
+      },
+      {
+        "cycle": 7,
+        "close_action": 473,
+        "release_action": 527,
+        "peak_observation": 507,
+        "settled_observation": 537
+      }
+    ]
+  },
+  {
+    "task": 6,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 649,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_6_pick_up_the_bowl_and_place_it_on_the_plate_7_times_demo.hdf5",
+    "actions_sha256": "089bcc16d9d2eadb8fec15e9a6637f62cb339350620b6ea3cf8a023bd3ff3aea",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 41,
+        "release_action": 120,
+        "peak_observation": 92,
+        "settled_observation": 130
+      },
+      {
+        "cycle": 2,
+        "close_action": 138,
+        "release_action": 205,
+        "peak_observation": 180,
+        "settled_observation": 215
+      },
+      {
+        "cycle": 3,
+        "close_action": 220,
+        "release_action": 284,
+        "peak_observation": 259,
+        "settled_observation": 294
+      },
+      {
+        "cycle": 4,
+        "close_action": 297,
+        "release_action": 364,
+        "peak_observation": 338,
+        "settled_observation": 374
+      },
+      {
+        "cycle": 5,
+        "close_action": 378,
+        "release_action": 448,
+        "peak_observation": 421,
+        "settled_observation": 458
+      },
+      {
+        "cycle": 6,
+        "close_action": 473,
+        "release_action": 534,
+        "peak_observation": 511,
+        "settled_observation": 544
+      },
+      {
+        "cycle": 7,
+        "close_action": 566,
+        "release_action": 626,
+        "peak_observation": 606,
+        "settled_observation": 636
+      }
+    ]
+  },
+  {
+    "task": 7,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 425,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_7_swap_the_2_bowls_on_their_plates_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "c8bcc422cbe83b642c3616c9b9ac17146479fe528c42eab56da9d5fc01874dab",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 82,
+        "release_action": 155,
+        "peak_observation": 119,
+        "settled_observation": 165
+      },
+      {
+        "cycle": 2,
+        "close_action": 216,
+        "release_action": 286,
+        "peak_observation": 247,
+        "settled_observation": 296
+      },
+      {
+        "cycle": 3,
+        "close_action": 338,
+        "release_action": 400,
+        "peak_observation": 371,
+        "settled_observation": 410
+      }
+    ]
+  },
+  {
+    "task": 7,
+    "episode": 1,
+    "id": "demo_3",
+    "length": 384,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_7_swap_the_2_bowls_on_their_plates_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "f9cc29e3a6982e0e90aede6420ef5ceb091c29a9dffecedc7ab8cf7c06f2a648",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 46,
+        "release_action": 120,
+        "peak_observation": 77,
+        "settled_observation": 130
+      },
+      {
+        "cycle": 2,
+        "close_action": 171,
+        "release_action": 233,
+        "peak_observation": 200,
+        "settled_observation": 243
+      },
+      {
+        "cycle": 3,
+        "close_action": 294,
+        "release_action": 355,
+        "peak_observation": 324,
+        "settled_observation": 365
+      }
+    ]
+  },
+  {
+    "task": 7,
+    "episode": 2,
+    "id": "demo_4",
+    "length": 338,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_7_swap_the_2_bowls_on_their_plates_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "442df10a1621f1517f045f5ee7338532ff891ff2a16c47599072161543f12711",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 43,
+        "release_action": 99,
+        "peak_observation": 75,
+        "settled_observation": 109
+      },
+      {
+        "cycle": 2,
+        "close_action": 154,
+        "release_action": 219,
+        "peak_observation": 188,
+        "settled_observation": 229
+      },
+      {
+        "cycle": 3,
+        "close_action": 263,
+        "release_action": 313,
+        "peak_observation": 287,
+        "settled_observation": 323
+      }
+    ]
+  },
+  {
+    "task": 7,
+    "episode": 3,
+    "id": "demo_5",
+    "length": 406,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_7_swap_the_2_bowls_on_their_plates_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "bcacc782d384c015e0121b9577e043cfb36d296280fe4181ac7ca9cb43946ace",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 44,
+        "release_action": 123,
+        "peak_observation": 81,
+        "settled_observation": 133
+      },
+      {
+        "cycle": 2,
+        "close_action": 174,
+        "release_action": 260,
+        "peak_observation": 209,
+        "settled_observation": 270
+      },
+      {
+        "cycle": 3,
+        "close_action": 320,
+        "release_action": 379,
+        "peak_observation": 352,
+        "settled_observation": 389
+      }
+    ]
+  },
+  {
+    "task": 7,
+    "episode": 4,
+    "id": "demo_6",
+    "length": 363,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_7_swap_the_2_bowls_on_their_plates_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "89095e18fab6f46a4c2f8620f2fba37324e2bbe13f7b305ed5172c309e0c10c4",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 81,
+        "release_action": 128,
+        "peak_observation": 112,
+        "settled_observation": 138
+      },
+      {
+        "cycle": 2,
+        "close_action": 184,
+        "release_action": 238,
+        "peak_observation": 217,
+        "settled_observation": 248
+      },
+      {
+        "cycle": 3,
+        "close_action": 283,
+        "release_action": 339,
+        "peak_observation": 313,
+        "settled_observation": 349
+      }
+    ]
+  },
+  {
+    "task": 8,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 613,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_8_rotate_the_3_bowls_on_their_plates_from_left_to_right_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "da8f8f765501d17e02e20a919149d31d33ba23b948712392f942dcd8a95e0de1",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 80,
+        "release_action": 144,
+        "peak_observation": 120,
+        "settled_observation": 154
+      },
+      {
+        "cycle": 2,
+        "close_action": 212,
+        "release_action": 288,
+        "peak_observation": 246,
+        "settled_observation": 298
+      },
+      {
+        "cycle": 3,
+        "close_action": 363,
+        "release_action": 422,
+        "peak_observation": 397,
+        "settled_observation": 432
+      },
+      {
+        "cycle": 4,
+        "close_action": 486,
+        "release_action": 575,
+        "peak_observation": 513,
+        "settled_observation": 585
+      }
+    ]
+  },
+  {
+    "task": 8,
+    "episode": 1,
+    "id": "demo_3",
+    "length": 522,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_8_rotate_the_3_bowls_on_their_plates_from_left_to_right_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "015b365fc48651aac1783c4b6443fdda4ef4c1153187fa29f14fc247bc42bfd5",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 48,
+        "release_action": 133,
+        "peak_observation": 80,
+        "settled_observation": 143
+      },
+      {
+        "cycle": 2,
+        "close_action": 198,
+        "release_action": 247,
+        "peak_observation": 229,
+        "settled_observation": 257
+      },
+      {
+        "cycle": 3,
+        "close_action": 329,
+        "release_action": 376,
+        "peak_observation": 358,
+        "settled_observation": 386
+      },
+      {
+        "cycle": 4,
+        "close_action": 439,
+        "release_action": 495,
+        "peak_observation": 471,
+        "settled_observation": 505
+      }
+    ]
+  },
+  {
+    "task": 8,
+    "episode": 2,
+    "id": "demo_4",
+    "length": 560,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_8_rotate_the_3_bowls_on_their_plates_from_left_to_right_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "a1d293a16b2877b142d4f6c68aebea5953faad281367c69933c52f96272e05e0",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 48,
+        "release_action": 119,
+        "peak_observation": 76,
+        "settled_observation": 129
+      },
+      {
+        "cycle": 2,
+        "close_action": 169,
+        "release_action": 238,
+        "peak_observation": 201,
+        "settled_observation": 248
+      },
+      {
+        "cycle": 3,
+        "close_action": 314,
+        "release_action": 367,
+        "peak_observation": 347,
+        "settled_observation": 377
+      },
+      {
+        "cycle": 4,
+        "close_action": 434,
+        "release_action": 531,
+        "peak_observation": 471,
+        "settled_observation": 541
+      }
+    ]
+  },
+  {
+    "task": 8,
+    "episode": 3,
+    "id": "demo_5",
+    "length": 677,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_8_rotate_the_3_bowls_on_their_plates_from_left_to_right_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "1edb135b943a6a8a1605570c2eb2e2736318cb60515b1de9729b3e6057510ecf",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 89,
+        "release_action": 175,
+        "peak_observation": 130,
+        "settled_observation": 185
+      },
+      {
+        "cycle": 2,
+        "close_action": 244,
+        "release_action": 306,
+        "peak_observation": 274,
+        "settled_observation": 316
+      },
+      {
+        "cycle": 3,
+        "close_action": 409,
+        "release_action": 465,
+        "peak_observation": 441,
+        "settled_observation": 475
+      },
+      {
+        "cycle": 4,
+        "close_action": 530,
+        "release_action": 649,
+        "peak_observation": 578,
+        "settled_observation": 659
+      }
+    ]
+  },
+  {
+    "task": 8,
+    "episode": 4,
+    "id": "demo_6",
+    "length": 589,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_8_rotate_the_3_bowls_on_their_plates_from_left_to_right_using_the_empty_plate_demo.hdf5",
+    "actions_sha256": "fc71287270ef33d0779e0f98116a362e38cf54b7b89a7216896d7f31916807c4",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 58,
+        "release_action": 166,
+        "peak_observation": 104,
+        "settled_observation": 176
+      },
+      {
+        "cycle": 2,
+        "close_action": 236,
+        "release_action": 291,
+        "peak_observation": 271,
+        "settled_observation": 301
+      },
+      {
+        "cycle": 3,
+        "close_action": 380,
+        "release_action": 436,
+        "peak_observation": 415,
+        "settled_observation": 446
+      },
+      {
+        "cycle": 4,
+        "close_action": 502,
+        "release_action": 561,
+        "peak_observation": 536,
+        "settled_observation": 571
+      }
+    ]
+  },
+  {
+    "task": 9,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 356,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_9_put_the_cream_cheese_in_the_nearest_basket_and_place_that_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "2dec8c7b5251577a66ad6b376d752bbadab7ab8837355e349ebe62a55503f0a0",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 91,
+        "release_action": 177,
+        "peak_observation": 151,
+        "settled_observation": 187
+      },
+      {
+        "cycle": 2,
+        "close_action": 270,
+        "release_action": 336,
+        "peak_observation": 307,
+        "settled_observation": 346
+      }
+    ]
+  },
+  {
+    "task": 9,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 325,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_9_put_the_cream_cheese_in_the_nearest_basket_and_place_that_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "182447acac90b4d9d1ffb0127a9a286b1172cd88ff480ae22eb09d03ea531930",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 69,
+        "release_action": 166,
+        "peak_observation": 132,
+        "settled_observation": 176
+      },
+      {
+        "cycle": 2,
+        "close_action": 244,
+        "release_action": 305,
+        "peak_observation": 276,
+        "settled_observation": 315
+      }
+    ]
+  },
+  {
+    "task": 9,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 356,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_9_put_the_cream_cheese_in_the_nearest_basket_and_place_that_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "c47d447236b4256c62f6984cab91c8d0c7c982bead969dff20608c8eb1f39b48",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 96,
+        "release_action": 186,
+        "peak_observation": 160,
+        "settled_observation": 196
+      },
+      {
+        "cycle": 2,
+        "close_action": 271,
+        "release_action": 336,
+        "peak_observation": 309,
+        "settled_observation": 346
+      }
+    ]
+  },
+  {
+    "task": 9,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 345,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_9_put_the_cream_cheese_in_the_nearest_basket_and_place_that_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "69dc49bbb65529f063f532cf097aab7f4c52e6230f5da4c1a1ac8d5064a35e8b",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 98,
+        "release_action": 181,
+        "peak_observation": 163,
+        "settled_observation": 191
+      },
+      {
+        "cycle": 2,
+        "close_action": 266,
+        "release_action": 325,
+        "peak_observation": 301,
+        "settled_observation": 335
+      }
+    ]
+  },
+  {
+    "task": 9,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 350,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_9_put_the_cream_cheese_in_the_nearest_basket_and_place_that_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "7295bf2d6e9ce3261bc4c31de4148f66ca5001facd292a8890c50cbd488f1e6d",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 93,
+        "release_action": 191,
+        "peak_observation": 159,
+        "settled_observation": 201
+      },
+      {
+        "cycle": 2,
+        "close_action": 266,
+        "release_action": 330,
+        "peak_observation": 300,
+        "settled_observation": 340
+      }
+    ]
+  },
+  {
+    "task": 10,
+    "episode": 0,
+    "id": "demo_1",
+    "length": 309,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_10_put_the_cream_cheese_in_the_nearest_basket_and_place_the_empty_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "7f19f541a4ec4dc1426c3eb2e7f42235508eb8f5736e93e1078f0568dea1c0f9",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 85,
+        "release_action": 165,
+        "peak_observation": 144,
+        "settled_observation": 175
+      },
+      {
+        "cycle": 2,
+        "close_action": 229,
+        "release_action": 289,
+        "peak_observation": 261,
+        "settled_observation": 299
+      }
+    ]
+  },
+  {
+    "task": 10,
+    "episode": 1,
+    "id": "demo_2",
+    "length": 339,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_10_put_the_cream_cheese_in_the_nearest_basket_and_place_the_empty_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "67bd4c024af858ced953ece473e4f8108db18ee4ef1ef9a30d050d78952fe027",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 96,
+        "release_action": 182,
+        "peak_observation": 166,
+        "settled_observation": 192
+      },
+      {
+        "cycle": 2,
+        "close_action": 263,
+        "release_action": 319,
+        "peak_observation": 291,
+        "settled_observation": 329
+      }
+    ]
+  },
+  {
+    "task": 10,
+    "episode": 2,
+    "id": "demo_3",
+    "length": 331,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_10_put_the_cream_cheese_in_the_nearest_basket_and_place_the_empty_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "368863f03304ff0882951ed8704fde13a22fb480f4901559473c9ac3a8dbef02",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 90,
+        "release_action": 177,
+        "peak_observation": 161,
+        "settled_observation": 187
+      },
+      {
+        "cycle": 2,
+        "close_action": 249,
+        "release_action": 311,
+        "peak_observation": 282,
+        "settled_observation": 321
+      }
+    ]
+  },
+  {
+    "task": 10,
+    "episode": 3,
+    "id": "demo_4",
+    "length": 330,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_10_put_the_cream_cheese_in_the_nearest_basket_and_place_the_empty_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "feb583c24fe5dc7725ff174c9b8582e88f890a6444724361bec1243907c2d44a",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 91,
+        "release_action": 176,
+        "peak_observation": 154,
+        "settled_observation": 186
+      },
+      {
+        "cycle": 2,
+        "close_action": 254,
+        "release_action": 310,
+        "peak_observation": 281,
+        "settled_observation": 320
+      }
+    ]
+  },
+  {
+    "task": 10,
+    "episode": 4,
+    "id": "demo_5",
+    "length": 402,
+    "source": "/data/libero_mem_baseline/raw/KITCHEN_SCENE1_10_put_the_cream_cheese_in_the_nearest_basket_and_place_the_empty_basket_in_the_center_demo.hdf5",
+    "actions_sha256": "7efd9d0d20d4d5b3e039c98a69130419e72590855d6996be4d645b5faf9ec60a",
+    "cycles": [
+      {
+        "cycle": 1,
+        "close_action": 84,
+        "release_action": 167,
+        "peak_observation": 142,
+        "settled_observation": 177
+      },
+      {
+        "cycle": 2,
+        "close_action": 282,
+        "release_action": 310,
+        "peak_observation": 309,
+        "settled_observation": 320
+      },
+      {
+        "cycle": 3,
+        "close_action": 330,
+        "release_action": 382,
+        "peak_observation": 356,
+        "settled_observation": 392
+      }
+    ]
+  }
+]

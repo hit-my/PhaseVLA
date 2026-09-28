@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "data_origin": "User supplied task-order percentages, converted exactly to counts out of 20",
+  "width_mm": 88.9,
+  "body_font_tex_pt": 10,
+  "font_pdf_pt": 9.962640099626402,
+  "colors": {
+    "pi05": "#0072B2",
+    "ActMem-VLA": "#009E73"
+  },
+  "task_count": 4,
+  "trials_per_task_per_method": 20,
+  "total_trials": 160,
+  "labeled_bars": 8,
+  "source_sha256": "ff812b75d4e4d2a23e338ec00c2310dbb697cdd4ba61eeb288871b81b44a945e",
+  "macro_success_rates": {
+    "pi05": 35.0,
+    "ActMem-VLA": 63.75
+  }
+}

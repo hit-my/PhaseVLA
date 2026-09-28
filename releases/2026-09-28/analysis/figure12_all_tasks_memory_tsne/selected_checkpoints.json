@@ -1,0 +1,278 @@
+[
+  {
+    "task": 1,
+    "seed": 0,
+    "step": 500,
+    "sr": 100.0,
+    "successes": 60,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-v1-t1-s0-c500-e10001",
+      "model": "PhaseVLA",
+      "task": 1,
+      "train_seed": 0,
+      "step": 500,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t1",
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t1-s0/500",
+      "checkpoint_origin": "A100",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "A100-source"
+    },
+    "evaluation_records": [
+      "gradientfix-v1-t1-s0-c500-e10001",
+      "gradientfix-v1-t1-s0-c500-e10002",
+      "gradientfix-v1-t1-s0-c500-e10003"
+    ]
+  },
+  {
+    "task": 2,
+    "seed": 0,
+    "step": 500,
+    "sr": 100.0,
+    "successes": 60,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-v1-t2-s0-c500-e10001",
+      "model": "PhaseVLA",
+      "task": 2,
+      "train_seed": 0,
+      "step": 500,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t2",
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t2-s0/500",
+      "checkpoint_origin": "A100",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "A100-source"
+    },
+    "evaluation_records": [
+      "gradientfix-v1-t2-s0-c500-e10001",
+      "gradientfix-v1-t2-s0-c500-e10002",
+      "gradientfix-v1-t2-s0-c500-e10003"
+    ]
+  },
+  {
+    "task": 3,
+    "seed": 0,
+    "step": 500,
+    "sr": 100.0,
+    "successes": 60,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-lgd-t3-s0-c500-e10001",
+      "model": "PhaseVLA",
+      "task": 3,
+      "train_seed": 0,
+      "step": 500,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t3",
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t3-s0/500",
+      "checkpoint_origin": "LGD",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "LGD-B20Z",
+      "evaluation_host": "LGD-9027",
+      "record_success_and_steps": true
+    },
+    "evaluation_records": [
+      "gradientfix-lgd-t3-s0-c500-e10001",
+      "gradientfix-lgd-t3-s0-c500-e10002",
+      "gradientfix-lgd-t3-s0-c500-e10003"
+    ]
+  },
+  {
+    "task": 4,
+    "seed": 1,
+    "step": 500,
+    "sr": 100.0,
+    "successes": 60,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-lgd-t4-s1-c500-e10001",
+      "model": "PhaseVLA",
+      "task": 4,
+      "train_seed": 1,
+      "step": 500,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t4",
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t4-s1/500",
+      "checkpoint_origin": "LGD",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "LGD-B20Z",
+      "evaluation_host": "LGD-9026",
+      "record_success_and_steps": true
+    },
+    "evaluation_records": [
+      "gradientfix-lgd-t4-s1-c500-e10001",
+      "gradientfix-lgd-t4-s1-c500-e10002",
+      "gradientfix-lgd-t4-s1-c500-e10003"
+    ]
+  },
+  {
+    "task": 5,
+    "seed": 42,
+    "step": 1000,
+    "sr": 100.0,
+    "successes": 60,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-lgd-t5-s42-c1000-e10001",
+      "model": "PhaseVLA",
+      "task": 5,
+      "train_seed": 42,
+      "step": 1000,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t5",
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t5-s42/1000",
+      "checkpoint_origin": "LGD",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "LGD-B20Z",
+      "evaluation_host": "LGD-9027",
+      "record_success_and_steps": true
+    },
+    "evaluation_records": [
+      "gradientfix-lgd-t5-s42-c1000-e10001",
+      "gradientfix-lgd-t5-s42-c1000-e10002",
+      "gradientfix-lgd-t5-s42-c1000-e10003"
+    ]
+  },
+  {
+    "task": 6,
+    "seed": 42,
+    "step": 1500,
+    "sr": 80.0,
+    "successes": 48,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-v1-t6-s42-c1500-e10001",
+      "checkpoint_key": "gradientfix-v1-t6-s42-c1500",
+      "model": "PhaseVLA",
+      "task": 6,
+      "train_seed": 42,
+      "step": 1500,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t6",
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t6-s42/1500",
+      "checkpoint_origin": "A100",
+      "training_version": "differentiable_recurrent_step_v1",
+      "protocol_id": "fullmatrix_20260909_a100_gradientfix_v1",
+      "evaluation_platform": "A100-source",
+      "merge_status": "separate_corrected_training_version",
+      "purpose": "corrected_history_gradient_evaluation"
+    },
+    "evaluation_records": [
+      "gradientfix-v1-t6-s42-c1500-e10001",
+      "gradientfix-v1-t6-s42-c1500-e10002",
+      "gradientfix-v1-t6-s42-c1500-e10003"
+    ]
+  },
+  {
+    "task": 7,
+    "seed": 0,
+    "step": 2000,
+    "sr": 45.0,
+    "successes": 27,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-v1-t7-s0-c2000-e10001",
+      "model": "PhaseVLA",
+      "task": 7,
+      "train_seed": 0,
+      "step": 2000,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t7",
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t7-s0/2000",
+      "checkpoint_origin": "A100",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "A100-source"
+    },
+    "evaluation_records": [
+      "gradientfix-v1-t7-s0-c2000-e10001",
+      "gradientfix-v1-t7-s0-c2000-e10002",
+      "gradientfix-v1-t7-s0-c2000-e10003"
+    ]
+  },
+  {
+    "task": 8,
+    "seed": 0,
+    "step": 3000,
+    "sr": 56.666666666666664,
+    "successes": 34,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-v1-t8-s0-c3000-e10001",
+      "checkpoint_key": "gradientfix-v1-t8-s0-c3000",
+      "model": "PhaseVLA",
+      "task": 8,
+      "train_seed": 0,
+      "step": 3000,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t8",
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t8-s0/3000",
+      "checkpoint_origin": "A100",
+      "training_version": "differentiable_recurrent_step_v1",
+      "protocol_id": "fullmatrix_20260909_a100_gradientfix_v1",
+      "evaluation_platform": "A100-source",
+      "merge_status": "separate_corrected_training_version",
+      "purpose": "corrected_history_gradient_evaluation"
+    },
+    "evaluation_records": [
+      "gradientfix-v1-t8-s0-c3000-e10001",
+      "gradientfix-v1-t8-s0-c3000-e10002",
+      "gradientfix-v1-t8-s0-c3000-e10003"
+    ]
+  },
+  {
+    "task": 9,
+    "seed": 0,
+    "step": 500,
+    "sr": 100.0,
+    "successes": 60,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-lgd-t9-s0-c500-e10001",
+      "model": "PhaseVLA",
+      "task": 9,
+      "train_seed": 0,
+      "step": 500,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t9",
+      "checkpoint": "/pfs/pfs-7jnepv/lgd/actmem_gradientfix_v1_20260910/checkpoints/t9-s0/500",
+      "checkpoint_origin": "LGD",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "LGD-B20Z",
+      "evaluation_host": "LGD-9027",
+      "record_success_and_steps": true
+    },
+    "evaluation_records": [
+      "gradientfix-lgd-t9-s0-c500-e10001",
+      "gradientfix-lgd-t9-s0-c500-e10002",
+      "gradientfix-lgd-t9-s0-c500-e10003"
+    ]
+  },
+  {
+    "task": 10,
+    "seed": 0,
+    "step": 500,
+    "sr": 100.0,
+    "successes": 60,
+    "episodes": 60,
+    "job": {
+      "id": "gradientfix-v1-t10-s0-c500-e10001",
+      "model": "PhaseVLA",
+      "task": 10,
+      "train_seed": 0,
+      "step": 500,
+      "eval_seed": 10001,
+      "config": "futuremamba_action_history_handoff04_libero_mem_bowl_t10",
+      "checkpoint": "/data/libero_mem_baseline/actmem_gradientfix_v1_20260910/checkpoints/t10-s0/500",
+      "checkpoint_origin": "A100",
+      "training_version": "differentiable_recurrent_step_v1",
+      "evaluation_platform": "A100-source"
+    },
+    "evaluation_records": [
+      "gradientfix-v1-t10-s0-c500-e10001",
+      "gradientfix-v1-t10-s0-c500-e10002",
+      "gradientfix-v1-t10-s0-c500-e10003"
+    ]
+  }
+]
