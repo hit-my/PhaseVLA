@@ -1,0 +1,139 @@
+{
+  "scope": "Arithmetic and consistency audit against saved local data; not a new independent audit of raw real-robot trials or hardware.",
+  "simulation_macro_sr": {
+    "pi05": 65.16666666666667,
+    "MemoryVLA": 49.5,
+    "ActMem-VLA": 80.77777777777777
+  },
+  "simulation_gain_pp": {
+    "pi05": 15.6111111111111,
+    "MemoryVLA": 31.27777777777777
+  },
+  "task_winners": {
+    "1": [
+      "MemoryVLA"
+    ],
+    "2": [
+      "ActMem-VLA"
+    ],
+    "3": [
+      "ActMem-VLA"
+    ],
+    "4": [
+      "ActMem-VLA"
+    ],
+    "5": [
+      "ActMem-VLA"
+    ],
+    "6": [
+      "ActMem-VLA"
+    ],
+    "7": [
+      "MemoryVLA",
+      "ActMem-VLA"
+    ],
+    "8": [
+      "ActMem-VLA"
+    ],
+    "9": [
+      "pi05"
+    ],
+    "10": [
+      "pi05"
+    ]
+  },
+  "component_table_all_values_match": true,
+  "hyperparameter_table_all_values_match": true,
+  "real_success_counts": {
+    "pi05": 28,
+    "actmem": 51
+  },
+  "real_trials_per_method": 80,
+  "real_gain_pp": 28.75,
+  "real_relative_gain_percent": 82.14285714285714,
+  "additional_parameters": 115700448,
+  "frozen_base_parameters": 3353433872,
+  "additional_parameter_percent": 3.450208127437916,
+  "actual_main_protocol": {
+    "pi05": {
+      "train_seeds": [
+        42
+      ],
+      "eval_seeds": [
+        10001,
+        10002,
+        10003
+      ],
+      "per_task_trials": {
+        "1": 60,
+        "2": 60,
+        "3": 60,
+        "4": 60,
+        "5": 60,
+        "6": 60,
+        "7": 60,
+        "8": 60,
+        "9": 60,
+        "10": 60
+      }
+    },
+    "MemoryVLA": {
+      "train_seeds": [
+        42
+      ],
+      "eval_seeds": [
+        10001,
+        10002,
+        10003
+      ],
+      "per_task_trials": {
+        "1": 60,
+        "2": 60,
+        "3": 60,
+        "4": 60,
+        "5": 60,
+        "6": 60,
+        "7": 60,
+        "8": 60,
+        "9": 60,
+        "10": 60
+      }
+    },
+    "ActMem-VLA": {
+      "train_seeds": [
+        0,
+        1,
+        42
+      ],
+      "eval_seeds": [
+        10001,
+        10002,
+        10003
+      ],
+      "per_task_trials": {
+        "1": 180,
+        "2": 180,
+        "3": 180,
+        "4": 180,
+        "5": 180,
+        "6": 180,
+        "7": 180,
+        "8": 180,
+        "9": 180,
+        "10": 180
+      }
+    }
+  },
+  "task_budgets": [
+    180,
+    220,
+    320,
+    340,
+    460,
+    600,
+    480,
+    600,
+    360,
+    360
+  ]
+}

@@ -1,0 +1,3 @@
+# This dated release intentionally tracks audited experiment data.
+!data/
+!data/**

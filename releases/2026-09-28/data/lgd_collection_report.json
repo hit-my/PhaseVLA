@@ -1,0 +1,12 @@
+{
+  "roots": [
+    "actmem_gradientfix_v1_20260910",
+    "actmem_single_seed_ablations_20260911",
+    "libero_fullmatrix_20260909",
+    "libero_multiseed_migration_20260908"
+  ],
+  "jobs": 1832,
+  "episodes": 36526,
+  "excluded": [],
+  "collected_at": 1790593691.6507509
+}

@@ -1,0 +1,12 @@
+{
+  "collected_at_unix": 1790593602.9481177,
+  "jobs": 950,
+  "episodes": 20103,
+  "excluded": [
+    {
+      "source": "/data/libero_mem_baseline/formal_video20_baseline_step49999_replan20/audited_summary.json",
+      "reason": "'overall'"
+    }
+  ],
+  "scope": "Available A100 audited_summary.json + rollouts.jsonl; failed/quarantined directories excluded; historical/diagnostic records are not pooled with formal results."
+}

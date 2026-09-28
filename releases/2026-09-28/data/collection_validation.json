@@ -1,0 +1,17 @@
+{
+  "source_counts": {
+    "a100_audited_evaluations.json.gz": {
+      "records": 950,
+      "episodes": 20103
+    },
+    "lgd_audited_evaluations.json.gz": {
+      "records": 1832,
+      "episodes": 36526
+    }
+  },
+  "available_records": 2782,
+  "unique_job_and_rollout_hash_records": 2782,
+  "duplicate_records": 0,
+  "job_ids_with_multiple_rollout_hashes": {},
+  "warning": "Deduplication removes exact job-ID/rollout-hash copies only. Different protocols, historic variants and partial diagnostic runs remain separate. This is NOT a pooled success-rate table."
+}

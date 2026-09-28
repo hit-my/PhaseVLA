@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "document": "C:\\Users\\lenovo\\Documents\\ActMem-VLA\\实验数据\\ActMem-VLA_已完成仿真实验原始数据_20260912.md",
+  "jobs": 978,
+  "episodes": 19560,
+  "prior_csv_matches": 12000,
+  "document_sha256": "829665bfe3a69bf6aafaf269e9d85eeaf53aae44ce178f15a78ca86124815f13",
+  "document_bytes": 1014166,
+  "source_fetch_times": [
+    "2026-09-12 01:45:29",
+    "2026-09-12 01:45:33"
+  ]
+}
